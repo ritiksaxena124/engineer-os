@@ -3,6 +3,7 @@ import type { Request } from 'express';
 import { AccessTokenGuard } from '../auth/access-token.guard';
 import { MasteryService } from './mastery.service';
 import { ReviewService } from './review.service';
+import { WeaknessService } from './weakness.service';
 
 type Authed = Request & { user: { sub: string } };
 
@@ -12,6 +13,7 @@ export class MasteryController {
   constructor(
     private readonly mastery: MasteryService,
     private readonly reviews: ReviewService,
+    private readonly weaknesses: WeaknessService,
   ) {}
 
   @Get()
@@ -22,5 +24,10 @@ export class MasteryController {
   @Get('reviews/due')
   due(@Req() req: Authed) {
     return this.reviews.due(req.user.sub, new Date());
+  }
+
+  @Get('weaknesses')
+  weaknessesReport(@Req() req: Authed) {
+    return this.weaknesses.report(req.user.sub);
   }
 }

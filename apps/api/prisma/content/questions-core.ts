@@ -334,6 +334,107 @@ export const QUESTIONS_CORE: QuestionSpec[] = [
     },
   },
   {
+    slug: 'drill-why-locality-beats-size',
+    topicSlug: 'memory-hierarchy',
+    categoryKey: 'why',
+    levelKey: 'understanding',
+    difficulty: 3,
+    stem:
+      'Two loops read the same 100 million numbers. One is twelve times faster and neither touches the disk. ' +
+      'Explain what the machine is actually doing differently.',
+    body: [
+      'One loop walks an array in the order it was built; the other follows a list of indexes that arrive in ' +
+      'random order. Same values, same language, same process. Say what moves, what stalls, and what number you ' +
+      'would print to prove which of the two you are blaming.',
+    ].join('\n'),
+    concepts: [
+      {
+        slug: 'fixed-size-line',
+        name: 'Memory moves in fixed-size lines, not one value at a time',
+        detail: 'The cache fills a whole 64-byte line per transfer, so the neighbour of a value arrives for free.',
+        terms: ['cache line', '64 byte', 'fixed size', 'block of bytes', 'line is loaded'],
+        weight: 2,
+      },
+      {
+        slug: 'latency-ladder',
+        name: 'The hierarchy is a latency ladder, not a capacity plan',
+        detail: 'Registers, L1, L2, L3, DRAM, NVMe each cost orders of magnitude more; size is not the variable.',
+        terms: ['l1 cache', 'l2 cache', 'l3 cache', 'register', 'dram', 'nvme', 'nanosecond', 'latency'],
+        weight: 2,
+      },
+      {
+        slug: 'the-miss-is-the-event',
+        name: 'The cache miss is the event that costs the time',
+        detail: 'A hit is a few cycles; a miss to DRAM is hundreds, and the core stalls rather than slows.',
+        terms: ['cache miss', 'miss', 'stall', 'prefetch', 'speculative'],
+        weight: 2,
+      },
+      {
+        slug: 'locality-is-the-cause',
+        name: 'Sequential access lets the hardware predict the next line',
+        detail: 'The prefetcher walks forward on a strided access pattern; random indexes defeat prediction.',
+        terms: ['locality', 'sequential', 'prefetch', 'contiguous', 'in order'],
+        weight: 2,
+      },
+      {
+        slug: 'pointer-chasing-is-strided',
+        name: 'Indirection turns one loop into a chain of dependent loads',
+        detail: 'Following a stored index or a next pointer serialises the misses: nothing can overlap.',
+        terms: ['pointer chasing', 'indirection', 'dependent load', 'linked list', 'random access'],
+      },
+      {
+        slug: 'measure-the-ratio',
+        name: 'The claim is proved by counters, not by the clock',
+        detail: 'perf shows misses per thousand instructions and the bandwidth; the runtime only reports the sum.',
+        terms: ['benchmark', 'perf', 'counters', 'misses per', 'profil', 'cycle'],
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'Both loops read the same bytes, but the ordered one walks contiguous cache lines the hardware has ' +
+        'already prefetched, and the random one takes a dependent cache miss per value.',
+      idealAnswer:
+        'The cpu never reads a single number: it reads a cache line, typically 64 bytes, which is eight of these ' +
+        'values. Walking the array in build order means the first miss loads the line and the next seven reads ' +
+        'hit, and the prefetcher notices the stride and pulls the following lines while the core is still busy. ' +
+        'Following a shuffled index list breaks both: the value you need is in a line that was not loaded, so ' +
+        'the request goes to L2, possibly L3, possibly DRAM, and the pipeline stalls for hundreds of cycles ' +
+        'because the address of the next load depends on the value of this one. Nothing about the algorithm ' +
+        'changed — the same number of adds ran. The difference is where the bytes were and how many lines had ' +
+        'to be fetched, which is why the memory hierarchy is a latency ladder and not a capacity chart.',
+      deepAnswer:
+        'The cost per level is roughly registers in a cycle, L1 four, L2 twelve, L3 forty, DRAM three hundred, ' +
+        'and NVMe tens of thousands of microseconds, so a single miss to DRAM pays for the whole loop over a ' +
+        'line. Modern cores hide that with out-of-order execution and multiple outstanding misses, which is why ' +
+        'an independent stride (read every 64th element) is only moderately slower than sequential: the address ' +
+        'of the next load is known ahead of time, so several lines are in flight together. Pointer chasing and ' +
+        'gather-by-random-index lose that overlap, and the dependent-load chain is why the gap between the two ' +
+        'loops is twelve times and not two. The secondary effect is TLB reach: at 4 KB pages a working set ' +
+        'above a few hundred megabytes adds a page walk to some misses, so very large random layouts get worse ' +
+        'than the cache maths alone predicts. Print cache-misses per thousand instructions and dTLB-load-misses ' +
+        'from perf with only the access order changed — the ratio is the argument, the wall clock is only the ' +
+        'symptom.',
+      commonMistakes:
+        '- Calling it a memory-size problem and adding RAM or a bigger container.\n' +
+        '- Blaming the garbage collector for a loop that allocates nothing.\n' +
+        '- Reporting the runtime difference as the finding without ever counting a miss.\n' +
+        '- Assuming the compiler will reorder the random loop into a sequential one.',
+      whyWrong:
+        'A bigger heap changes nothing, because the values already fit in RAM; the cost is the round trip to ' +
+        'get each line, not the room to hold them. Tuning GC on this loop spends the week and leaves the twelve ' +
+        'times intact — and if you only quote the elapsed time, the next engineer has no idea which of the two ' +
+        'effects to fix.',
+      followUps:
+        '1. Which loop would an index scan on a badly-clustering Postgres table behave like, and why?\n' +
+        '2. What does the same access pattern cost when the values are 8 bytes instead of 64?\n' +
+        '3. At what working-set size does TLB reach start to show up in your numbers?',
+      exercise:
+        'Build a 100M-element array and sum it twice: once in order, once through a shuffled index list. ' +
+        'Report the elapsed time and the cache-miss counters from perf for both runs, then re-run the random ' +
+        'order in chunks of 512 indexes and explain what changed.',
+    },
+  },
+  {
     slug: 'drill-loop-lag-incident',
     topicSlug: 'event-loop',
     categoryKey: 'debugging',

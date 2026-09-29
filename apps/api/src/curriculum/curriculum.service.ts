@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { repairPath, unlockState, type GraphTopic } from './graph';
 
-interface CatalogTopic extends GraphTopic {
+export interface CatalogTopic extends GraphTopic {
   phaseKey: string;
   skillKey: string | null;
   summary: string;
@@ -10,6 +10,11 @@ interface CatalogTopic extends GraphTopic {
 
 /** Current mastery level per topic slug; absent means untouched, which gates as zero. */
 type Levels = Record<string, number>;
+
+export interface CurriculumContext {
+  topics: CatalogTopic[];
+  levels: Levels;
+}
 
 @Injectable()
 export class CurriculumService {
@@ -61,7 +66,7 @@ export class CurriculumService {
   }
 
   async repairPathFor(userId: string, slug: string) {
-    const topics = await this.loadTopics();
+    const { topics, levels } = await this.graphWithLevels(userId);
     if (!topics.some((topic) => topic.slug === slug)) {
       throw new NotFoundException({
         code: 'TOPIC_NOT_FOUND',
@@ -69,7 +74,6 @@ export class CurriculumService {
       });
     }
 
-    const levels = await this.levelsFor(userId);
     const slugs = repairPath(slug, topics, levels);
     const bySlug = new Map(topics.map((topic) => [topic.slug, topic]));
 
@@ -82,6 +86,12 @@ export class CurriculumService {
         currentLevel: levels[entry] ?? 0,
       })),
     };
+  }
+
+  /** The graph and the learner's standing on it, in one load, for anything that walks it. */
+  async graphWithLevels(userId: string): Promise<CurriculumContext> {
+    const [topics, levels] = await Promise.all([this.loadTopics(), this.levelsFor(userId)]);
+    return { topics, levels };
   }
 
   /** Gating for one topic, used by anything that has to refuse a locked learner (lessons, drills). */
