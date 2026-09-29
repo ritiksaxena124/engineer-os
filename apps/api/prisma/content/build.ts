@@ -1,4 +1,4 @@
-import type { TopicSpec } from './types';
+import type { ConceptSpec, TopicSpec } from './types';
 
 /**
  * Critical prerequisites gate unlocking; advisory ones only warn, so a learner can be
@@ -23,3 +23,15 @@ export const t = (
     ...advisory.map((slug) => ({ slug, critical: false })),
   ],
 });
+
+/**
+ * A concept a real answer must touch. Terms are the accepted phrasings — a learner who says
+ * "timer queue" for "macrotask queue" is not wrong, and the grader has to know that.
+ */
+export const c = (
+  slug: string,
+  name: string,
+  detail: string,
+  terms: string[],
+  weight = 1,
+): ConceptSpec => ({ slug, name, detail, terms, weight });

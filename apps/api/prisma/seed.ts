@@ -1,6 +1,8 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { ALL_PHASES, ALL_TOPICS, validateCurriculum, validateLessons } from './content/curriculum';
 import { LESSONS } from './content/lessons';
+import { ALL_QUESTIONS, validateQuestions } from './content/questions';
+import type { ConceptSpec } from './content/types';
 import {
   ATTEMPT_VERDICTS,
   LESSON_SECTION_KINDS,
@@ -37,12 +39,16 @@ async function runInChunks(prisma: PrismaClient, operations: Operation[], size =
  * Content is code here, so seeding is the deploy step. It validates the authored graph before
  * writing, then upserts by natural key so re-running it is a no-op rather than a duplicate.
  */
-export async function seedContent(prisma: PrismaClient): Promise<{ topics: number; phases: number }> {
+export async function seedContent(prisma: PrismaClient): Promise<{ topics: number; phases: number; questions: number }> {
   const problems = validateCurriculum();
   if (problems.length > 0) throw new Error(`curriculum content invalid:\n${problems.join('\n')}`);
   const lessonProblems = validateLessons();
   if (lessonProblems.length > 0) {
     throw new Error(`lesson content invalid:\n${lessonProblems.join('\n')}`);
+  }
+  const questionProblems = validateQuestions();
+  if (questionProblems.length > 0) {
+    throw new Error(`question content invalid:\n${questionProblems.join('\n')}`);
   }
 
   const order = topologicalOrder(ALL_TOPICS.map(asGraphTopic));
@@ -122,8 +128,115 @@ export async function seedContent(prisma: PrismaClient): Promise<{ topics: numbe
 
   await runInChunks(prisma, await buildEdgeOperations(prisma, idBySlug, positionOf));
   await runInChunks(prisma, await buildLessonOperations(prisma, idBySlug));
+  await buildQuestionOperations(prisma, idBySlug);
 
-  return { topics: ALL_TOPICS.length, phases: ALL_PHASES.length };
+  return { topics: ALL_TOPICS.length, phases: ALL_PHASES.length, questions: ALL_QUESTIONS.length };
+}
+
+/**
+ * Questions carry their own rubric: concepts are global rows, their terms are the matchable
+ * phrasings, and the answer model travels with the question so grading never reads source files.
+ */
+async function buildQuestionOperations(prisma: PrismaClient, topicIdBySlug: Map<string, string>) {
+  const lessonIdBySlug = new Map(
+    (await prisma.lesson.findMany({ select: { id: true, slug: true } })).map((lesson) => [lesson.slug, lesson.id]),
+  );
+
+  await runInChunks(
+    prisma,
+    ALL_QUESTIONS.map((question) => {
+      const data = {
+        stem: question.stem,
+        body: question.body,
+        difficulty: question.difficulty,
+        isDiagnostic: question.isDiagnostic === true,
+        topicId: topicIdBySlug.get(question.topicSlug) as string,
+        categoryKey: question.categoryKey,
+        levelKey: question.levelKey,
+        lessonId: question.lessonSlug ? lessonIdBySlug.get(question.lessonSlug) ?? null : null,
+      };
+      return prisma.question.upsert({
+        where: { slug: question.slug },
+        create: { slug: question.slug, ...data },
+        update: { ...data, isActive: true },
+      });
+    }),
+  );
+
+  const questionIdBySlug = new Map(
+    (await prisma.question.findMany({ select: { id: true, slug: true } })).map((row) => [row.slug, row.id]),
+  );
+
+  // validateQuestions guarantees a shared concept slug always means the same thing, so the
+  // first definition seen is the definition.
+  const conceptBySlug = new Map<string, ConceptSpec>();
+  const conceptTopicId = new Map<string, string>();
+  for (const question of ALL_QUESTIONS) {
+    for (const concept of question.concepts) {
+      if (conceptBySlug.has(concept.slug)) continue;
+      conceptBySlug.set(concept.slug, concept);
+      conceptTopicId.set(concept.slug, topicIdBySlug.get(question.topicSlug) as string);
+    }
+  }
+
+  await runInChunks(
+    prisma,
+    [...conceptBySlug.entries()].map(([slug, concept]) => {
+      const topicId = conceptTopicId.get(slug) as string;
+      return prisma.concept.upsert({
+        where: { slug },
+        create: { slug, name: concept.name, detail: concept.detail, topicId },
+        update: { name: concept.name, detail: concept.detail, topicId, isActive: true },
+      });
+    }),
+  );
+
+  const conceptIdBySlug = new Map(
+    (await prisma.concept.findMany({ select: { id: true, slug: true } })).map((row) => [row.slug, row.id]),
+  );
+
+  const termOperations: Operation[] = [];
+  const edgeOperations: Operation[] = [];
+  for (const question of ALL_QUESTIONS) {
+    const questionId = questionIdBySlug.get(question.slug);
+    if (!questionId) continue;
+
+    for (const concept of question.concepts) {
+      const conceptId = conceptIdBySlug.get(concept.slug);
+      if (!conceptId) continue;
+      for (const term of concept.terms) {
+        termOperations.push(
+          prisma.conceptTerm.upsert({
+            where: { conceptId_term: { conceptId, term } },
+            create: { conceptId, term },
+            update: {},
+          }),
+        );
+      }
+      const weight = concept.weight ?? 1;
+      edgeOperations.push(
+        prisma.questionExpectedConcept.upsert({
+          where: { questionId_conceptId: { questionId, conceptId } },
+          create: { questionId, conceptId, weight },
+          update: { weight },
+        }),
+      );
+    }
+  }
+  await runInChunks(prisma, termOperations);
+
+  await runInChunks(
+    prisma,
+    ALL_QUESTIONS.map((question) => {
+      const questionId = questionIdBySlug.get(question.slug) as string;
+      return prisma.questionAnswer.upsert({
+        where: { questionId },
+        create: { questionId, ...question.answer },
+        update: question.answer,
+      });
+    }),
+  );
+  await runInChunks(prisma, edgeOperations);
 }
 
 /** topic_prerequisites has no natural unique key, so existing edges are matched by slug pair. */
@@ -230,7 +343,7 @@ async function main() {
   const prisma = new PrismaClient();
   try {
     const result = await seedContent(prisma);
-    console.log(`seeded ${result.phases} phases, ${result.topics} topics`);
+    console.log(`seeded ${result.phases} phases, ${result.topics} topics, ${result.questions} questions`);
   } finally {
     await prisma.$disconnect();
   }

@@ -177,9 +177,23 @@ model Concept {
 
   expectedBy QuestionExpectedConcept[]
   mistakes   Mistake[]
+  terms      ConceptTerm[]
 
   @@index([topicId])
   @@map("concepts")
+}
+
+// Grading is deterministic until the AI evaluator arrives: a concept counts as touched when
+// one of its terms appears in the answer, so the terms are authored content, not code.
+model ConceptTerm {
+  id        String @id @default(uuid())
+  conceptId String
+  term      String
+
+  concept Concept @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+
+  @@unique([conceptId, term])
+  @@map("concept_terms")
 }
 
 model Lesson {
@@ -255,7 +269,8 @@ model QuestionCategory {
 }
 
 model Question {
-  id           String  @id @default(uuid())
+  id           String   @id @default(uuid())
+  slug         String   @unique
   stem         String
   body         String
   difficulty   Int
