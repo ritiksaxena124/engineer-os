@@ -90,6 +90,95 @@ export const SESSION_TYPES = [
   { key: 'teach-back', label: 'Teach Back', purpose: 'explain it to a junior engineer' },
   { key: 'revision', label: 'Revision', purpose: 'scheduled spaced repetition' },
   { key: 'exam', label: 'Exam', purpose: 'phase assessment Parts A-G' },
+  { key: 'diagnostic', label: 'Diagnostic', purpose: 'placement across the graph, reported and never promoted' },
+] as const;
+
+/**
+ * §70 — a phase is examined in seven parts, each one a different kind of work, so passing the exam
+ * means the concept survived being asked seven different ways. `categoryKeys` is how a part selects
+ * its items from the bank within the phase; a part with `generated` has no authored question row
+ * because it is addressed to the topic itself — the learner explains that topic's concepts to a
+ * junior engineer, and the rubric is those concepts.
+ */
+export const EXAM_PARTS = [
+  {
+    key: 'theory',
+    label: 'Part A — Theory',
+    position: 1,
+    minutes: 30,
+    items: 20,
+    sessionTypeKey: 'exam',
+    instructions: 'What the phase claims the concept is. Answer in full sentences, not arrows.',
+    categoryKeys: ['conceptual', 'why', 'internal', 'output-prediction'],
+    generated: null,
+  },
+  {
+    key: 'implementation',
+    label: 'Part B — Implementation',
+    position: 2,
+    minutes: 40,
+    items: 3,
+    sessionTypeKey: 'build',
+    instructions: 'Write the thing. Pseudocode is not an implementation.',
+    categoryKeys: ['implementation'],
+    generated: null,
+  },
+  {
+    key: 'debugging',
+    label: 'Part C — Debugging',
+    position: 3,
+    minutes: 30,
+    items: 2,
+    sessionTypeKey: 'debug',
+    instructions: 'Two broken applications. Name the fault, the mechanism, and the fix.',
+    categoryKeys: ['debugging'],
+    generated: null,
+  },
+  {
+    key: 'architecture',
+    label: 'Part D — Architecture',
+    position: 4,
+    minutes: 30,
+    items: 1,
+    sessionTypeKey: 'system-design',
+    instructions: 'One design problem, end to end, with the constraint that decides it.',
+    categoryKeys: ['architecture', 'trade-off'],
+    generated: null,
+  },
+  {
+    key: 'production',
+    label: 'Part E — Production',
+    position: 5,
+    minutes: 20,
+    items: 1,
+    sessionTypeKey: 'incident',
+    instructions: 'One incident. Triage it live: what you check first and what you stop doing.',
+    categoryKeys: ['production', 'security', 'performance'],
+    generated: null,
+  },
+  {
+    key: 'interview',
+    label: 'Part F — Interview',
+    position: 6,
+    minutes: 10,
+    items: 3,
+    sessionTypeKey: 'interview',
+    instructions: 'Ten minutes, out loud, in order. The interviewer stops you if you ramble.',
+    categoryKeys: ['interview', 'senior-judgment'],
+    generated: null,
+  },
+  {
+    key: 'teaching',
+    label: 'Part G — Teaching',
+    position: 7,
+    minutes: 15,
+    items: 1,
+    sessionTypeKey: 'teach-back',
+    instructions:
+      'Explain the topic to a junior engineer who has to use it today. No jargon that is not defined.',
+    categoryKeys: [],
+    generated: 'teach-back',
+  },
 ] as const;
 
 export const ATTEMPT_VERDICTS = [
@@ -152,6 +241,37 @@ export function validateReference(): string[] {
   const reviewDimensions = SIGNALS.filter((signal) => signal.evidencedByReview);
   if (reviewDimensions.length !== 1) {
     problems.push(`exactly one signal must be evidencedByReview, found ${reviewDimensions.length}`);
+  }
+
+  const sessionTypes: Set<string> = new Set(SESSION_TYPES.map((type) => type.key));
+  const categoryKeys: Set<string> = new Set(QUESTION_CATEGORIES.map((category) => category.key));
+  const positions = EXAM_PARTS.map((part) => part.position).sort((a, b) => a - b);
+  positions.forEach((position, index) => {
+    if (position !== index + 1) problems.push(`exam part positions are not contiguous: ${positions.join(',')}`);
+  });
+  // Widened for the same reason as the tables above: the literals are `as const`, so the part with
+  // no categories of its own would be typed out of existence and the check would stop running.
+  const parts: { key: string; sessionTypeKey: string; categoryKeys: readonly string[]; generated: string | null }[] =
+    EXAM_PARTS.map((part) => ({
+      key: part.key,
+      sessionTypeKey: part.sessionTypeKey,
+      categoryKeys: part.categoryKeys,
+      generated: part.generated,
+    }));
+
+  const seenParts = new Set<string>();
+  for (const part of parts) {
+    if (seenParts.has(part.key)) problems.push(`exam part "${part.key}" is defined twice`);
+    seenParts.add(part.key);
+    if (!sessionTypes.has(part.sessionTypeKey)) {
+      problems.push(`exam part "${part.key}" opens session type "${part.sessionTypeKey}" which does not exist`);
+    }
+    if (part.generated === null && part.categoryKeys.length === 0) {
+      problems.push(`exam part "${part.key}" selects no category and generates nothing, so it can never have items`);
+    }
+    for (const category of part.categoryKeys) {
+      if (!categoryKeys.has(category)) problems.push(`exam part "${part.key}" selects unknown category "${category}"`);
+    }
   }
 
   return problems;

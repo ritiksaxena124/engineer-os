@@ -78,7 +78,8 @@ describe('diagnostic assessment', () => {
     expect(text).not.toContain('commonMistakes');
 
     const session = await prisma.learningSession.findUniqueOrThrow({ where: { id: payload.sessionId } });
-    expect(session.typeKey).toBe('exam');
+    // placement is not a phase exam: it is its own session type, so the two are never confused
+    expect(session.typeKey).toBe('diagnostic');
     expect(session.endedAt).toBeNull();
   });
 

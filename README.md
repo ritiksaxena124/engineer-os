@@ -19,6 +19,7 @@ actually answered scores at or above 60 with evidence behind it — which is why
 | **Recall** | A graded answer schedules spaced reviews at 1/3/7/14/30 days. Answering a review is the only path that moves the `recall` dimension. |
 | **Weakness** | Three misses in a row on one topic opens a finding, and the finding walks the graph down to the deepest weak prerequisite. The report names what to repair, not what to keep failing. |
 | **Diagnostic** | 30 written questions, one per area. It decides where the graph opens and promotes nothing. |
+| **Exam** | Seven parts per phase, each a different kind of work: theory, implementation, debugging, architecture, production, interview, teaching. Every part must hold; the pass is what opens the next phase. |
 
 ## Layout
 
@@ -56,7 +57,7 @@ covering its commands, environment and the toolchain constraints behind its buil
 ## Test it
 
 ```bash
-bun run test:api          # 158 tests — integration against engineer_os_test, domain rules without a DB
+bun run test:api          # 184 tests — integration against engineer_os_test, domain rules without a DB
 bun run --cwd apps/web test
 bun run typecheck         # both apps
 ```
@@ -67,11 +68,14 @@ and only executed by Bun.
 
 ## Status
 
-Milestones 1–5 and 7–9 are shipped and tested: schema and toolchain, auth with refresh rotation and
+All nine MVP milestones are shipped and tested: schema and toolchain, auth with refresh rotation and
 reuse detection, the curriculum graph with gating, the lesson engine, the question engine with
-rubric grading, the mastery engine with spaced repetition, weakness detection, and the web client.
-The diagnostic ships; the phase exam (Parts A–G) is authored content that is not finished. Deferred
-deliberately: the AI mentor, an embedded code-execution sandbox, Redis, docker-compose, load tests.
+rubric grading, the assessment engine (diagnostic, topic drills and the seven-part phase exam), the
+mastery engine with spaced repetition, weakness detection, and the web client. An exam passes only
+when every part holds, and that pass — never a finished lesson — is what recommends the next phase.
+What is thin is authored content: P00 and P01 carry question sets, so P00 is the only phase a learner
+can sit end to end today. Deferred deliberately: the AI mentor, an embedded code-execution sandbox,
+Redis, docker-compose, load tests.
 
 ## Design documents
 

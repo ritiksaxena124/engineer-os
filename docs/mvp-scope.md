@@ -17,14 +17,24 @@ the next starts.
 | 8 | Weakness detection | repeated failure walks the graph back to the weak prerequisite and recommends the repair path |
 | 9 | Web UI | Dashboard, Learning Path, Topic, Lesson, Practice, Progress — dark, developer-tool aesthetic |
 
-**Status.** 1, 2, 3, 4, 5, 7 and 8 are shipped and tested. 6 is shipped except the phase exam: the
-30-question diagnostic and topic drills work, Parts A–G are not authored yet.
+**Status.** All nine MVP milestones are shipped and tested, 6 including the phase exam. The
+30-question diagnostic, topic drills and Parts A–G of the exam all work; what is thin is authored
+content — P00 and P01 carry the question sets, so P00 is the only phase that can be sat end to end.
 
 Mastery (7) is derived, never stored as a claim: a question category is evidence for one signal
 dimension (`question_categories.signalKey`, authored as a lookup table), each dimension belongs to
 one rung, and a rung is held only while its **most recent** demonstration scores at least 60.
 That is why standing can fall. A scheduled review answers for the `recall` dimension instead,
 which is the only way spaced repetition moves the ladder. Reading a lesson reaches none of this.
+
+The exam (6) is §70: seven parts, each a different kind of work, each selecting from a different
+family of the phase's own bank — theory, implementation, debugging, architecture, production,
+interview, and a teach-back addressed to the topic with the most to explain (it has no question
+row). A part that cannot be filled is refused out loud as `EXAM_NOT_AUTHORED` rather than padded
+with a question from the wrong family; a part that is only partly filled hands out a short paper
+and grades it against what it handed out. Passing requires every part to hold, and the pass is the
+only thing that recommends the next phase — a finished lesson never does. `POST /assessments/exam`
+and `/assessments/exam/submit`.
 
 Weakness (8) is derived the same way, from the attempt ledger rather than a stored flag: three
 misses in a row on one topic — a miss being an attempt under the pass score, diagnostic attempts

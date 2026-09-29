@@ -497,6 +497,9 @@ model LearningSession {
   startedAt      DateTime  @default(now())
   endedAt        DateTime?
   summary        String
+  // what the session was for: a phase exam records its phase, so a submit is checked against the
+  // session rather than against whatever the client happened to send.
+  meta           Json?
 
   user     User        @relation(fields: [userId], references: [id], onDelete: Restrict)
   type     SessionType @relation(fields: [typeKey], references: [key], onDelete: Restrict)

@@ -962,4 +962,287 @@ export const QUESTIONS_CORE: QuestionSpec[] = [
         'that would reopen it.',
     },
   },
+  {
+    slug: 'drill-interview-process-model',
+    topicSlug: 'how-programs-run',
+    categoryKey: 'interview',
+    levelKey: 'production',
+    difficulty: 5,
+    lessonSlug: 'the-life-of-a-program',
+    stem:
+      'Sixty seconds: an interviewer asks what a process actually is and why a backend engineer should care. ' +
+      'Answer it, then take the interruptions.',
+    body: [
+      'Expect to be cut off, and expect each interruption to be a production story:',
+      '1. "I keep a Map at module scope as a cache. I run four cluster workers. How many caches are there?"',
+      '2. "One worker segfaulted and the other three kept serving. Why did the box survive?"',
+      '3. "The machine says EMFILE. Where is that limit actually living?"',
+    ].join('\n'),
+    concepts: [
+      {
+        slug: 'process-private-address-space',
+        name: 'A process owns a private address space',
+        detail: 'Page tables the kernel maintains for that process alone; nothing inside is visible from outside.',
+        terms: ['address space', 'page table', 'private', 'virtual memory', 'isolated memory'],
+        weight: 2,
+      },
+      {
+        slug: 'kernel-bookkeeping-not-code',
+        name: 'A process is kernel bookkeeping, not code',
+        detail: 'pid, file-descriptor table, signal dispositions, a scheduler entry — the running half of a program.',
+        terms: ['pid', 'file descriptor table', 'file descriptors', 'signal', 'scheduler'],
+        weight: 2,
+      },
+      {
+        slug: 'module-state-not-shared',
+        name: 'Module-level state is per process',
+        detail: 'The same imported Map holds different contents in each address space.',
+        terms: ['module state', 'not shared', 'separate copy', 'own address space', 'per process'],
+        weight: 2,
+      },
+      {
+        slug: 'process-boundary-is-failure-domain',
+        name: 'The process boundary is the failure domain',
+        detail: 'A crash destroys one address space; the kernel reclaims its memory and descriptors.',
+        terms: ['failure domain', 'segfault', 'crash', 'kernel reclaims', 'does not take down', 'isolated failure'],
+        weight: 1,
+      },
+      {
+        slug: 'cluster-shares-a-socket-not-a-heap',
+        name: 'Cluster shares the listening socket and nothing else',
+        detail: 'The kernel distributes accepted connections across workers; every heap stays apart.',
+        terms: ['listening socket', 'shared port', 'accept', 'round robin', 'cluster workers'],
+        weight: 1,
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'A process is the kernel carrying one instance of a program: a private address space, its own descriptor ' +
+        'table, its own signal state. You care because every "shared" thing in your service is actually per worker.',
+      idealAnswer:
+        'The program is a file; the process is the live object the kernel built from it — page tables mapping a ' +
+        'private virtual address space, a file-descriptor table, heaps and thread stacks, signal dispositions, and ' +
+        'a place in the scheduler. Nothing crosses that boundary by accident. So four cluster workers are four ' +
+        'copies of every module-level Map, four separate limits on open descriptors, and four independent ways to ' +
+        'die: a segfault in one is reclaimed by the kernel while the master keeps accepting into the other three. ' +
+        'What they share is the listening socket, which the kernel hands connections out from — which is exactly ' +
+        'why sticky in-memory state breaks the first time you scale past one worker.',
+      deepAnswer:
+        'The interview answer becomes a production answer in three places. Session storage: an in-memory session ' +
+        'store on a four-worker service has four stores, so a user is authenticated on one request and logged out ' +
+        'on the next, and it reproduces only in staging where you ran one worker. Rate limiting: a counter in a ' +
+        'module variable divides your limit by the worker count, so a "100 requests per minute" limiter silently ' +
+        'becomes 400. And EMFILE: descriptors are a per-process table, so raising the machine-wide ulimit without ' +
+        'raising the process limit is the classic half-fix that "works" the first day and fails under load. Every ' +
+        'one of these is the same fact: the address space is private and the kernel is the only thing that lets ' +
+        'processes cooperate — sockets, shared memory segments, pipes, files with locking.',
+      commonMistakes:
+        '- "A process is a program in memory" and stopping there, with no consequences named.\n' +
+        '- Claiming cluster workers share memory because they run the same binary.\n' +
+        '- Answering the interruption about EMFILE with a machine-level fix.\n' +
+        '- Reaching for "thread" when the question was about process isolation.',
+      whyWrong:
+        'The vague version is indistinguishable from not knowing it, and the interviewer takes the follow-up as ' +
+        'the real test. In production the same vagueness is what produces the four-caches bug, a rate limiter four ' +
+        'times looser than the spec, and a week spent on a "stochastic" logout that only happens in production.',
+      followUps:
+        '1. What exactly do two cluster workers share, and who shares it for them?\n' +
+        '2. If you need one cache across workers, what are your options and their costs?\n' +
+        '3. A thread differs from a process in which two structures?\n' +
+        '4. How would you prove the per-process limit from the command line?',
+      exercise:
+        'Start a Node service with four cluster workers, put a counter at module scope, and load it with 400 ' +
+        'requests. Print the sum each worker saw, then explain the four numbers to someone who expected one.',
+    },
+  },
+  {
+    slug: 'drill-interview-cpu-io-shape',
+    topicSlug: 'cpu-bound-vs-io-bound',
+    categoryKey: 'interview',
+    levelKey: 'judgment',
+    difficulty: 6,
+    stem:
+      'Sixty seconds: why did hashing a password inside the login handler take down an API that still had CPU ' +
+      'capacity free?',
+    body: [
+      'Then the follow-ups, in order:',
+      '1. "How much of a normal request was waiting, and how much was computing?"',
+      '2. "You are single threaded — so more cores do nothing for me?"',
+      '3. "What do you change, and what number tells you it worked?"',
+    ].join('\n'),
+    concepts: [
+      {
+        slug: 'loop-is-one-queue-for-everyone',
+        name: 'One loop, every request in line behind it',
+        detail: 'Code on the stack is a resource every other request has to wait behind.',
+        terms: ['single thread', 'event loop', 'one at a time', 'queue behind', 'head of line', 'head-of-line'],
+        weight: 2,
+      },
+      {
+        slug: 'blocking-work-is-everyones-latency',
+        name: 'CPU work in a handler is latency for unrelated endpoints',
+        detail: 'A 120 ms hash holds the loop, so health checks and reads pay for it too.',
+        terms: ['latency for everyone', 'unrelated endpoints', 'loop lag', 'p99', 'blocks the loop', 'stalls'],
+        weight: 2,
+      },
+      {
+        slug: 'workload-shape-decides-the-fix',
+        name: 'Know which shape the workload has',
+        detail: 'I/O-bound traffic spends its time waiting; CPU-bound work spends it computing. Only one of them ' +
+          'is helped by concurrency tricks on the loop.',
+        terms: ['io bound', 'cpu bound', 'workload shape', 'waiting dominates', 'computing dominates'],
+        weight: 2,
+      },
+      {
+        slug: 'waiting-is-delegated-computing-is-not',
+        name: 'Waiting gets delegated, computing does not',
+        detail: 'The kernel and the pool hold I/O while the loop serves others; a hash has nobody to hand off to.',
+        terms: ['epoll', 'libuv', 'thread pool', 'non-blocking', 'delegated', 'kernel does the waiting'],
+        weight: 2,
+      },
+      {
+        slug: 'offload-is-a-trade',
+        name: 'Offloading is a trade, not a free fix',
+        detail: 'Worker threads cost memory and start-up; a separate service costs a hop and another deploy.',
+        terms: ['worker thread', 'separate service', 'trade-off', 'extra hop', 'startup cost', 'serialisation'],
+        weight: 1,
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'The login handler was doing 120 ms of CPU work on the one loop that serves every request, so the whole ' +
+        'API waited behind it. Free cores do not help: only the loop thread can run your JavaScript.',
+      idealAnswer:
+        'Start with the shape. An API that is 90% database reads spends its wall clock waiting, and waiting is ' +
+        'cheap — the kernel holds the socket while the loop takes the next request. bcrypt is the opposite: 100+ ' +
+        'ms of synchronous arithmetic on the loop thread, during which nothing else runs. At 60 logins a second ' +
+        'that is 6 seconds of loop occupancy per second, which is over budget, so queue depth grows and every ' +
+        'endpoint — including /healthz — inherits the delay. The idle cores are irrelevant: exactly one thread ' +
+        'executes your JavaScript, and the other cores only hold the I/O the loop already released. The fix is to ' +
+        'get the computing off the loop: a worker pool or a separate hashing service, plus a cost check on the ' +
+        'hash itself. The number that proves it is loop lag and p99 on an unrelated endpoint, not login latency.',
+      deepAnswer:
+        'The diagnostic that settles this in minutes is a CPU profile plus loop lag, side by side. If loop lag ' +
+        'tracks the login rate, you have a CPU-bound slice inside an I/O-bound service, which is the most ' +
+        'common Node performance incident and the one teams misdiagnose most often, because the dashboard says ' +
+        '"CPU 15%". At 15% average across eight cores, one core pinned is invisible. That is why the honest ' +
+        'answer names per-thread utilisation, not machine average. It also explains why clustering to eight ' +
+        'workers helps throughput and does nothing about the login: the same 120 ms still blocks each worker\'s ' +
+        'own loop, and now eight workers each burn it. The cheapest correct move is usually to make the work ' +
+        'smaller — tune the cost factor, move hashing to the write path or an async job, batch it — before ' +
+        'paying for worker-thread start-up and serialisation of the payload across the boundary.',
+      commonMistakes:
+        '- Saying "Node is single threaded so it is slow" and stopping there.\n' +
+        '- Prescribing more cores or more cluster workers before naming which resource is actually saturated.\n' +
+        '- Confusing blocking the event loop with being CPU-bound as a workload.\n' +
+        '- Quoting machine-wide CPU average as evidence the loop was free.',
+      whyWrong:
+        'The "add workers" answer makes the incident worse and costs a redeploy to discover it, because the ' +
+        'bottleneck is per-loop, not per-machine. And quoting machine CPU while one thread is pinned is how a ' +
+        'team concludes the monitoring is lying and stops trusting their own dashboards.',
+      followUps:
+        '1. What is the difference between blocking the loop and being CPU bound?\n' +
+        '2. How would you size the worker pool, and what does each worker cost?\n' +
+        '3. Which metric tells you the fix worked, and which metric would still lie to you?\n' +
+        '4. If hashing moved to a separate service, what new failure modes did you buy?',
+      exercise:
+        'Write a handler that runs a 100 ms synchronous busy loop on one route and a trivial read on another. ' +
+        'Load the trivial route, add the busy route at 50 rps, and report p50 and p99 for both before and after ' +
+        'moving the busy work into a worker thread.',
+    },
+  },
+  {
+    slug: 'drill-scale-before-shape',
+    topicSlug: 'processes-threads',
+    categoryKey: 'senior-judgment',
+    levelKey: 'teaching',
+    difficulty: 7,
+    stem:
+      'A team wants to go from 2 to 16 cluster workers because "Node is single threaded and we need to scale". ' +
+      'Traffic is 90% Postgres reads and the box has 4 cores. What do you say?',
+    body:
+      'Not a yes or no. Name what you would measure before deciding, what an extra worker actually buys here, ' +
+      'and what you would do instead. Say what you would tell them to do on Monday.',
+    concepts: [
+      {
+        slug: 'limiting-resource-before-scaling',
+        name: 'Find the limiting resource before adding capacity',
+        detail: 'Workers add loop concurrency. They add no database capacity, no bandwidth, no cores.',
+        terms: ['bottleneck', 'limiting resource', 'measure first', 'profile', 'cpu saturation', 'what is saturated'],
+        weight: 2,
+      },
+      {
+        slug: 'workers-oversubscribe-cores',
+        name: 'Sixteen workers on four cores is contention',
+        detail: 'Beyond the core count, extra workers add context switches and scheduling delay, not throughput.',
+        terms: ['context switch', 'oversubscribe', 'contention', 'cores available', 'four cores', 'thrash'],
+        weight: 2,
+      },
+      {
+        slug: 'connection-pool-is-the-ceiling',
+        name: 'The connection pool is the real ceiling',
+        detail: 'Sixteen workers each holding a pool multiply the load on one Postgres that has one limit.',
+        terms: ['connection pool', 'database connections', 'postgres limit', 'pool per process', 'max_connections'],
+        weight: 2,
+      },
+      {
+        slug: 'heap-multiplies-per-worker',
+        name: 'Every worker brings its own heap',
+        detail: 'Module caches, buffers and compiled code footprint multiply with the process count.',
+        terms: ['heap per process', 'memory footprint', 'rss', 'cache duplication', 'out of memory', 'container limit'],
+        weight: 1,
+      },
+      {
+        slug: 'cheaper-fix-before-processes',
+        name: 'Prefer the fix that does not need more processes',
+        detail: 'Cache the hot read, kill the N+1, add the index — then re-measure.',
+        terms: ['cache', 'n+1', 'batch', 'index', 'cheaper fix', 'query optimisation', 're-measure'],
+        weight: 1,
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'Refuse the number, not the goal: sixteen workers on four cores is contention, and a read-heavy service ' +
+        'is limited by Postgres, not by the loop. Measure which resource is saturated, then fix that one.',
+      idealAnswer:
+        'First the measurement, because the premise has two claims in it and only one is checkable. Is the loop ' +
+        'saturated? That is loop lag and per-process CPU, not machine average — and with 90% Postgres reads the ' +
+        'answer is almost always no, the requests are waiting. Then what is saturated: usually database ' +
+        'connections or query time, and a worker cannot add either. Second the arithmetic the proposal skips: ' +
+        'sixteen workers on four cores oversubscribe the CPU and each worker carries its own heap, its own ' +
+        'connection pool, and its own copy of every module-level cache, so sixteen workers means sixteen pools ' +
+        'against a Postgres that has one max_connections — the change converts a latency problem into a ' +
+        'connection-exhaustion outage. On Monday: profile one endpoint, take the top query, add the missing index ' +
+        'or the cache, and set workers at cores minus one. If the loop genuinely is the ceiling on a read-heavy ' +
+        'path, the argument for more processes is over anyway.',
+      deepAnswer:
+        'The judgment here is naming what is really driving the request. Usually it is a dashboard that shows ' +
+        'high p99 and a team that has read "Node is single threaded" as a confession. Sometimes it is honest ' +
+        'excitement about a number going up, which is legitimate and should be satisfied with a bounded ' +
+        'experiment: two to three workers is free, sixteen is a change to memory limits, pool sizing and the ' +
+        'container spec, all of which have to be re-derived. There is also a quiet correctness cost: every piece ' +
+        'of state the team believes is shared becomes N copies, so rate limits loosen by N, in-memory caches ' +
+        'drift, and any scheduled job fires N times unless someone gates it. Write the decision as an ADR with ' +
+        'the two numbers that would change your mind — loop lag above X at p95, or per-process CPU pinned — and ' +
+        'the plan stops being a belief.',
+      commonMistakes:
+        '- Agreeing to the worker count because it feels like action.\n' +
+        '- Refusing without a measurement, which loses the room and teaches nothing.\n' +
+        '- Ignoring that each worker multiplies the connection pool and the heap.\n' +
+        '- Treating "Node is single threaded" as a workload fact rather than a per-loop fact.',
+      whyWrong:
+        'Sixteen workers on a four-core box against one Postgres is the rare change that makes latency worse and ' +
+        'correctness weaker at the same time: the queues move from the loop to the database, where they are ' +
+        'harder to see. And an unmeasured yes on performance is how a team learns that their metrics cannot ' +
+        'answer the question they actually care about.',
+      followUps:
+        '1. Which two metrics would tell you the loop was the ceiling?\n' +
+        '2. How do you size the pool when workers × pool size exceeds max_connections?\n' +
+        '3. What breaks when a cron scheduled in module scope runs sixteen times?\n' +
+        '4. What is the cheapest change that halves p99 on this service?',
+      exercise:
+        'Write the ADR: current p99 and its breakdown, what you measured, the worker count you chose and why, ' +
+        'the pool and memory consequences of it, and the number that would reopen the decision.',
+    },
+  },
 ];

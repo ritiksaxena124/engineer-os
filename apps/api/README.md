@@ -64,11 +64,11 @@ and the process refuses to start on a bad value rather than failing at the first
 src/
 ├── auth/          register, login, refresh rotation with reuse detection, guards
 ├── curriculum/    tracks, phases, topics, prerequisites, unlock state, repair path
-├── lessons/       §43 lesson anatomy; reading writes a read and no mastery signal
+├── lesson/        §43 lesson anatomy; reading writes a read and no mastery signal
 ├── question/      bank, categories, rubric grading, active-recall reveal
-├── assessments/   the 30-question diagnostic session and gap report
+├── assessment/    the 30-question diagnostic, the seven-part phase exam, gap report
 ├── mastery/       8-signal derivation, evidence-gated rungs, spaced repetition, weakness findings
-└── prisma/        schema, migrations, authored content tables
+└── common/        error envelopes, request IDs, health
 ```
 
 Gating, grading and mastery are pure modules — no NestJS or Prisma imports — so they are unit-tested
