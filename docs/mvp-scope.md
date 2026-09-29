@@ -17,6 +17,17 @@ the next starts.
 | 8 | Weakness detection | repeated failure walks the graph back to the weak prerequisite and recommends the repair path |
 | 9 | Web UI | Dashboard, Learning Path, Topic, Lesson, Practice, Progress — dark, developer-tool aesthetic |
 
+**Status.** 1, 2, 3, 4, 5, 7 are shipped and tested. 6 is shipped except the phase exam: the
+30-question diagnostic and topic drills work, Parts A–G are not authored yet. 8 has its repair
+path already (the graph reports it on every refusal); what is missing is the rule that detects
+repeated failure and opens the path on its own.
+
+Mastery (7) is derived, never stored as a claim: a question category is evidence for one signal
+dimension (`question_categories.signalKey`, authored as a lookup table), each dimension belongs to
+one rung, and a rung is held only while its **most recent** demonstration scores at least 60.
+That is why standing can fall. A scheduled review answers for the `recall` dimension instead,
+which is the only way spaced repetition moves the ladder. Reading a lesson reaches none of this.
+
 **Deferred deliberately:** embedded code execution sandbox (§83 says local execution is
 acceptable for MVP — exercises ship with a runner script instead), Redis, docker-compose,
 load tests, the Python AI service.

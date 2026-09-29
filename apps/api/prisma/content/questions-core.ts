@@ -149,6 +149,191 @@ export const QUESTIONS_CORE: QuestionSpec[] = [
     },
   },
   {
+    slug: 'drill-process-isolation-proof',
+    topicSlug: 'how-programs-run',
+    categoryKey: 'implementation',
+    levelKey: 'implementation',
+    difficulty: 3,
+    lessonSlug: 'the-life-of-a-program',
+    stem: 'Write the code that proves two Node processes do not share anything, and print the numbers that show it.',
+    body: [
+      'Given `worker.js`, name the parent call that starts it, what the two processes share, and the three things',
+      'you print to prove isolation rather than assert it. No documentation quotes — the measurement.',
+    ].join('\n'),
+    concepts: [
+      {
+        slug: 'fork-spawn-parent',
+        name: 'The parent starts the child with fork or spawn',
+        detail: 'child_process.fork gives a channel, spawn gives a pipe; neither gives shared memory.',
+        terms: ['child_process', 'fork', 'spawn', 'execFile'],
+        weight: 2,
+      },
+      {
+        slug: 'pid-as-identity',
+        name: 'Each side prints its own pid',
+        detail: 'process.pid differs, which is the cheapest proof that there are two kernels objects.',
+        terms: ['process.pid', 'pid differs', 'two pids'],
+        weight: 2,
+      },
+      {
+        slug: 'module-state-not-shared',
+        name: 'Module-level state is per process',
+        detail: 'The same imported Map holds different contents in each address space.',
+        terms: ['module state', 'not shared', 'separate copy', 'own address space', 'per process'],
+        weight: 2,
+      },
+      {
+        slug: 'rss-as-the-number',
+        name: 'RSS is the memory number to print',
+        detail: 'process.memoryUsage().rss per pid, plus heapUsed to separate the runtime from the kernel view.',
+        terms: ['memoryusage', 'rss', 'resident set', 'heapUsed'],
+        weight: 2,
+      },
+      {
+        slug: 'argv-env-from-kernel',
+        name: 'argv and env come from the kernel at exec time',
+        detail: 'They are copied into the new process image, which is why changing env in the parent is invisible.',
+        terms: ['argv', 'environment', 'process.env', 'exec'],
+      },
+      {
+        slug: 'message-passing-is-the-only-channel',
+        name: 'Crossing the boundary needs a message',
+        detail: 'IPC channel, socket or a store — the alternative to sharing is passing.',
+        terms: ['ipc', 'message passing', 'channel', 'socket'],
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'fork() a worker, print process.pid and memoryUsage().rss from both sides, and mutate a module-level ' +
+        'Map in one of them to show the other never sees it.',
+      idealAnswer:
+        'The parent calls child_process.fork("./worker") — spawn works too, with an explicit stdio pipe. Inside ' +
+        'each process print three things: process.pid, process.memoryUsage().rss, and Object.keys of a ' +
+        'module-level Map you then write into. The pids differ, the RSS figures differ by more than the noise ' +
+        'between two V8 boots, and the map written in the child reads back empty in the parent. That is the ' +
+        'proof: isolation is shown by a write that does not appear, not by a sentence about address spaces.',
+      deepAnswer:
+        'What is genuinely shared is the page cache, the binary on disk, and whatever you deliberately put ' +
+        'outside the process — a database, Redis, a file. The cost of that isolation is the number that surprises ' +
+        'people: eight cluster workers are eight V8 heaps, so a 40 MB module-level cache becomes 320 MB and eight ' +
+        'copies of every warm JIT structure. The benefit is failure containment: a crash, an unbounded loop, or a ' +
+        'GC stall belongs to exactly one pid, which is why "restart the pod" is a real strategy and "restart the ' +
+        'thread" is not. And because argv and env are copied at exec, a parent mutating process.env after forking ' +
+        'changes nothing in the child — a bug that costs a day the first time it bites.',
+      commonMistakes:
+        '- Printing only the pid and calling that proof of isolation.\n' +
+        '- Believing a module-level Map is shared between cluster workers.\n' +
+        '- Using worker_threads and calling it the same experiment: those do share a SharedArrayBuffer.',
+      whyWrong:
+        'Teams that assume shared module state build rate limiters, sessions and caches that silently disagree ' +
+        'with each other under scale. The failure looks like nondeterminism, so it is diagnosed weeks late and ' +
+        'usually blamed on the load balancer.',
+      followUps:
+        '1. What does fork add over spawn, and what does it cost?\n' +
+        '2. How would you prove the same fact with worker_threads?\n' +
+        '3. What is the first thing you check when RSS grows linearly with replica count?',
+      exercise:
+        'Write parent and worker, log pid, RSS and the map contents from both, then run it with one, four and ' +
+        'sixteen workers and report the memory slope per worker.',
+    },
+  },
+  {
+    slug: 'drill-stack-overflow-debugging',
+    topicSlug: 'how-programs-run',
+    categoryKey: 'debugging',
+    levelKey: 'debugging',
+    difficulty: 4,
+    lessonSlug: 'the-life-of-a-program',
+    stem: 'flatten() on a deeply nested array throws RangeError: Maximum call stack size exceeded at roughly 10k frames. Diagnose the arithmetic and give two fixes that ship.',
+    body: [
+      '```js',
+      'function flatten(xs) {',
+      '  return xs.reduce(',
+      '    (acc, x) => acc.concat(Array.isArray(x) ? flatten(x) : x),',
+      '    [],',
+      '  );',
+      '}',
+      '```',
+      'Say what consumes the memory per frame, what the limit actually is, and why raising it is not a fix.',
+    ].join('\n'),
+    concepts: [
+      {
+        slug: 'frame-per-call',
+        name: 'Every call pushes a stack frame',
+        detail: 'Return address, locals and the saved slot until the call returns — recursion holds them all.',
+        terms: ['stack frame', 'per call', 'return address', 'locals', 'frame size'],
+        weight: 2,
+      },
+      {
+        slug: 'fixed-stack-limit',
+        name: 'The thread stack is a fixed budget',
+        detail: 'V8 default is around 1 MB of usable frames, so depth is roughly budget divided by frame size.',
+        terms: ['stack size', '1mb', 'default limit', 'stack budget', 'v8 stack'],
+        weight: 2,
+      },
+      {
+        slug: 'depth-is-input-shape',
+        name: 'Recursion depth is set by the data, not the code',
+        detail: 'A JSON payload from a caller decides how deep you go, so the limit is attacker-controlled.',
+        terms: ['input shape', 'untrusted depth', 'nesting depth', 'attacker controlled', 'data decides'],
+        weight: 2,
+      },
+      {
+        slug: 'explicit-stack-rewrite',
+        name: 'Iterative rewrite with an explicit worklist',
+        detail: 'Move the stack onto the heap: push items to an array you control and loop.',
+        terms: ['worklist', 'explicit stack', 'loop', 'iterative', 'heap allocated'],
+        weight: 2,
+      },
+      {
+        slug: 'tail-call-not-available',
+        name: 'No guarantee of tail-call elimination',
+        detail: 'Only strict-mode simple calls in some engines, so reduce/recursion still frames.',
+        terms: ['tail call', 'tail recursion', 'strict mode', 'not eliminated'],
+      },
+      {
+        slug: 'raising-the-limit-is-not-a-fix',
+        name: '--stack-size trades crash depth for real memory',
+        detail: 'A bigger stack still ends, and a deeper recursion can now overflow the segment it lives in.',
+        terms: ['stack-size flag', 'raising the limit', 'bigger stack', 'just delays'],
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'Each call pushes a frame, the thread stack is a fixed roughly 1 MB budget, and the input decides the ' +
+        'depth. Rewrite with an explicit worklist on the heap, or bound the depth and reject the payload.',
+      idealAnswer:
+        'The arithmetic is the diagnosis: usable stack budget divided by frame size is the maximum depth, and a ' +
+        'frame holds the return address, the arguments object, acc and x, so a few hundred to a couple thousand ' +
+        'bytes per level puts the wall near ten thousand frames. Two fixes ship. First, make the stack yours: an ' +
+        'iterative loop with an explicit worklist array on the heap, where the budget is the heap and the failure ' +
+        'is OOM rather than a RangeError. Second, bound the input — a depth limit that rejects the payload — ' +
+        'because that is the only fix that also protects availability.',
+      deepAnswer:
+        'The reason this is an availability bug and not a code-quality one: flatten does not choose its own depth, ' +
+        'the request body does. A caller who sends 100k-nested JSON can hold your process open with one POST, and ' +
+        'if the throw escapes inside a Promise it can take the worker down too. Node parsers hit exactly this and ' +
+        'is why they cap nesting. Note what raising --stack-size does: it moves the wall from ten thousand frames ' +
+        'to thirty thousand and spends real address space per thread — the same attacker simply sends a deeper ' +
+        'payload. And the concat version has a second problem: it copies the accumulator at every level, so even ' +
+        'the shallow case is quadratic, which a profile would show as GC time rather than as a stack error.',
+      commonMistakes:
+        '- Rebooting with --stack-size and calling the incident closed.\n' +
+        '- Assuming V8 optimises the recursive tail away.\n' +
+        '- Fixing the crash and leaving the quadratic concat in place.',
+      whyWrong:
+        'A bigger stack converts a fast, honest RangeError into a slow memory exhaustion that takes the pod out ' +
+        'with an OOM kill and no useful stack — the same bug, now unobservable in production.',
+      followUps:
+        '1. What depth limit would you enforce and where?\n' +
+        '2. How do you prove the worklist version does not leak?\n' +
+        '3. Which is worse for tail latency: recursion depth or the copying, and how do you tell?',
+      exercise:
+        'Measure the depth at which the recursive version throws, rewrite it with a worklist, then report both ' +
+        'the new ceiling and the RSS curve for a 1M-element nested array.',
+    },
+  },
+  {
     slug: 'drill-loop-lag-incident',
     topicSlug: 'event-loop',
     categoryKey: 'debugging',

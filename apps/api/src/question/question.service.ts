@@ -1,6 +1,9 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurriculumService } from '../curriculum/curriculum.service';
+import { MasteryService } from '../mastery/mastery.service';
+import { ReviewService } from '../mastery/review.service';
+import { PASS_SCORE } from '../mastery/derivation';
 import { gradeAnswer, type GradeableConcept } from './grading';
 import type { AttemptDto, QuestionQueryDto } from './dto';
 
@@ -15,6 +18,8 @@ export class QuestionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly curriculum: CurriculumService,
+    private readonly mastery: MasteryService,
+    private readonly reviews: ReviewService,
   ) {}
 
   async list(filter: QuestionQueryDto) {
@@ -74,6 +79,19 @@ export class QuestionService {
     await this.assertAnswerable(userId, loaded.row);
 
     const result = gradeAnswer(dto.answerText, loaded.concepts);
+    const now = new Date();
+
+    /**
+     * The diagnostic is a placement instrument: it writes an attempt and nothing else, so it can
+     * report a gap but can never promote a topic the learner has not been gated into.
+     */
+    const review = loaded.row.isDiagnostic
+      ? null
+      : await this.reviews.recordAttempt(userId, loaded.row.id, {
+          passed: result.score >= PASS_SCORE,
+          now,
+        });
+
     await this.prisma.attempt.create({
       data: {
         userId,
@@ -88,9 +106,18 @@ export class QuestionService {
           matched: result.matched,
           missing: result.missing,
           characters: dto.answerText.trim().length,
+          fromReview: review?.isReview ?? false,
         },
       },
     });
+
+    const evidence = loaded.row.isDiagnostic
+      ? null
+      : await this.mastery.recordEvidence(userId, loaded.row.topic.slug, {
+          signalKey: loaded.row.category.signalKey,
+          fromReview: review?.isReview ?? false,
+          score: result.score,
+        });
 
     return {
       verdict: result.verdict,
@@ -98,6 +125,18 @@ export class QuestionService {
       coverage: result.coverage,
       missing: result.missing,
       feedback: result.feedback,
+      evidence: evidence && {
+        topicSlug: evidence.topicSlug,
+        level: evidence.level,
+        levelKey: evidence.levelKey,
+        previousLevel: evidence.previousLevel,
+        score: evidence.score,
+      },
+      review: review && {
+        intervalDays: review.intervalDays,
+        dueAt: review.dueAt,
+        lapseCount: review.lapseCount,
+      },
       answer: this.answerOf(loaded.row),
     };
   }
@@ -107,7 +146,7 @@ export class QuestionService {
       where: { slug },
       include: {
         topic: { select: { slug: true } },
-        category: { select: { key: true, label: true } },
+        category: { select: { key: true, label: true, signalKey: true } },
         expectedConcepts: {
           include: { concept: { select: { slug: true, name: true, terms: { select: { term: true } } } } },
         },

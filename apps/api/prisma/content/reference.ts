@@ -23,32 +23,39 @@ export const MASTERY_LEVELS = [
 ] as const;
 
 /** §71 — mastery is the aggregate of these signals, never a read lesson. Each signal is
- * evidence for one specific rung, which is what makes promotion auditable. */
+ * evidence for one specific rung, which is what makes promotion auditable. evidencedByReview
+ * marks the dimension a scheduled review speaks for: recall is the only one, because answering
+ * after a delay is a different claim than answering now. */
 export const SIGNALS = [
-  { key: 'understanding', label: 'Explains the concept', weight: 10, levelKey: 'understanding' },
-  { key: 'implementation', label: 'Built it', weight: 20, levelKey: 'implementation' },
-  { key: 'debugging', label: 'Diagnosed a broken one', weight: 20, levelKey: 'debugging' },
-  { key: 'testing', label: 'Wrote the tests that prove it', weight: 10, levelKey: 'implementation' },
-  { key: 'design', label: 'Chose the right shape', weight: 15, levelKey: 'design' },
-  { key: 'recall', label: 'Recalled it after a delay', weight: 10, levelKey: 'understanding' },
-  { key: 'production-reasoning', label: 'Reasons about operating it', weight: 10, levelKey: 'production' },
-  { key: 'interview-explanation', label: 'Argues trade-offs under pressure', weight: 5, levelKey: 'judgment' },
+  { key: 'understanding', label: 'Explains the concept', weight: 10, levelKey: 'understanding', evidencedByReview: false },
+  { key: 'implementation', label: 'Built it', weight: 20, levelKey: 'implementation', evidencedByReview: false },
+  { key: 'debugging', label: 'Diagnosed a broken one', weight: 20, levelKey: 'debugging', evidencedByReview: false },
+  { key: 'testing', label: 'Wrote the tests that prove it', weight: 10, levelKey: 'implementation', evidencedByReview: false },
+  { key: 'design', label: 'Chose the right shape', weight: 15, levelKey: 'design', evidencedByReview: false },
+  { key: 'recall', label: 'Recalled it after a delay', weight: 10, levelKey: 'understanding', evidencedByReview: true },
+  { key: 'production-reasoning', label: 'Reasons about operating it', weight: 10, levelKey: 'production', evidencedByReview: false },
+  { key: 'interview-explanation', label: 'Argues trade-offs under pressure', weight: 5, levelKey: 'judgment', evidencedByReview: false },
 ] as const;
 
+/**
+ * signalKey is the dimension a correct answer to this category is evidence for, which is what
+ * lets a promotion be audited from the question alone. `testing` and `recall` are deliberately
+ * absent here: tests are evidence from exercises, and recall from a review taken on its due day.
+ */
 export const QUESTION_CATEGORIES = [
-  { key: 'conceptual', label: 'Conceptual', asks: 'what is it' },
-  { key: 'why', label: 'Why', asks: 'what problem made it necessary' },
-  { key: 'internal', label: 'Internal', asks: 'how does it actually work' },
-  { key: 'implementation', label: 'Implementation', asks: 'build it' },
-  { key: 'debugging', label: 'Debugging', asks: 'find and fix the fault' },
-  { key: 'output-prediction', label: 'Output prediction', asks: 'what prints, and why' },
-  { key: 'architecture', label: 'Architecture', asks: 'design the system' },
-  { key: 'trade-off', label: 'Trade-off', asks: 'why this and not that' },
-  { key: 'security', label: 'Security', asks: 'how is it attacked' },
-  { key: 'performance', label: 'Performance', asks: 'where does the time go' },
-  { key: 'production', label: 'Production', asks: 'what do you do at 3am' },
-  { key: 'interview', label: 'Interview', asks: 'explain it in sixty seconds' },
-  { key: 'senior-judgment', label: 'Senior judgment', asks: 'what would you not build' },
+  { key: 'conceptual', label: 'Conceptual', asks: 'what is it', signalKey: 'understanding' },
+  { key: 'why', label: 'Why', asks: 'what problem made it necessary', signalKey: 'understanding' },
+  { key: 'internal', label: 'Internal', asks: 'how does it actually work', signalKey: 'understanding' },
+  { key: 'implementation', label: 'Implementation', asks: 'build it', signalKey: 'implementation' },
+  { key: 'debugging', label: 'Debugging', asks: 'find and fix the fault', signalKey: 'debugging' },
+  { key: 'output-prediction', label: 'Output prediction', asks: 'what prints, and why', signalKey: 'implementation' },
+  { key: 'architecture', label: 'Architecture', asks: 'design the system', signalKey: 'design' },
+  { key: 'trade-off', label: 'Trade-off', asks: 'why this and not that', signalKey: 'design' },
+  { key: 'security', label: 'Security', asks: 'how is it attacked', signalKey: 'production-reasoning' },
+  { key: 'performance', label: 'Performance', asks: 'where does the time go', signalKey: 'production-reasoning' },
+  { key: 'production', label: 'Production', asks: 'what do you do at 3am', signalKey: 'production-reasoning' },
+  { key: 'interview', label: 'Interview', asks: 'explain it in sixty seconds', signalKey: 'interview-explanation' },
+  { key: 'senior-judgment', label: 'Senior judgment', asks: 'what would you not build', signalKey: 'interview-explanation' },
 ] as const;
 
 /** §43 — the anatomy every lesson must be able to express. */
@@ -94,3 +101,58 @@ export const ATTEMPT_VERDICTS = [
 ] as const;
 
 export const ROLES = [{ key: 'learner', label: 'Learner' }];
+
+/**
+ * The lookup tables reference each other by key, and nothing in Postgres can check that until
+ * the rows exist — so a category pointing at a signal that was renamed, or a rung with no
+ * evidence dimension feeding it, is caught here at seed time instead of as a silent non-promotion.
+ */
+export function validateReference(): string[] {
+  const problems: string[] = [];
+  // Widened on purpose: the literals are `as const`, so a branch that is unreachable for today's
+  // content would be typed `never` and the check would stop existing when content changes.
+  const levels: Set<string> = new Set(MASTERY_LEVELS.map((level) => level.key));
+  const signals: Set<string> = new Set(SIGNALS.map((signal) => signal.key));
+  const categories: { key: string; signalKey: string | null }[] = QUESTION_CATEGORIES.map((category) => ({
+    key: category.key,
+    signalKey: category.signalKey,
+  }));
+
+  const signalRows: { key: string; levelKey: string }[] = SIGNALS.map((signal) => ({
+    key: signal.key,
+    levelKey: signal.levelKey,
+  }));
+
+  for (const signal of signalRows) {
+    if (!levels.has(signal.levelKey)) {
+      problems.push(`signal "${signal.key}" feeds unknown mastery level "${signal.levelKey}"`);
+    }
+  }
+
+  for (const category of categories) {
+    if (!category.signalKey) {
+      problems.push(`category "${category.key}" records no mastery signal, so it can never promote anyone`);
+    } else if (!signals.has(category.signalKey)) {
+      problems.push(`category "${category.key}" references unknown signal "${category.signalKey}"`);
+    }
+  }
+
+  // A rung with no evidence dimension in the middle of the ladder is a step nobody can climb.
+  // The top of the ladder may legitimately be unfed for now — it waits for a signal that does
+  // not exist yet — but nothing below the highest fed rung may be empty.
+  const feedable: Set<string> = new Set(SIGNALS.map((signal) => signal.levelKey));
+  const fedNumbers = MASTERY_LEVELS.filter((level) => feedable.has(level.key)).map((level) => level.number);
+  const highestFed = Math.max(...fedNumbers);
+  for (const level of MASTERY_LEVELS) {
+    if (level.number > 0 && level.number <= highestFed && !feedable.has(level.key)) {
+      problems.push(`mastery level "${level.key}" has no signal that can evidence it`);
+    }
+  }
+
+  const reviewDimensions = SIGNALS.filter((signal) => signal.evidencedByReview);
+  if (reviewDimensions.length !== 1) {
+    problems.push(`exactly one signal must be evidencedByReview, found ${reviewDimensions.length}`);
+  }
+
+  return problems;
+}

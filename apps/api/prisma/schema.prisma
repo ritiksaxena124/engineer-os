@@ -263,6 +263,11 @@ model QuestionCategory {
   asks     String
   isActive Boolean @default(true)
 
+  // which mastery dimension a correct answer to this category is evidence for; null means
+  // the category is practice only and promotes nothing
+  signalKey String?
+  signal    Signal? @relation(fields: [signalKey], references: [key], onDelete: Restrict)
+
   questions Question[]
 
   @@map("question_categories")
@@ -350,10 +355,15 @@ model Signal {
   weight   Int
   isActive Boolean @default(true)
 
+  // which dimension an answer to a *scheduled review* evidences, so spaced repetition promotes
+  // recall without the engine hardcoding a lookup-table key
+  evidencedByReview Boolean @default(false)
+
   levelKey String
   level    MasteryLevel @relation(fields: [levelKey], references: [key], onDelete: Restrict)
 
-  records MasteryRecordSignal[]
+  records          MasteryRecordSignal[]
+  questionCategories QuestionCategory[]
 
   @@map("signals")
 }
@@ -386,6 +396,8 @@ model MasteryRecordSignal {
   record MasteryRecord @relation(fields: [recordId], references: [id], onDelete: Restrict)
   signal Signal        @relation(fields: [signalKey], references: [key], onDelete: Restrict)
 
+  // one accumulated standing per dimension: evidence updates it, it is never a log
+  @@unique([recordId, signalKey])
   @@index([recordId])
   @@map("mastery_record_signals")
 }

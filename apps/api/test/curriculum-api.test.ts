@@ -181,18 +181,24 @@ describe('curriculum api', () => {
     );
   });
 
-  test('seeding twice is idempotent', async () => {
-    const before = await Promise.all([
-      prisma.topic.count(),
-      prisma.topicPrerequisite.count(),
-      prisma.phase.count(),
-    ]);
-    await seedContent(prisma);
-    const after = await Promise.all([
-      prisma.topic.count(),
-      prisma.topicPrerequisite.count(),
-      prisma.phase.count(),
-    ]);
-    expect(after).toEqual(before);
-  });
+  // A full re-seed of 303 topics takes seconds on its own and Bun's default timeout is five,
+  // so it gets room while the other suites share the test database.
+  test(
+    'seeding twice is idempotent',
+    async () => {
+      const before = await Promise.all([
+        prisma.topic.count(),
+        prisma.topicPrerequisite.count(),
+        prisma.phase.count(),
+      ]);
+      await seedContent(prisma);
+      const after = await Promise.all([
+        prisma.topic.count(),
+        prisma.topicPrerequisite.count(),
+        prisma.phase.count(),
+      ]);
+      expect(after).toEqual(before);
+    },
+    60_000,
+  );
 });

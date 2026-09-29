@@ -4,6 +4,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { CurriculumModule } from './curriculum/curriculum.module';
 import { LessonModule } from './lesson/lesson.module';
+import { MasteryModule } from './mastery/mastery.module';
 import { QuestionModule } from './question/question.module';
 import { AssessmentModule } from './assessment/assessment.module';
 import { HealthController } from './health/health.controller';
@@ -17,6 +18,7 @@ import { requestId } from './common/request-id.middleware';
     AuthModule,
     CurriculumModule,
     LessonModule,
+    MasteryModule,
     QuestionModule,
     AssessmentModule,
   ],

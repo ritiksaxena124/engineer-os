@@ -12,6 +12,7 @@ import {
   SIGNALS,
   SKILLS,
   TRACKS,
+  validateReference,
 } from './content/reference';
 import { topologicalOrder, type GraphTopic } from '../src/curriculum/graph';
 
@@ -50,6 +51,10 @@ export async function seedContent(prisma: PrismaClient): Promise<{ topics: numbe
   if (questionProblems.length > 0) {
     throw new Error(`question content invalid:\n${questionProblems.join('\n')}`);
   }
+  const referenceProblems = validateReference();
+  if (referenceProblems.length > 0) {
+    throw new Error(`reference content invalid:\n${referenceProblems.join('\n')}`);
+  }
 
   const order = topologicalOrder(ALL_TOPICS.map(asGraphTopic));
   const positionOf = new Map(order.map((slug, index) => [slug, index]));
@@ -63,7 +68,7 @@ export async function seedContent(prisma: PrismaClient): Promise<{ topics: numbe
       prisma.questionCategory.upsert({
         where: { key: row.key },
         create: row,
-        update: { label: row.label, asks: row.asks },
+        update: { label: row.label, asks: row.asks, signalKey: row.signalKey },
       }),
     ),
     ...LESSON_SECTION_KINDS.map((row) =>
