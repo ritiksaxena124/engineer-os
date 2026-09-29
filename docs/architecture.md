@@ -79,7 +79,9 @@ Bun's transpiler does **not** emit `design:paramtypes` decorator metadata, and N
 constructor injection from that metadata. Verified locally — `Reflect.getMetadata('design:paramtypes', Svc)`
 returns `null` under Bun, `function[]` under tsc. So:
 
-- `bunx tsc -p tsconfig.build.json` emits `dist/` (metadata included) → `bun run dist/main.js`
+- `bunx tsc -p tsconfig.build.json` emits `dist/` (metadata included) → `bun run dist/src/main.js`.
+  The emit root is the package, not `src/`, because `src/question/dto.ts` imports the authored
+  tables from `prisma/content/reference`.
 - `bun run dev` starts both under watch (`scripts/dev.ts`), giving edit-restart without losing DI
 - tests are authored in TS, compiled to `dist-test/`, then `bun test` runs them against the real
   `engineer_os_test` database (`bun run db:test:prepare` drops and re-migrates it every run)
