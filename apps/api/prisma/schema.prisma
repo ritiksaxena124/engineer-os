@@ -57,7 +57,7 @@ model Track {
   sortOrder Int
   isActive  Boolean @default(true)
 
-  phases      Phase[]
+  phases      PhaseTrack[]
   memberships TrackMembership[]
 
   @@map("tracks")
@@ -83,13 +83,25 @@ model Phase {
   summary  String
   isActive Boolean @default(true)
 
-  trackKey String
-  track    Track   @relation(fields: [trackKey], references: [key], onDelete: Restrict)
-
   topics   Topic[]
   projects Project[]
+  tracks   PhaseTrack[]
 
   @@map("phases")
+}
+
+// a phase can belong to several tracks; the foundation is shared by all three
+model PhaseTrack {
+  id       String  @id @default(uuid())
+  phaseKey String
+  trackKey String
+  isActive Boolean @default(true)
+
+  phase Phase @relation(fields: [phaseKey], references: [key], onDelete: Restrict)
+  track Track @relation(fields: [trackKey], references: [key], onDelete: Restrict)
+
+  @@unique([phaseKey, trackKey])
+  @@map("phase_tracks")
 }
 
 model Topic {

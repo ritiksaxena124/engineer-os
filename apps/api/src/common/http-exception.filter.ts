@@ -27,14 +27,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exception.getResponse()
         : { message: 'internal error' };
 
+    const detail = typeof payload === 'string' ? {} : (payload as Record<string, unknown>);
+
     const body = {
       error: {
         status,
-        code: status === HttpStatus.INTERNAL_SERVER_ERROR ? 'internal_error' : 'request_failed',
+        code:
+          (typeof detail.code === 'string' && detail.code) ||
+          (status === HttpStatus.INTERNAL_SERVER_ERROR ? 'internal_error' : 'request_failed'),
         message:
           typeof payload === 'string'
             ? payload
-            : ((payload as { message?: string | string[] }).message ?? 'request failed'),
+            : ((detail.message as string | string[] | undefined) ?? 'request failed'),
         requestId: req.requestId,
       },
     };

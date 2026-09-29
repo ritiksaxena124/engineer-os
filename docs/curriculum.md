@@ -3,6 +3,12 @@
 40 phases, ordered by dependency, not by hype (§5). Every topic declares *critical* prerequisites
 that gate unlocking and *advisory* ones that only warn.
 
+**Prerequisite edges point backward only.** A topic may depend on something in an earlier phase, or
+an earlier topic in its own phase, and never on something not yet written. `validateCurriculum()`
+enforces this along with duplicate slugs, dangling references and unknown skill buckets, because a
+forward reference is not a prerequisite — it is a cross-link, and pretending otherwise makes the
+graph cyclic and the gating unusable.
+
 ## Spine
 
 ```
