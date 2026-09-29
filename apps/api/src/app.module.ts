@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { CurriculumModule } from './curriculum/curriculum.module';
 import { LessonModule } from './lesson/lesson.module';
 import { QuestionModule } from './question/question.module';
+import { AssessmentModule } from './assessment/assessment.module';
 import { HealthController } from './health/health.controller';
 import { loadEnv } from './config/env';
 import { requestId } from './common/request-id.middleware';
@@ -17,6 +18,7 @@ import { requestId } from './common/request-id.middleware';
     CurriculumModule,
     LessonModule,
     QuestionModule,
+    AssessmentModule,
   ],
   controllers: [HealthController],
 })
