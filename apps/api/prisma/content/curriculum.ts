@@ -2,6 +2,7 @@ import { PHASES_00_09 } from './phases-00-09';
 import { PHASES_10_19 } from './phases-10-19';
 import { PHASES_20_29 } from './phases-20-29';
 import { PHASES_30_39 } from './phases-30-39';
+import { LESSON_ANATOMY, LESSONS } from './lessons';
 import { SKILLS } from './reference';
 import type { PhaseSpec, TopicSpec } from './types';
 
@@ -72,6 +73,43 @@ export function validateCurriculum(): string[] {
         problems.push(
           `topic "${topic.slug}" depends forward on "${prerequisite.slug}"; prerequisites must already exist`,
         );
+      }
+    }
+  }
+
+  return problems;
+}
+
+/** §43: a lesson that skips a rung of the anatomy has not taught the concept, it has named it. */
+export function validateLessons(): string[] {
+  const problems: string[] = [];
+  const topicSlugs = new Set(ALL_TOPICS.map((topic) => topic.slug));
+  const lessonSlugs = new Set<string>();
+
+  for (const lesson of LESSONS) {
+    if (lessonSlugs.has(lesson.slug)) problems.push(`duplicate lesson slug "${lesson.slug}"`);
+    lessonSlugs.add(lesson.slug);
+
+    if (!topicSlugs.has(lesson.topicSlug)) {
+      problems.push(`lesson "${lesson.slug}" belongs to unknown topic "${lesson.topicSlug}"`);
+    }
+
+    const kinds = lesson.sections.map((section) => section.kind);
+    const missing = LESSON_ANATOMY.filter((kind) => !kinds.includes(kind));
+    for (const kind of missing) {
+      problems.push(`lesson "${lesson.slug}" is missing the "${kind}" section`);
+    }
+    for (const kind of kinds) {
+      if (!LESSON_ANATOMY.includes(kind as (typeof LESSON_ANATOMY)[number])) {
+        problems.push(`lesson "${lesson.slug}" uses unknown section kind "${kind}"`);
+      }
+      if (kinds.filter((entry) => entry === kind).length > 1) {
+        problems.push(`lesson "${lesson.slug}" repeats the "${kind}" section`);
+      }
+    }
+    for (const section of lesson.sections) {
+      if (section.body.trim().length < 80) {
+        problems.push(`lesson "${lesson.slug}" section "${section.kind}" is too thin to teach anything`);
       }
     }
   }

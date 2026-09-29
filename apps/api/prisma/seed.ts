@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { ALL_PHASES, ALL_TOPICS, validateCurriculum } from './content/curriculum';
+import { ALL_PHASES, ALL_TOPICS, validateCurriculum, validateLessons } from './content/curriculum';
+import { LESSONS } from './content/lessons';
 import {
   ATTEMPT_VERDICTS,
   LESSON_SECTION_KINDS,
@@ -39,6 +40,10 @@ async function runInChunks(prisma: PrismaClient, operations: Operation[], size =
 export async function seedContent(prisma: PrismaClient): Promise<{ topics: number; phases: number }> {
   const problems = validateCurriculum();
   if (problems.length > 0) throw new Error(`curriculum content invalid:\n${problems.join('\n')}`);
+  const lessonProblems = validateLessons();
+  if (lessonProblems.length > 0) {
+    throw new Error(`lesson content invalid:\n${lessonProblems.join('\n')}`);
+  }
 
   const order = topologicalOrder(ALL_TOPICS.map(asGraphTopic));
   const positionOf = new Map(order.map((slug, index) => [slug, index]));
@@ -108,25 +113,32 @@ export async function seedContent(prisma: PrismaClient): Promise<{ topics: numbe
   );
   await runInChunks(prisma, topicOps);
 
-  const edges = await buildEdgeOperations(prisma, positionOf);
-  await runInChunks(prisma, edges);
+  const idBySlug = new Map(
+    (await prisma.topic.findMany({ select: { id: true, slug: true } })).map((topic) => [
+      topic.slug,
+      topic.id,
+    ]),
+  );
+
+  await runInChunks(prisma, await buildEdgeOperations(prisma, idBySlug, positionOf));
+  await runInChunks(prisma, await buildLessonOperations(prisma, idBySlug));
 
   return { topics: ALL_TOPICS.length, phases: ALL_PHASES.length };
 }
 
 /** topic_prerequisites has no natural unique key, so existing edges are matched by slug pair. */
-async function buildEdgeOperations(prisma: PrismaClient, positionOf: Map<string, number>) {
-  const [topics, existing] = await Promise.all([
-    prisma.topic.findMany({ select: { id: true, slug: true } }),
-    prisma.topicPrerequisite.findMany({
-      include: {
-        topic: { select: { slug: true } },
-        prerequisite: { select: { slug: true } },
-      },
-    }),
-  ]);
+async function buildEdgeOperations(
+  prisma: PrismaClient,
+  idBySlug: Map<string, string>,
+  positionOf: Map<string, number>,
+) {
+  const existing = await prisma.topicPrerequisite.findMany({
+    include: {
+      topic: { select: { slug: true } },
+      prerequisite: { select: { slug: true } },
+    },
+  });
 
-  const idBySlug = new Map(topics.map((topic) => [topic.slug, topic.id]));
   const byPair = new Map(
     existing.map((edge) => [`${edge.topic.slug}>${edge.prerequisite.slug}`, edge]),
   );
@@ -160,6 +172,56 @@ async function buildEdgeOperations(prisma: PrismaClient, positionOf: Map<string,
         );
       }
     }
+  }
+  return operations;
+}
+
+/** Sections are matched by kind within a lesson so a reseed edits content instead of duplicating it. */
+async function buildLessonOperations(prisma: PrismaClient, idBySlug: Map<string, string>) {
+  const operations: Operation[] = [];
+  const lessons: Operation[] = [];
+
+  for (const lesson of LESSONS) {
+    const topicId = idBySlug.get(lesson.topicSlug);
+    if (!topicId) continue;
+    lessons.push(
+      prisma.lesson.upsert({
+        where: { slug: lesson.slug },
+        create: { slug: lesson.slug, title: lesson.title, topicId },
+        update: { title: lesson.title, topicId, isActive: true },
+      }),
+    );
+  }
+  await runInChunks(prisma, lessons);
+
+  const stored = await prisma.lesson.findMany({
+    where: { slug: { in: LESSONS.map((lesson) => lesson.slug) } },
+    include: { sections: true },
+  });
+  const bySlug = new Map(stored.map((lesson) => [lesson.slug, lesson]));
+
+  for (const lesson of LESSONS) {
+    const row = bySlug.get(lesson.slug);
+    if (!row) continue;
+    const existingByKind = new Map(row.sections.map((section) => [section.kindKey, section]));
+
+    lesson.sections.forEach((section, index) => {
+      const found = existingByKind.get(section.kind);
+      if (!found) {
+        operations.push(
+          prisma.lessonSection.create({
+            data: { lessonId: row.id, kindKey: section.kind, position: index + 1, body: section.body },
+          }),
+        );
+      } else if (found.body !== section.body || found.position !== index + 1) {
+        operations.push(
+          prisma.lessonSection.update({
+            where: { id: found.id },
+            data: { body: section.body, position: index + 1 },
+          }),
+        );
+      }
+    });
   }
   return operations;
 }

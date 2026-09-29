@@ -40,6 +40,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
             ? payload
             : ((detail.message as string | string[] | undefined) ?? 'request failed'),
         requestId: req.requestId,
+        ...(detail.details ? { details: detail.details } : {}),
       },
     };
 

@@ -84,6 +84,20 @@ export class CurriculumService {
     };
   }
 
+  /** Gating for one topic, used by anything that has to refuse a locked learner (lessons, drills). */
+  async unlockStateForTopic(userId: string, topicSlug: string) {
+    const topics = await this.loadTopics();
+    const topic = topics.find((entry) => entry.slug === topicSlug);
+    if (!topic) return null;
+
+    const levels = await this.levelsFor(userId);
+    return {
+      topic,
+      level: levels[topicSlug] ?? 0,
+      state: unlockState(topic, levels),
+    };
+  }
+
   private async loadTopics(trackKey?: string): Promise<CatalogTopic[]> {
     const rows = await this.prisma.topic.findMany({
       where: {

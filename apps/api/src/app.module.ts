@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { CurriculumModule } from './curriculum/curriculum.module';
+import { LessonModule } from './lesson/lesson.module';
 import { HealthController } from './health/health.controller';
 import { loadEnv } from './config/env';
 import { requestId } from './common/request-id.middleware';
@@ -13,6 +14,7 @@ import { requestId } from './common/request-id.middleware';
     PrismaModule,
     AuthModule,
     CurriculumModule,
+    LessonModule,
   ],
   controllers: [HealthController],
 })

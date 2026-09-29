@@ -30,6 +30,7 @@ model User {
   journalEntries   JournalEntry[]
   decisions        ArchitectureDecision[]
   interviews       InterviewSession[]
+  lessonReads      LessonRead[]
   refreshTokens    RefreshToken[]
 
   @@map("users")
@@ -193,6 +194,7 @@ model Lesson {
   sections  LessonSection[]
   questions Question[]
   exercises Exercise[]
+  reads     LessonRead[]
 
   @@index([topicId])
   @@map("lessons")
@@ -211,6 +213,22 @@ model LessonSection {
 
   @@index([lessonId, position])
   @@map("lesson_sections")
+}
+
+// Append-only: a read is evidence of exposure only. It has no path to mastery_records,
+// which is what makes "reading a lesson marked you complete" impossible rather than discouraged.
+model LessonRead {
+  id     String   @id @default(uuid())
+  userId String
+  lessonId String
+  readAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, lessonId])
+  @@index([lessonId])
+  @@map("lesson_reads")
 }
 
 model LessonSectionKind {

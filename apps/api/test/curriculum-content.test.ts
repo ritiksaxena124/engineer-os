@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ALL_PHASES, ALL_TOPICS, validateCurriculum } from '../prisma/content/curriculum';
+import { ALL_PHASES, ALL_TOPICS, validateCurriculum, validateLessons } from '../prisma/content/curriculum';
 import { TRACKS } from '../prisma/content/reference';
 import { topologicalOrder, unlockState, type GraphTopic } from '../src/curriculum/graph';
 
@@ -28,6 +28,10 @@ describe('curriculum content', () => {
         expect(TRACKS.map((entry) => entry.key)).toContain(track);
       }
     }
+  });
+
+  test('every lesson teaches the whole §43 anatomy or does not seed', () => {
+    expect(validateLessons()).toEqual([]);
   });
 
   test('the whole graph is a DAG: every prerequisite resolves and nothing cycles', () => {
