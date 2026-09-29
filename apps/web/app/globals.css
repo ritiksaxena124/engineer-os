@@ -1,0 +1,68 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Colour is only ever a signal here: green means the rung is held, red means the
+ * ladder is weak, amber means a review is due, violet means it came from recall. Structure comes
+ * from hairline borders and surfaces, never from shadows.
+ */
+@theme {
+  --color-canvas: #0b0d10;
+  --color-surface: #101317;
+  --color-raised: #15191e;
+  --color-line: #1f242b;
+  --color-line-strong: #2b323b;
+
+  --color-ink: #e6e9ee;
+  --color-muted: #9ba4b0;
+  --color-dim: #6b7480;
+
+  --color-accent: #4c9aff;
+  --color-held: #3fb950;
+  --color-due: #d29922;
+  --color-weak: #f85149;
+  --color-recall: #a371f7;
+
+  --font-sans: var(--font-inter), ui-sans-serif, sans-serif;
+
+  --radius-control: 4px;
+  --radius-panel: 6px;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background: var(--color-canvas);
+  }
+
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'tnum';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+    border: 3px solid var(--color-canvas);
+    border-radius: 999px;
+  }
+}
+
+@utility numeric {
+  font-variant-numeric: tabular-nums;
+}
