@@ -1,0 +1,95 @@
+# EngineerOS architecture
+
+Engineering training system whose only real metric is: *can this developer use this concept in
+production?* Lesson completion is never mastery (§71 of the master prompt).
+
+## System layout
+
+```
+┌────────────┐   HTTPS/JSON   ┌──────────────────┐   Prisma    ┌──────────────┐
+│  Next.js   │ ─────────────► │  NestJS control  │ ──────────► │ PostgreSQL   │
+│  (apps/web)│                │  plane (apps/api)│             │ engineer_os  │
+└────────────┘                └────────┬─────────┘             └──────────────┘
+                                       │ internal HTTP, shared secret
+                              ┌────────▼──────────┐
+                              │ FastAPI AI service│  ← LLM provider abstraction
+                              │  (apps/ai)        │     mentor / evaluator /
+                              └───────────────────┘     question generator
+```
+
+Three planes, each with one job:
+
+**Control plane — NestJS (`apps/api`)** owns all business data and every decision that can be
+made deterministically: curriculum graph, prerequisite gating, attempt ledger, mastery
+computation, spaced-repetition scheduling, auth, RBAC. It is the source of truth. The AI service
+never writes learner state directly; it returns structured suggestions and the control plane
+persists them after validating them (§76: "the AI service must not own business data blindly").
+
+**AI plane — FastAPI (`apps/ai`)** is stateless per request. Endpoints map 1:1 to the mentor
+behaviours: `/mentor/session`, `/evaluator/answer`, `/interviewer/turn`,
+`/question-generator`, `/code-reviewer`, `/incident-generator`. Provider abstraction (OpenAI,
+Anthropic, or `local` deterministic stub) so the platform runs with no API key. LangGraph is
+introduced only for the multi-turn mentor/interview graph after the raw state machine is
+implemented in Phase 32 of the curriculum — the product itself follows the curriculum rule.
+
+**Data plane — PostgreSQL** only. No Redis in the MVP: nothing in steps 1–16 has a latency or
+shared-state problem that a process-local cache cannot serve. It arrives in the Redis/caching
+phase with a measured reason, which is exactly the judgment the curriculum teaches (§64).
+
+## Module map (control plane)
+
+```
+src/
+├── auth/          register, login, refresh rotation, guards
+├── curriculum/    tracks, phases, topics, prerequisites, unlock graph
+├── lessons/       lesson content + reading, never mastery-bearing
+├── questions/     question bank, answer model, active-recall grading
+├── assessments/   diagnostic, topic drills, phase exams (Parts A–G)
+├── mastery/       ladder levels, signal aggregation, spaced repetition
+├── journal/       mistakes, ADRs, engineering journal entries
+├── incidents/     production incident simulator scenarios + resolutions
+├── interviews/    interviewer sessions, feedback rubric
+└── prisma/        repository layer (soft-delete-only writes)
+```
+
+Cohesive modules, one Prisma repository each. No `utils/` folder, no interfaces with a single
+implementation, no repository abstraction over an ORM that is already a repository.
+
+## Request path and observability
+
+`requestId` middleware → correlation header on responses and logs → `logging.jsonl` (structured,
+pino-style lines) → `/health/ready` (DB ping) and `/health/live` → graceful shutdown on SIGTERM
+(close HTTP, then disconnect Prisma). Zod validates the environment at boot; the process refuses
+to start on a bad config rather than failing at the first request.
+
+## Cross-cutting rules
+
+- **No hard deletes.** Every business row carries `isActive`; deactivation is the delete path.
+  Append-only ledgers (`attempts`, `mastery_events`, `learning_sessions`, `journal_entries`,
+  `incidents`) never get `isActive` — a deleted mistake is a lost lesson.
+- **Domain decisions are pure functions.** Gating, grading and mastery are plain modules with no
+  NestJS or Prisma imports, so they are unit-testable without a database.
+- **Type safety is not runtime validation.** DTOs use class-validator at the HTTP boundary;
+  internal domain types are TypeScript unions. Compile-time shapes never guard external input.
+
+## Toolchain constraint: Bun runs it, tsc emits it
+
+Bun is the package manager, dev runner, test runner and runtime. One caveat decided this layout:
+Bun's transpiler does **not** emit `design:paramtypes` decorator metadata, and NestJS resolves
+constructor injection from that metadata. Verified locally — `Reflect.getMetadata('design:paramtypes', Svc)`
+returns `null` under Bun, `function[]` under tsc. So:
+
+- `bunx tsc -p tsconfig.build.json` emits `dist/` (metadata included) → `bun run dist/main.js`
+- `bun run dev` starts both under watch (`scripts/dev.ts`), giving edit-restart without losing DI
+- tests are authored in TS, compiled to `dist-test/`, then `bun test` runs them against the real
+  `engineer_os_test` database (`bun run db:test:prepare` drops and re-migrates it every run)
+
+Migrations are generated by `scripts/migrate.ts` (`migrate diff` → file → `deploy`) because
+`prisma migrate dev` refuses to run non-interactively, which is what an agent and CI both need.
+The same script targets either database via `--db=DATABASE_URL_TEST`.
+
+## Deployment
+
+Local dev: `bun run dev:api` + `bun run dev:web` + system PostgreSQL. Containerised path is a
+docker-compose with postgres + api + web + ai (deferred until the Docker daemon is available),
+which is the Phase 20 deliverable, not a prerequisite for building.

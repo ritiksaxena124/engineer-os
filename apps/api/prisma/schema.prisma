@@ -1,0 +1,627 @@
+// EngineerOS control plane schema.
+// Rules (docs/schema.md): no enums for business constants, no cascade deletes,
+// isActive soft delete on mutable rows, append-only ledgers without isActive.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  displayName  String
+  passwordHash String
+  roleKey      String   @default("learner")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  trackMemberships TrackMembership[]
+  attempts         Attempt[]
+  masteryRecords   MasteryRecord[]
+  reviewSchedules  ReviewSchedule[]
+  learningSessions LearningSession[]
+  mistakes         Mistake[]
+  journalEntries   JournalEntry[]
+  decisions        ArchitectureDecision[]
+  interviews       InterviewSession[]
+  refreshTokens    RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  tokenHash  String    @unique
+  issuedAt   DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  replacedBy String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Track {
+  key       String  @id
+  name      String
+  blurb     String
+  sortOrder Int
+  isActive  Boolean @default(true)
+
+  phases      Phase[]
+  memberships TrackMembership[]
+
+  @@map("tracks")
+}
+
+model TrackMembership {
+  id       String  @id @default(uuid())
+  userId   String
+  trackKey String
+  isActive Boolean @default(true)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  track Track @relation(fields: [trackKey], references: [key], onDelete: Restrict)
+
+  @@unique([userId, trackKey])
+  @@map("track_memberships")
+}
+
+model Phase {
+  key      String  @id
+  number   Int     @unique
+  title    String
+  summary  String
+  isActive Boolean @default(true)
+
+  trackKey String
+  track    Track   @relation(fields: [trackKey], references: [key], onDelete: Restrict)
+
+  topics   Topic[]
+  projects Project[]
+
+  @@map("phases")
+}
+
+model Topic {
+  id       String  @id @default(uuid())
+  slug     String  @unique
+  number   Int
+  title    String
+  summary  String
+  isActive Boolean @default(true)
+
+  phaseKey String
+  phase    Phase   @relation(fields: [phaseKey], references: [key], onDelete: Restrict)
+
+  skillKey String?
+  skill    Skill?  @relation(fields: [skillKey], references: [key], onDelete: SetNull)
+
+  requires    TopicPrerequisite[] @relation("dependent")
+  requiredBy  TopicPrerequisite[] @relation("prerequisite")
+  concepts    Concept[]
+  lessons     Lesson[]
+  questions   Question[]
+  exercises   Exercise[]
+  masteryRecords MasteryRecord[]
+  resources   Resource[]
+
+  // unlock rule: a topic unlocks only when every critical prerequisite reaches this level
+  unlockRequiredLevel Int @default(3)
+
+  // set to null by the repository when the row is deactivated: keeps (phase, number)
+  // unique among active topics without a raw partial index Prisma would later drop
+  activeMarker Int? @default(1)
+
+  @@unique([phaseKey, number, activeMarker])
+  @@index([phaseKey])
+  @@map("topics")
+}
+
+model TopicPrerequisite {
+  id             String  @id @default(uuid())
+  topicId        String
+  prerequisiteId String
+  critical       Boolean @default(true)
+  isActive       Boolean @default(true)
+
+  topic        Topic @relation("dependent", fields: [topicId], references: [id], onDelete: Restrict)
+  prerequisite Topic @relation("prerequisite", fields: [prerequisiteId], references: [id], onDelete: Restrict)
+
+  @@index([topicId])
+  @@index([prerequisiteId])
+  @@map("topic_prerequisites")
+}
+
+model Skill {
+  key      String  @id
+  label    String
+  isActive Boolean @default(true)
+
+  topics Topic[]
+
+  @@map("skills")
+}
+
+model Concept {
+  id       String  @id @default(uuid())
+  slug     String  @unique
+  name     String
+  detail   String
+  isActive Boolean @default(true)
+
+  topicId String
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Restrict)
+
+  expectedBy QuestionExpectedConcept[]
+  mistakes   Mistake[]
+
+  @@index([topicId])
+  @@map("concepts")
+}
+
+model Lesson {
+  id       String  @id @default(uuid())
+  slug     String  @unique
+  title    String
+  isActive Boolean @default(true)
+
+  topicId String
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Restrict)
+
+  sections  LessonSection[]
+  questions Question[]
+  exercises Exercise[]
+
+  @@index([topicId])
+  @@map("lessons")
+}
+
+// §43 lesson anatomy as rows so lessons stay editable content, not code
+model LessonSection {
+  id       String  @id @default(uuid())
+  lessonId String
+  kindKey  String
+  position Int
+  body     String
+
+  lesson      Lesson              @relation(fields: [lessonId], references: [id], onDelete: Restrict)
+  sectionKind LessonSectionKind   @relation(fields: [kindKey], references: [key], onDelete: Restrict)
+
+  @@index([lessonId, position])
+  @@map("lesson_sections")
+}
+
+model LessonSectionKind {
+  key       String  @id
+  label     String
+  guidance  String
+  sortOrder Int
+  isActive  Boolean @default(true)
+
+  sections LessonSection[]
+
+  @@map("lesson_section_kinds")
+}
+
+model QuestionCategory {
+  key      String  @id
+  label    String
+  asks     String
+  isActive Boolean @default(true)
+
+  questions Question[]
+
+  @@map("question_categories")
+}
+
+model Question {
+  id           String  @id @default(uuid())
+  stem         String
+  body         String
+  difficulty   Int
+  isDiagnostic Boolean @default(false)
+  isActive     Boolean @default(true)
+
+  topicId String
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Restrict)
+
+  lessonId String?
+  lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  categoryKey String
+  category    QuestionCategory @relation(fields: [categoryKey], references: [key], onDelete: Restrict)
+
+  levelKey String
+  level    MasteryLevel @relation(fields: [levelKey], references: [key], onDelete: Restrict)
+
+  expectedConcepts QuestionExpectedConcept[]
+  answer           QuestionAnswer?
+  attempts         Attempt[]
+  reviews          ReviewSchedule[]
+
+  @@index([topicId, categoryKey])
+  @@index([difficulty])
+  @@map("questions")
+}
+
+model QuestionAnswer {
+  id             String  @id @default(uuid())
+  questionId     String  @unique
+  shortAnswer    String
+  idealAnswer    String
+  deepAnswer     String
+  commonMistakes String
+  whyWrong       String
+  followUps      String
+  exercise       String
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@map("question_answers")
+}
+
+model QuestionExpectedConcept {
+  id         String @id @default(uuid())
+  questionId String
+  conceptId  String
+  weight     Int    @default(1)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  concept  Concept  @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+
+  @@unique([questionId, conceptId])
+  @@map("question_expected_concepts")
+}
+
+model MasteryLevel {
+  key        String  @id
+  number     Int
+  label      String
+  capability String
+  sortOrder  Int
+  isActive   Boolean @default(true)
+
+  questions      Question[]
+  signals        Signal[]
+  masteryRecords MasteryRecord[]
+
+  @@map("mastery_levels")
+}
+
+// one mastery signal dimension (understanding, implementation, debugging, ...)
+model Signal {
+  key      String  @id
+  label    String
+  weight   Int
+  isActive Boolean @default(true)
+
+  levelKey String
+  level    MasteryLevel @relation(fields: [levelKey], references: [key], onDelete: Restrict)
+
+  records MasteryRecordSignal[]
+
+  @@map("signals")
+}
+
+model MasteryRecord {
+  id        String   @id @default(uuid())
+  userId    String
+  topicId   String
+  levelKey  String
+  updatedAt DateTime @updatedAt
+
+  user  User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  topic Topic        @relation(fields: [topicId], references: [id], onDelete: Restrict)
+  level MasteryLevel @relation(fields: [levelKey], references: [key], onDelete: Restrict)
+
+  signals MasteryRecordSignal[]
+  events  MasteryEvent[]
+
+  @@unique([userId, topicId])
+  @@map("mastery_records")
+}
+
+model MasteryRecordSignal {
+  id            String @id @default(uuid())
+  recordId      String
+  signalKey     String
+  score         Int
+  evidenceCount Int    @default(0)
+
+  record MasteryRecord @relation(fields: [recordId], references: [id], onDelete: Restrict)
+  signal Signal        @relation(fields: [signalKey], references: [key], onDelete: Restrict)
+
+  @@index([recordId])
+  @@map("mastery_record_signals")
+}
+
+// append-only: every recomputation of a topic's standing
+model MasteryEvent {
+  id        String   @id @default(uuid())
+  recordId  String
+  fromLevel String
+  toLevel   String
+  reason    String
+  createdAt DateTime @default(now())
+
+  record MasteryRecord @relation(fields: [recordId], references: [id], onDelete: Restrict)
+
+  @@index([recordId])
+  @@map("mastery_events")
+}
+
+model Attempt {
+  id              String   @id @default(uuid())
+  userId          String
+  questionId      String?
+  sessionId       String?
+  answerText      String
+  verdictKey      String
+  score           Int
+  missingConcepts String
+  feedback        String
+  meta            Json?
+  createdAt       DateTime @default(now())
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  question Question?        @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  session  LearningSession? @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  verdict  AttemptVerdict   @relation(fields: [verdictKey], references: [key], onDelete: Restrict)
+
+  @@index([userId, questionId])
+  @@index([createdAt])
+  @@map("attempts")
+}
+
+model AttemptVerdict {
+  key      String  @id
+  label    String
+  isActive Boolean @default(true)
+
+  attempts Attempt[]
+
+  @@map("attempt_verdicts")
+}
+
+model Exercise {
+  id          String  @id @default(uuid())
+  slug        String  @unique
+  title       String
+  brief       String
+  starterCode String
+  testSpec    String
+  hiddenTests String
+  hintChain   String
+  isActive    Boolean @default(true)
+
+  topicId String
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Restrict)
+
+  lessonId String?
+  lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  @@index([topicId])
+  @@map("exercises")
+}
+
+model Project {
+  id           String  @id @default(uuid())
+  slug         String  @unique
+  title        String
+  brief        String
+  requirements String
+  checklist    String
+  rubric       String
+  isActive     Boolean @default(true)
+
+  phaseKey String
+  phase    Phase   @relation(fields: [phaseKey], references: [key], onDelete: Restrict)
+
+  @@index([phaseKey])
+  @@map("projects")
+}
+
+model LearningSession {
+  id             String    @id @default(uuid())
+  userId         String
+  typeKey        String
+  topicSlug      String?
+  plannedMinutes Int
+  startedAt      DateTime  @default(now())
+  endedAt        DateTime?
+  summary        String
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  type     SessionType @relation(fields: [typeKey], references: [key], onDelete: Restrict)
+  attempts Attempt[]
+
+  @@index([userId, startedAt])
+  @@map("learning_sessions")
+}
+
+model SessionType {
+  key      String  @id
+  label    String
+  purpose  String
+  isActive Boolean @default(true)
+
+  sessions LearningSession[]
+
+  @@map("session_types")
+}
+
+model ReviewSchedule {
+  id           String   @id @default(uuid())
+  userId       String
+  questionId   String
+  dueAt        DateTime
+  intervalDays Int
+  lapseCount   Int      @default(0)
+  isActive     Boolean  @default(true)
+  activeMarker Int?     @default(1)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, questionId, activeMarker])
+  @@index([userId, dueAt])
+  @@map("review_schedules")
+}
+
+model Mistake {
+  id        String   @id @default(uuid())
+  userId    String
+  what      String
+  diagnosis String
+  rootCause String
+  lesson    String
+  conceptId String?
+  createdAt DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  concept Concept? @relation(fields: [conceptId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@map("mistakes")
+}
+
+model JournalEntry {
+  id        String   @id @default(uuid())
+  userId    String
+  kindKey   String
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@map("journal_entries")
+}
+
+model ArchitectureDecision {
+  id           String   @id @default(uuid())
+  userId       String
+  slug         String   @unique
+  title        String
+  context      String
+  decision     String
+  alternatives String
+  tradeoffs    String
+  consequences String
+  statusKey    String   @default("proposed")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("architecture_decisions")
+}
+
+model Incident {
+  id           String  @id @default(uuid())
+  slug         String  @unique
+  title        String
+  severityKey  String
+  phaseKey     String?
+  alertText    String
+  metrics      String
+  logs         String
+  traces       String
+  rootCause    String
+  mitigations  String
+  permanentFix String
+  isActive     Boolean @default(true)
+
+  steps IncidentStep[]
+
+  @@map("incidents")
+}
+
+model IncidentStep {
+  id         String  @id @default(uuid())
+  incidentId String
+  position   Int
+  prompt     String
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Restrict)
+
+  @@unique([incidentId, position])
+  @@map("incident_steps")
+}
+
+model Resource {
+  id        String    @id @default(uuid())
+  title     String
+  url       String
+  kindKey   String
+  tier      Int
+  whyUsed   String
+  checkedAt DateTime?
+  isActive  Boolean   @default(true)
+
+  topicId String
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Restrict)
+
+  @@index([topicId])
+  @@map("resources")
+}
+
+model InterviewSession {
+  id           String    @id @default(uuid())
+  userId       String
+  modeKey      String
+  topicSlug    String?
+  prompt       String
+  transcript   String
+  feedback     String
+  rubricScores Json?
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, startedAt])
+  @@map("interview_sessions")
+}
+
+model Assessment {
+  id       String  @id @default(uuid())
+  slug     String  @unique
+  title    String
+  kindKey  String
+  phaseKey String?
+  passRule String
+  isActive Boolean @default(true)
+
+  parts AssessmentPart[]
+
+  @@map("assessments")
+}
+
+model AssessmentPart {
+  id           String  @id @default(uuid())
+  assessmentId String
+  label        String
+  kindKey      String
+  position     Int
+  instructions String
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+
+  questionIds String
+
+  @@index([assessmentId, position])
+  @@map("assessment_parts")
+}

@@ -1,0 +1,16 @@
+{
+  "name": "engineer-os",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:api": "bun run --cwd apps/api dev",
+    "dev:web": "bun run --cwd apps/web dev",
+    "test:api": "bun run --cwd apps/api test",
+    "db:migrate": "bun run --cwd apps/api db:migrate",
+    "db:seed": "bun run --cwd apps/api db:seed",
+    "typecheck": "bun run --cwd apps/api typecheck && bun run --cwd apps/web typecheck"
+  }
+}
