@@ -166,3 +166,55 @@ export interface DiagnosticReport {
   reading: { skill: string; misses: number; firstRepair: string }[];
   repairPath: RepairStep[];
 }
+
+/** §70 — one part of a phase exam is one kind of work, with its own instruction and clock. */
+export interface ExamItem {
+  slug: string;
+  stem: string;
+  body: string;
+  difficulty: number;
+  category: string;
+  levelKey: string;
+  topicSlug: string;
+  conceptCount: number;
+}
+
+export interface ExamPartPaper {
+  key: string;
+  label: string;
+  position: number;
+  minutes: number;
+  instructions: string;
+  short: boolean;
+  items: ExamItem[];
+}
+
+export interface ExamSession {
+  sessionId: string;
+  phaseKey: string;
+  phaseTitle: string;
+  plannedMinutes: number;
+  shortParts: string[];
+  parts: ExamPartPaper[];
+}
+
+export interface ExamPartScore {
+  key: string;
+  label: string;
+  items: number;
+  answered: number;
+  score: number;
+  passed: boolean;
+}
+
+export interface ExamReport {
+  sessionId: string;
+  phaseKey: string;
+  passed: boolean;
+  score: number;
+  parts: ExamPartScore[];
+  failedParts: { key: string; label: string; score: number }[];
+  verdicts: { slug: string; part: string; verdict: string; score: number; missing: string[] }[];
+  promotions: { topicSlug: string; levelKey: string; previousLevel: number; level: number }[];
+  nextPhase: { key: string; title: string } | null;
+}

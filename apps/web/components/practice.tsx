@@ -56,7 +56,7 @@ export function PracticeAttempt() {
           <h1 className="max-w-[70ch] text-[17px] leading-snug tracking-tight text-ink">{row.stem}</h1>
           <span className="shrink-0">{standing ? <RungLabel level={standing.level} levelKey={standing.levelKey} /> : <RungLabel level={0} levelKey="exposure" />}</span>
         </div>
-        {row.body && <p className="mt-2 max-w-[74ch] text-[12px] leading-relaxed text-muted">{row.body}</p>}
+        {row.body && <p className="mt-2 max-w-[74ch] whitespace-pre-line text-[12px] leading-relaxed text-muted">{row.body}</p>}
       </header>
 
       {refused && refused.code === 'TOPIC_LOCKED' && (

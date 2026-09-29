@@ -11,6 +11,7 @@ const LINKS = [
   { href: '/practice', label: 'Practice' },
   { href: '/progress', label: 'Progress' },
   { href: '/diagnostic', label: 'Diagnostic' },
+  { href: '/exam', label: 'Exam' },
 ];
 
 export function Nav() {
