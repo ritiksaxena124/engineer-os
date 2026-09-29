@@ -11,6 +11,9 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "sourceMap": true,
+    // src/question/dto.ts imports the authored tables from prisma/content, so the emit root is the
+    // package rather than src/ and the entry lands at dist/src/main.js.
+    "rootDir": ".",
     "outDir": "dist",
     "types": ["node"],
     "baseUrl": "src"

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bun run scripts/dev.ts",
     "build": "bunx tsc -p tsconfig.build.json",
-    "start": "bun run dist/main.js",
+    "start": "bun run dist/src/main.js",
     "test": "bunx tsc -p tsconfig.test.json && bun test dist-test",
     "test:unit": "bunx tsc -p tsconfig.test.json && bun test dist-test/src",
     "typecheck": "bunx tsc --noEmit",

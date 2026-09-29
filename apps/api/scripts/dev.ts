@@ -12,16 +12,16 @@ const compiler = Bun.spawn(
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Don't launch the app against a stale dist/ — wait for tsc's first emit.
-const mainEntry = `${apiDir}/dist/main.js`;
+const mainEntry = `${apiDir}/dist/src/main.js`;
 const startedAt = Date.now();
 for (;;) {
   if (existsSync(mainEntry) && statSync(mainEntry).size > 0) break;
-  if (Date.now() - startedAt > 120_000) throw new Error('tsc never emitted dist/main.js');
+  if (Date.now() - startedAt > 120_000) throw new Error('tsc never emitted dist/src/main.js');
   await wait(500);
 }
 await wait(1000);
 
-const app = Bun.spawn([process.execPath, 'run', '--watch', 'dist/main.js'], {
+const app = Bun.spawn([process.execPath, 'run', '--watch', 'dist/src/main.js'], {
   cwd: apiDir,
   stdout: 'inherit',
   stderr: 'inherit',

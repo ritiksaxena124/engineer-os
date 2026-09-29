@@ -8,3 +8,5 @@ dist-test/
 .DS_Store
 coverage/
 .bun/
+*.tsbuildinfo
+next-env.d.ts
