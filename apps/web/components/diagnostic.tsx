@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Badge, Button, Panel } from '@/components/ui';
 import { Empty } from '@/components/states';
+import { Prose } from '@/components/prose';
 import { api, ApiError } from '@/lib/api';
 import { answerDepth, asVerdict, verdictTone } from '@/lib/view';
 import type { DiagnosticItem, DiagnosticReport, DiagnosticSession } from '@/lib/types';
@@ -210,9 +211,7 @@ function ItemCard({
       </header>
       <div className="space-y-2 px-4 py-3">
         <p className="max-w-[74ch] text-[13px] leading-relaxed text-ink">{item.stem}</p>
-        {item.body && (
-          <p className="max-w-[74ch] whitespace-pre-line text-[12px] leading-relaxed text-muted">{item.body}</p>
-        )}
+        {item.body && <Prose text={item.body} className="text-[12px] leading-relaxed text-muted" />}
         <textarea
           className="min-h-[140px] w-full resize-y rounded-control border border-line-strong bg-canvas px-3 py-2.5 text-[13px] leading-relaxed text-ink placeholder:text-dim"
           placeholder="Mechanism, order, cost — then the failure mode."

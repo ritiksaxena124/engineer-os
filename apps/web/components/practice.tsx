@@ -6,6 +6,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { Badge, Button, Panel } from '@/components/ui';
 import { Empty, Failure, Loading } from '@/components/states';
+import { Prose } from '@/components/prose';
 import { RungLabel } from '@/components/rung';
 import { useQuery } from '@/lib/useQuery';
 import { api, ApiError } from '@/lib/api';
@@ -56,7 +57,7 @@ export function PracticeAttempt() {
           <h1 className="max-w-[70ch] text-[17px] leading-snug tracking-tight text-ink">{row.stem}</h1>
           <span className="shrink-0">{standing ? <RungLabel level={standing.level} levelKey={standing.levelKey} /> : <RungLabel level={0} levelKey="exposure" />}</span>
         </div>
-        {row.body && <p className="mt-2 max-w-[74ch] whitespace-pre-line text-[12px] leading-relaxed text-muted">{row.body}</p>}
+        {row.body && <Prose text={row.body} className="mt-2 text-[12px] leading-relaxed text-muted" />}
       </header>
 
       {refused && refused.code === 'TOPIC_LOCKED' && (
@@ -163,8 +164,8 @@ function Reveal({ model, note }: { model: AnswerModel; note?: string }) {
               {entry.label}
               <span className="normal-case tracking-normal text-dim/70">{entry.hint}</span>
             </dt>
-            <dd className="mt-1 max-w-[78ch] whitespace-pre-line text-[12px] leading-relaxed text-muted">
-              {model[entry.key]}
+            <dd className="mt-1 text-[12px] leading-relaxed text-muted">
+              <Prose text={model[entry.key]} />
             </dd>
           </div>
         ))}

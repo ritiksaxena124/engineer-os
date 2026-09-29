@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Badge, Button, Panel } from '@/components/ui';
 import { RungLabel } from '@/components/rung';
 import { Empty, Failure, Loading } from '@/components/states';
+import { Prose } from '@/components/prose';
 import { api, ApiError } from '@/lib/api';
 import { useQuery } from '@/lib/useQuery';
 import { answerDepth, asVerdict, partTone, phaseStandings, verdictTone, type PhaseStanding } from '@/lib/view';
@@ -379,9 +380,7 @@ function ItemCard({
       </header>
       <div className="space-y-2 px-3.5 py-2.5">
         <p className="max-w-[74ch] text-[13px] leading-relaxed text-ink">{item.stem}</p>
-        {item.body && (
-          <p className="max-w-[74ch] whitespace-pre-line text-[12px] leading-relaxed text-muted">{item.body}</p>
-        )}
+        {item.body && <Prose text={item.body} className="text-[12px] leading-relaxed text-muted" />}
         <textarea
           className="min-h-[150px] w-full resize-y rounded-control border border-line-strong bg-canvas px-3 py-2.5 text-[13px] leading-relaxed text-ink placeholder:text-dim"
           placeholder="Mechanism, order, cost — then the failure it prevents."
