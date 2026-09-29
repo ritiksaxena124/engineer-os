@@ -98,6 +98,37 @@ const EXPECTS: Record<string, string> = {
   'Pattern-20: Star & Number Patterns': 'letterTriangle(3) === "A\\nBC\\nDEF"',
   'Pattern-21: Star & Number Patterns': 'butterfly(2) === "****\\n*  *\\n****" && butterfly(1) === "**"',
   'Pattern-22: Star & Number Patterns': 'centredNumbers(3) === "  1\\n 121\\n12321" && centredNumbers(1) === "1"',
+  'Majority Element (> n/2 times)':
+    'majorityElement([2, 2, 1, 1, 2]) === 2 && majorityElement([1]) === 1 && majorityElement([1, 2, 3]) === null && majorityElement([6, 5, 5]) === 5',
+  "Maximum Subarray Sum (Kadane's Algorithm)":
+    'maxSubarraySum([-2, 1, -3, 4, -1, 2, 1, -5, 4]) === 6 && maxSubarraySum([-3, -1, -2]) === -1 && maxSubarraySum([1]) === 1',
+  'Print subarray with maximum subarray sum':
+    'maxSubarray([-2, 1, -3, 4, -1, 2, 1, -5, 4]).join() === "4,-1,2,1" && maxSubarray([-3, -1, -2]).join() === "-1" && maxSubarray([1, 2]).join() === "1,2"',
+  'Stock Buy and Sell':
+    'bestProfit([7, 1, 5, 3, 6, 4]) === 5 && bestProfit([7, 6, 4, 3, 1]) === 0 && bestProfit([]) === 0 && bestProfit([2, 4, 1, 8]) === 7',
+  'Rearrange Array Elements by Sign':
+    'rearrangeBySign([3, 1, -2, -5, 2, -4]).join() === "3,-2,1,-5,2,-4" && rearrangeBySign([1, -1]).join() === "1,-1"',
+  'Next Permutation':
+    'nextPermutation([1, 2, 3]).join() === "1,3,2" && nextPermutation([3, 2, 1]).join() === "1,2,3" && nextPermutation([1, 1, 5]).join() === "1,5,1" && nextPermutation([5]).join() === "5"',
+  'Leaders in an Array': 'leaders([17, 4, 3, 5, 2]).join() === "17,5,2" && leaders([3, 2, 3, 1, 2]).join() === "3,3,2" && leaders([]).join() === ""',
+  'Longest Consecutive Sequence in an Array':
+    'longestConsecutive([100, 4, 200, 1, 3, 2]) === 4 && longestConsecutive([0, 3, 7, 2, 5, 8, 4, 6, 0, 1]) === 9 && longestConsecutive([]) === 0',
+  'Set Matrix Zeroes':
+    '(() => { const a = setZeroes([[1, 1, 1], [1, 0, 1], [1, 1, 1]]).map((r) => r.join()).join("|"); const b = setZeroes([[0, 1], [1, 1]]).map((r) => r.join()).join("|"); const c = setZeroes([[1, 1], [0, 1]]).map((r) => r.join()).join("|"); return a === "1,0,1|0,0,0|1,0,1" && b === "0,0|0,1" && c === "0,1|0,0"; })()',
+  'Rotate Matrix by 90 degrees':
+    'rotateMatrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).map((r) => r.join()).join("|") === "7,4,1|8,5,2|9,6,3" && rotateMatrix([[1, 2], [3, 4]]).map((r) => r.join()).join("|") === "3,1|4,2" && rotateMatrix([[5]]).join() === "5"',
+  'Print the matrix in spiral manner':
+    'spiralOrder([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).join() === "1,2,3,6,9,8,7,4,5" && spiralOrder([[1, 2, 3], [4, 5, 6]]).join() === "1,2,3,6,5,4" && spiralOrder([[1, 2, 3]]).join() === "1,2,3"',
+  'Count Subarray sum Equals K':
+    'countSubarraysWithSum([1, 2, 3], 3) === 2 && countSubarraysWithSum([1, 1, 1], 2) === 2 && countSubarraysWithSum([1, -1, 1, -1], 0) === 4 && countSubarraysWithSum([1, -1, 0], 0) === 3 && countSubarraysWithSum([], 0) === 0 && countSubarraysWithSum([0], 0) === 1',
+  "Pascal's Triangle":
+    'pascalTriangle(5).map((r) => r.join()).join("|") === "1|1,1|1,2,1|1,3,3,1|1,4,6,4,1" && pascalTriangle(1).map((r) => r.join()).join("|") === "1" && pascalTriangle(0).length === 0',
+  'Majority Elements (> n/3 times)':
+    'majorityThird([3, 2, 3]).join() === "3" && majorityThird([1, 1, 1, 2, 2, 3, 3]).join() === "1" && majorityThird([1, 2]).join() === "1,2" && majorityThird([1, 2, 3]).join() === "" && majorityThird([]).join() === ""',
+  '3-Sum Problem':
+    'threeSum([-1, 0, 1, 2, -1, -4]).map((t) => t.join()).join("|") === "-1,-1,2|-1,0,1" && threeSum([0, 0, 0]).map((t) => t.join()).join("|") === "0,0,0" && threeSum([0, 0, 0, 0]).length === 1 && threeSum([1, 2]).length === 0',
+  '4-Sum Problem':
+    'fourSum([1, 0, -1, 0, -2, 2], 0).map((q) => q.join()).join("|") === "-2,-1,1,2|-2,0,0,2|-1,0,0,1" && fourSum([2, 2, 2, 2, 2], 8).map((q) => q.join()).join("|") === "2,2,2,2" && fourSum([0, 0, 0], 0).length === 0',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */

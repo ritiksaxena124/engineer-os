@@ -294,6 +294,111 @@ export const DSA_CONCEPTS = {
     terms: ['repeat', 'join', 'row string', 'newline', 'accumulate'],
     weight: 1,
   },
+  'dsa-boyer-moore-vote': {
+    slug: 'dsa-boyer-moore-vote',
+    name: 'A majority survives cancellation against everything else',
+    detail: 'Pair off different elements and the > n/2 value is what remains standing; verify the candidate before trusting it.',
+    terms: ['candidate', 'votes', 'cancel', 'majority', 'verify count'],
+    weight: 2,
+  },
+  'dsa-kadane-reset': {
+    slug: 'dsa-kadane-reset',
+    name: 'A running sum that is worse than starting over should start over',
+    detail: 'The best subarray ending here is either the element alone or the element extended onto the previous run.',
+    terms: ['running sum', 'reset', 'ending here', 'drop the prefix', 'kadane'],
+    weight: 2,
+  },
+  'dsa-running-minimum': {
+    slug: 'dsa-running-minimum',
+    name: 'Track the cheapest so far and read the best answer off the current value',
+    detail: 'One pass over a monotone tracker replaces the O(n squared) pair enumeration.',
+    terms: ['cheapest', 'minimum so far', 'best spread', 'one pass', 'before it'],
+    weight: 2,
+  },
+  'dsa-suffix-maximum': {
+    slug: 'dsa-suffix-maximum',
+    name: 'A leader is defined by what comes after, so scan from the right',
+    detail: 'Reversed, the question becomes "is this at least the tallest value I have seen", which one variable answers.',
+    terms: ['from the right', 'suffix maximum', 'nothing greater', 'reverse scan'],
+    weight: 2,
+  },
+  'dsa-lexicographic-successor': {
+    slug: 'dsa-lexicographic-successor',
+    name: 'The next permutation raises the rightmost liftable digit',
+    detail: 'Find the pivot whose suffix descends, swap in the smallest larger value, then reverse the suffix to sort it again.',
+    terms: ['pivot', 'swap', 'reverse the suffix', 'descending tail', 'lexicographic'],
+    weight: 2,
+  },
+  'dsa-order-preserving-split': {
+    slug: 'dsa-order-preserving-split',
+    name: 'Split by a predicate and interleave to keep relative order',
+    detail: 'Two filtered passes preserve the input order inside each group, which an in-place swap does not.',
+    terms: ['filter', 'relative order', 'stable', 'interleave', 'two groups'],
+    weight: 2,
+  },
+  'dsa-set-run-start': {
+    slug: 'dsa-set-run-start',
+    name: 'A run only begins where its predecessor is absent',
+    detail: 'Hashing the input and skipping any value that has value - 1 makes the walk over a sequence linear overall.',
+    terms: ['set', 'has', 'value - 1', 'start of the run', 'membership'],
+    weight: 2,
+  },
+  'dsa-in-place-markers': {
+    slug: 'dsa-in-place-markers',
+    name: 'A decision can be recorded inside the data it will change',
+    detail: 'Reserving the first row and column as markers keeps a grid update at O(1) extra space, if the markers themselves are handled last.',
+    terms: ['marker row', 'marker column', 'first row', 'flag', 'in place', 'deferred update'],
+    weight: 2,
+  },
+  'dsa-transpose-reverse': {
+    slug: 'dsa-transpose-reverse',
+    name: 'A quarter turn is a transpose plus a reversal',
+    detail: 'Swapping across the diagonal then reversing each row is the rotation; the index map is the whole argument.',
+    terms: ['transpose', 'diagonal', 'reverse', 'rotate', 'index map'],
+    weight: 2,
+  },
+  'dsa-boundary-shrink': {
+    slug: 'dsa-boundary-shrink',
+    name: 'Four moving boundaries read a grid in layers',
+    detail: 'Top, bottom, left and right each close by one after their edge is consumed, and the two guards stop the repeats.',
+    terms: ['boundaries', 'top', 'bottom', 'shrink', 'layer', 'spiral'],
+    weight: 2,
+  },
+  'dsa-prefix-count-map': {
+    slug: 'dsa-prefix-count-map',
+    name: 'Count the prefix sums a target is short of',
+    detail: 'A map of how often each running total has occurred turns "how many subarrays" into a lookup per element.',
+    terms: ['prefix sum', 'frequency of sums', 'running total', 'map lookup', 'seed with zero'],
+    weight: 2,
+  },
+  'dsa-row-recurrence': {
+    slug: 'dsa-row-recurrence',
+    name: 'Each row is built from the row above it',
+    detail: 'Interior cells are the sum of two neighbours in the previous row, so the whole triangle costs its own output.',
+    terms: ['previous row', 'recurrence', 'boundary of one', 'interior cell', 'build from the row above'],
+    weight: 2,
+  },
+  'dsa-two-candidate-vote': {
+    slug: 'dsa-two-candidate-vote',
+    name: 'A third threshold needs two candidate slots',
+    detail: 'Decrement every slot on a foreign value; values above a third can only occupy the two survivors, and both need verifying.',
+    terms: ['two candidates', 'second slot', 'decrement every slot', 'threshold', 'verify both'],
+    weight: 2,
+  },
+  'dsa-sort-then-two-pointer': {
+    slug: 'dsa-sort-then-two-pointer',
+    name: 'Sorting turns a search for pairs into a closing window',
+    detail: 'Once the array is ordered, fixing one element leaves a two-pointer walk whose moves are decided by the sum.',
+    terms: ['sort first', 'two pointers', 'closing window', 'fixed element', 'skips duplicates'],
+    weight: 2,
+  },
+  'dsa-duplicate-skip': {
+    slug: 'dsa-duplicate-skip',
+    name: 'Uniqueness is an index test, not a set of results',
+    detail: 'Comparing each candidate against the value just consumed emits every combination once; deduplicating afterwards is slower and fuzzier.',
+    terms: ['skip duplicates', 'same as previous', 'unique results', 'advance past repeats'],
+    weight: 2,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -2704,6 +2809,688 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return rows.join("\\n");\n' +
       '}',
     modify: 'Invert the pyramid using the same body function and confirm the two halves still share an axis.',
+  },
+  {
+    step: 3,
+    name: 'Majority Element (> n/2 times)',
+    difficulty: 'Easy',
+    topicSlug: ARRAYS,
+    stem: 'Find the element that occurs more than n/2 times in O(1) space, and say why the answer still needs verifying.',
+    brief: 'Input: an array of integers. Output: the majority value, or null when none exists. No frequency map.',
+    concepts: ['dsa-boyer-moore-vote', 'dsa-single-pass-tracking', 'dsa-hash-frequency'],
+    shortAnswer: 'Cancel pairs of different values; whatever survives is the only candidate, and a counting pass proves it.',
+    idealAnswer:
+      'Boyer-Moore keeps a candidate and a counter: matching values add, differing values subtract, and a zero counter ' +
+      'hands the candidate slot to the next value. A majority cannot be fully cancelled because it has more copies than ' +
+      'everything else combined, so the survivor is necessary but not sufficient — the guarantee is only "if a majority ' +
+      'exists this is it", and the verify pass is what distinguishes the two statements.',
+    walkthrough:
+      'The cancellation is order-independent in effect: pairs of distinct values are removed from consideration, which ' +
+      'is the same argument as voting down a motion twice and keeping the same winner. That is also why the counter is ' +
+      'not a frequency — it is a debt ledger against the candidate, and reading it as a count at the end is the classic ' +
+      'misinterpretation.',
+    commonMistake: 'Returning the candidate without counting it, or treating the final vote count as a frequency.',
+    whyWrong:
+      'On [1, 2, 3] the algorithm hands back 3 with one vote and no majority exists, so the shipped function reports a ' +
+      'value that occurs once as the answer for "more than half". That is a correctness bug your tests only find if ' +
+      'someone remembers the no-majority input exists.',
+    followUps: ['Why is the surviving candidate unique even though the path to it depends on order?', 'What breaks if the input is empty?', 'Now require more than n/3 — how many candidates do you need?'],
+    solution:
+      'function majorityElement(nums) {\n' +
+      '  let candidate = null;\n' +
+      '  let votes = 0;\n' +
+      '  for (const value of nums) {\n' +
+      '    if (votes === 0) {\n' +
+      '      candidate = value;\n' +
+      '      votes = 1;\n' +
+      '    } else if (value === candidate) {\n' +
+      '      votes += 1;\n' +
+      '    } else {\n' +
+      '      votes -= 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  const count = nums.filter((value) => value === candidate).length;\n' +
+      '  return count > nums.length / 2 ? candidate : null;\n' +
+      '}',
+    modify: 'Return every value above n/4 with two candidate slots — why do you need two and not one?',
+  },
+  {
+    step: 3,
+    name: 'Maximum Subarray Sum (Kadane\'s Algorithm)',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Give the largest sum over contiguous elements in one pass and say what the running sum means.',
+    brief: 'Input: an array of integers, all negative allowed. Output: the maximum subarray sum, and an empty array is not an option.',
+    concepts: ['dsa-kadane-reset', 'dsa-single-pass-tracking', 'dsa-boundary-conditions'],
+    shortAnswer: 'The best run ending here either extends the previous run or starts fresh; the answer is the maximum of those local bests.',
+    idealAnswer:
+      'Define the state as "best sum over subarrays that end at i" rather than "best so far", because the first is ' +
+      'recurrences-ready: cur = max(a[i], cur + a[i]). The global answer is the max over those local values, which is ' +
+      'why a single pass is enough and why resetting is not throwing the run away but declaring the prefix a liability. ' +
+      'O(n) time, O(1) space.',
+    walkthrough:
+      'Seeding both values with a[0] rather than 0 is the whole all-negative case: a zero-seeded cur silently allows an ' +
+      'empty subarray to win with 0, which is the answer to a different question. The recurrence form also generalises ' +
+      'directly to the variants that ask for the product, the longest run, or the actual indices.',
+    commonMistake: 'Initialising the best at zero, or clamping the running sum with Math.max(0, ...) and calling it Kadane.',
+    whyWrong:
+      'For [-3, -1, -2] a zero-seeded best reports 0, which is not the sum of any subarray in the input. The clamp ' +
+      'version hides the same bug: it discards the negative run instead of choosing between the run and the element.',
+    followUps: ['Which input separates max(0, cur + x) from max(x, cur + x)?', 'Return the sum and the indices — which extra state do you need?', 'Why does the same shape solve maximum profit with a cost per day?'],
+    solution:
+      'function maxSubarraySum(nums) {\n' +
+      '  let best = nums[0];\n' +
+      '  let current = nums[0];\n' +
+      '  for (let i = 1; i < nums.length; i += 1) {\n' +
+      '    current = Math.max(nums[i], current + nums[i]);\n' +
+      '    best = Math.max(best, current);\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Allow one element to be skipped and keep it linear — what does the state become?',
+  },
+  {
+    step: 3,
+    name: 'Print subarray with maximum subarray sum',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Return the subarray that achieves the maximum sum, and say when a new run has to begin.',
+    brief: 'Input: an array of integers. Output: the contiguous slice with the largest sum, in order.',
+    concepts: ['dsa-kadane-reset', 'dsa-single-pass-tracking', 'dsa-boundary-conditions'],
+    shortAnswer: 'Carry the start index with the running sum and move it the moment starting over beats extending.',
+    idealAnswer:
+      'The sum alone forgets geometry, so the state has to hold where the current run began as well as what it is worth. ' +
+      'When the element on its own beats the extension, both the sum and the start move to i; when the running total ' +
+      'beats the recorded best, the best start and end are copied from the live run. Still O(n) time and O(1) state ' +
+      'besides the output slice.',
+    walkthrough:
+      'Recording the answer at the moment it is beaten — not after the loop — is what makes the indices correct, because ' +
+      'the live run keeps moving. This is the pattern to reach for whenever a metric question turns into a "which one" ' +
+      'question: the extra pointer costs nothing and the alternative is a second pass that has to rediscover the state.',
+    commonMistake: 'Reconstructing the range after the loop from the final sum, or updating the best start on every extension.',
+    whyWrong:
+      'The run that produced the maximum is not the run that ends the array, so any post-loop reconstruction starts from ' +
+      'the wrong place. Moving the start on every extension instead of every reset slides the window along and returns ' +
+      'a suffix of the real answer — same sum, wrong slice.',
+    followUps: ['Which tie do you report when two runs hold the same maximum?', 'Return the indices instead of the slice — what changes?', 'Can you do it without slicing, and why would a service prefer that?'],
+    solution:
+      'function maxSubarray(nums) {\n' +
+      '  let best = { start: 0, end: 0, sum: nums[0] };\n' +
+      '  let run = { start: 0, sum: nums[0] };\n' +
+      '  for (let i = 1; i < nums.length; i += 1) {\n' +
+      '    if (run.sum + nums[i] < nums[i]) {\n' +
+      '      run = { start: i, sum: nums[i] };\n' +
+      '    } else {\n' +
+      '      run.sum += nums[i];\n' +
+      '    }\n' +
+      '    if (run.sum > best.sum) best = { start: run.start, end: i, sum: run.sum };\n' +
+      '  }\n' +
+      '  return nums.slice(best.start, best.end + 1);\n' +
+      '}',
+    modify: 'Report every maximum-sum subarray rather than the first one found — how much extra state does that need?',
+  },
+  {
+    step: 3,
+    name: 'Stock Buy and Sell',
+    difficulty: 'Easy',
+    topicSlug: ARRAYS,
+    stem: 'Find the best single buy-then-sell profit in one pass and say why the order of the two updates matters.',
+    brief: 'Input: prices by day. Output: the largest profit from one buy before one sell, or 0 when no trade pays.',
+    concepts: ['dsa-running-minimum', 'dsa-single-pass-tracking', 'dsa-boundary-conditions'],
+    shortAnswer: 'Keep the cheapest price seen so far and score the current price against it.',
+    idealAnswer:
+      'Two trackers, one pass: the minimum over days already passed, and the best spread the current day can produce ' +
+      'against it. The buy can only ever be in the past, which is exactly what makes updating the minimum first and the ' +
+      'profit second correct — and a same-day buy and sell is a zero profit, harmless to the answer.',
+    walkthrough:
+      'The O(n squared) pair enumeration is what this replaces, and the reason it collapses to one pass is that the best ' +
+      'sell day for any future buy day only needs the minimum, never the identity of the day it happened on. Trackers ' +
+      'like this are the linear form of "best pair with an ordering constraint", which shows up in matching, in ' +
+      'drawdown, and in any max-spread question.',
+    commonMistake: 'Subtracting the minimum from the last price, or updating the profit before the minimum on the first day.',
+    whyWrong:
+      'A single global minimum and the final price answer a question nobody asked — the sell has to be after the buy, so ' +
+      '[7, 6, 4, 3, 1] is 0 and not 6. Updating profit first would let day one trade with itself against its own price ' +
+      'and hides the case where the cheapest day is also the last day.',
+    followUps: ['What does the function report for a strictly falling series?', 'Multiple transactions, buy again only after selling: which tracker changes?', 'Maximum drawdown of the same series — what is the mirror image here?'],
+    solution:
+      'function bestProfit(prices) {\n' +
+      '  let cheapest = Infinity;\n' +
+      '  let best = 0;\n' +
+      '  for (const price of prices) {\n' +
+      '    if (price < cheapest) cheapest = price;\n' +
+      '    else if (price - cheapest > best) best = price - cheapest;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Allow as many completed trades as you like and sum the rises — why does that become a greedy scan of differences?',
+  },
+  {
+    step: 3,
+    name: 'Rearrange Array Elements by Sign',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Alternate positives and negatives starting with a positive while keeping the order inside each group.',
+    brief: 'Input: an array with equal counts of positive and negative numbers. Output: the rearranged array; relative order within a sign must survive.',
+    concepts: ['dsa-order-preserving-split', 'dsa-write-index', 'dsa-boundary-conditions'],
+    shortAnswer: 'Two filtered passes hold each group in order, then one interleave emits them in pairs.',
+    idealAnswer:
+      'Stability inside each group is the constraint that rules out the obvious in-place swap: partitioning by sign ' +
+      'reverses or shuffles the order within a group. Two arrays built by filter keep the relative order for free, and ' +
+      'the merge is a single loop over the shared length, so it is O(n) time and O(n) space — the space is the price of ' +
+      'stability.',
+    walkthrough:
+      'The trade is the same one a stable sort makes against a quicksort: order-preservation costs memory. If the ' +
+      'requirement were only "positives first, negatives after" the write-index partition from earlier array work ' +
+      'would be in place and O(1), so reading which property is actually asked for decides the algorithm before you ' +
+      'write it.',
+    commonMistake: 'Swapping in place to alternate the signs, or assuming the counts stay equal.',
+    whyWrong:
+      'In-place swapping scrambles the order inside each sign, which is the one property the problem names. Unequal ' +
+      'counts make the paired loop drop the leftover elements off the end of the output, and the array comes back short ' +
+      'without any error to say so.',
+    followUps: ['What is the invariant the interleave depends on, and how do you assert it?', 'Return the array unchanged when the counts differ — which loop guard moves?', 'Negatives first instead: what is the one-character change?'],
+    solution:
+      'function rearrangeBySign(nums) {\n' +
+      '  const positive = nums.filter((value) => value > 0);\n' +
+      '  const negative = nums.filter((value) => value <= 0);\n' +
+      '  const out = [];\n' +
+      '  for (let i = 0; i < positive.length; i += 1) {\n' +
+      '    out.push(positive[i]);\n' +
+      '    out.push(negative[i]);\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}',
+    modify: 'Handle unequal group sizes by appending the remainder, then say what changes if zero counts as negative.',
+  },
+  {
+    step: 3,
+    name: 'Next Permutation',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Advance an array to the next lexicographic ordering in place, and say what the descending tail means.',
+    brief: 'Input: an array of numbers. Output: the same array reordered to the next permutation, wrapping to ascending when it is already the last.',
+    concepts: ['dsa-lexicographic-successor', 'dsa-reversal-trick', 'dsa-boundary-conditions'],
+    shortAnswer: 'Raise the right element that can be raised, swap in the smallest larger value from the tail, then reverse the tail.',
+    idealAnswer:
+      'Scanning right to left, the first index whose value is below its neighbour is the pivot; everything past it is ' +
+      'already descending, which is the signature of a final permutation for that suffix. Swapping the pivot with the ' +
+      'smallest value in the tail that still exceeds it makes the change minimal, and reversing the tail turns a ' +
+      'descending suffix into the ascending, smallest-possible one. O(n) time, O(1) space, in place.',
+    walkthrough:
+      'The reason the tail is descending is that you have already enumerated every ordering of it while the pivot was ' +
+      'fixed, so the next step must change the pivot and reset the suffix to its minimum — the same carry logic as ' +
+      'adding one to a number. Skipping the verify step and sorting the tail instead of reversing it is O(n log n) for ' +
+      'a property the reversal already gives you.',
+    commonMistake: 'Swapping the pivot with the immediate successor, or forgetting to reverse the tail when there is no pivot.',
+    whyWrong:
+      'The immediate successor is not the smallest larger value in a descending tail — it happens to be adjacent, which ' +
+      'is why the shortcut passes small tests and fails the ones that matter. And when the whole array is descending, ' +
+      'there is no pivot, so the reversal of the entire array is the wrap-around; without it the last permutation ' +
+      'repeats forever.',
+    followUps: ['Why is the suffix descending at the moment you stop scanning?', 'What would you change to get the previous permutation?', 'How many permutations are after the last one for n = 4?'],
+    solution:
+      'function nextPermutation(a) {\n' +
+      '  let i = a.length - 2;\n' +
+      '  while (i >= 0 && a[i] >= a[i + 1]) i -= 1;\n' +
+      '  if (i >= 0) {\n' +
+      '    let j = a.length - 1;\n' +
+      '    while (a[j] <= a[i]) j -= 1;\n' +
+      '    const t = a[i];\n' +
+      '    a[i] = a[j];\n' +
+      '    a[j] = t;\n' +
+      '  }\n' +
+      '  for (let lo = i + 1, hi = a.length - 1; lo < hi; lo += 1, hi -= 1) {\n' +
+      '    const t = a[lo];\n' +
+      '    a[lo] = a[hi];\n' +
+      '    a[hi] = t;\n' +
+      '  }\n' +
+      '  return a;\n' +
+      '}',
+    modify: 'Advance k permutations at once without looping k times — what does the rank of the suffix buy you?',
+  },
+  {
+    step: 3,
+    name: 'Leaders in an Array',
+    difficulty: 'Easy',
+    topicSlug: ARRAYS,
+    stem: 'Report every element with nothing greater to its right and explain why the scan goes backwards.',
+    brief: 'Input: an array of numbers. Output: the leaders in left-to-right order; a leader is >= every value after it, and the last element always qualifies.',
+    concepts: ['dsa-suffix-maximum', 'dsa-single-pass-tracking', 'dsa-boundary-conditions'],
+    shortAnswer: 'Scan right to left keeping the tallest value seen, and every element that meets it is a leader.',
+    idealAnswer:
+      'The definition talks about the suffix, so the suffix maximum is the only state you need; scanning forwards would ' +
+      'make each candidate ask a question about elements it has not reached. Collect while scanning right to left and ' +
+      'reverse at the end to restore left-to-right output. O(n) time, O(1) space beyond the answer.',
+    walkthrough:
+      'Reading the direction of a scan off the direction of the definition is the transferable move: any property about ' +
+      '"everything after this" is a right-to-left pass with one accumulator, and any property about "everything before" ' +
+      'is the mirror. The strict-versus-non-strict comparison is the second decision, and duplicates are what force you ' +
+      'to state it out loud.',
+    commonMistake: 'Comparing each element against the array maximum, or using a strict greater-than so duplicates stop being leaders.',
+    whyWrong:
+      'The global maximum only says which element is the tallest, not which elements dominate their own suffix — that ' +
+      'loses every leader after the first. A strict comparison drops the second of two equal tallest values, and the ' +
+      'definition says nothing greater, which equality satisfies.',
+    followUps: ['Which two elements decide whether your comparison is >= or >?', 'Count the non-leaders instead — same pass?', 'What changes if leaders are defined against everything before them?'],
+    solution:
+      'function leaders(nums) {\n' +
+      '  const found = [];\n' +
+      '  let tallest = -Infinity;\n' +
+      '  for (let i = nums.length - 1; i >= 0; i -= 1) {\n' +
+      '    if (nums[i] >= tallest) {\n' +
+      '      found.push(nums[i]);\n' +
+      '      tallest = nums[i];\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return found.reverse();\n' +
+      '}',
+    modify: 'Return the leader indices instead of the values, then the right-to-left order is what you can keep — do you still reverse?',
+  },
+  {
+    step: 3,
+    name: 'Longest Consecutive Sequence in an Array',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Give the length of the longest run of consecutive values without sorting, and say why most starts are skipped.',
+    brief: 'Input: an unsorted array of integers with duplicates. Output: the longest sequence length where consecutive means value + 1.',
+    concepts: ['dsa-set-run-start', 'dsa-hash-frequency', 'dsa-boundary-conditions'],
+    shortAnswer: 'Hash the values, walk forward only from a value whose predecessor is absent.',
+    idealAnswer:
+      'Sorting is O(n log n) and the question does not need order, only membership, so a Set gives O(1) lookups and the ' +
+      'run length comes from walking value, value + 1, value + 2 while they exist. The start test — value - 1 is not in ' +
+      'the Set — is what makes it linear: every element is visited at most once inside a walk and once as a candidate, ' +
+      'so the nested loop is O(n) overall rather than O(n squared).',
+    walkthrough:
+      'Without the start test the walk from the middle of a run re-counts the same elements once per interior value, ' +
+      'which is the amortised argument people skip and then fail to explain when asked why the double loop is linear. ' +
+      'Duplicates cost nothing because a Set holds each value once, and the run length is about distinct values anyway.',
+    commonMistake: 'Sorting the array first, or walking forward from every value instead of only from the start of a run.',
+    whyWrong:
+      'Sorting spends O(n log n) and O(n) space to answer a membership question, and the sort only becomes the right ' +
+      'tool when the answer must be ordered. Walking from every value is the quadratic version that still returns the ' +
+      'correct length — the failure is invisible in the output and only shows up on a long run.',
+    followUps: ['Prove the total work is linear despite the inner while loop.', 'Return the run itself rather than its length — what extra state?', 'What does the answer become if the input is already sorted?'],
+    solution:
+      'function longestConsecutive(nums) {\n' +
+      '  const pool = new Set(nums);\n' +
+      '  let best = 0;\n' +
+      '  for (const value of pool) {\n' +
+      '    if (pool.has(value - 1)) continue;\n' +
+      '    let length = 1;\n' +
+      '    while (pool.has(value + length)) length += 1;\n' +
+      '    if (length > best) best = length;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Report the longest run of consecutive values that also appear in order in the array — does the Set still help?',
+  },
+  {
+    step: 3,
+    name: 'Set Matrix Zeroes',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Zero every row and column that contains a zero, without letting your own writes create new zeros.',
+    brief: 'Input: a grid of numbers, mutated in place. Output: the same grid with each affected row and column cleared.',
+    concepts: ['dsa-in-place-markers', 'dsa-boundary-conditions', 'dsa-hash-frequency'],
+    shortAnswer: 'Record the rows and columns to clear first, then apply them — a write during the scan would corrupt later reads.',
+    idealAnswer:
+      'The naive in-place version fails because clearing a row on sight turns other cells into zeros that the scan has ' +
+      'not reached yet, so the whole grid collapses. Holding the affected indices in two sets separates observation ' +
+      'from mutation; the harder version of the same idea reuses the first row and column as the markers, which needs ' +
+      'two extra flags because those markers are themselves part of the answer.',
+    walkthrough:
+      'This is the read-modify-write hazard in miniature: any pass that reads a structure it is also writing has to ' +
+      'stage the writes. Staging in sets costs O(r + c) space, which is trivial; the marker trick costs O(1) and buys ' +
+      'nothing here except the interview point, and it is the kind of complexity a service should not carry without a ' +
+      'memory constraint to justify it.',
+    commonMistake: 'Clearing rows and columns while still scanning the grid, or forgetting that the marker row is itself data.',
+    whyWrong:
+      'Write-during-scan propagates: one zero wipes a row, and a later cell in that row now looks like a zero and wipes ' +
+      'its own column. The marker variant fails in the opposite direction — clearing the first row early erases the ' +
+      'record of which columns were ever marked.',
+    followUps: ['Which two cells need flags in the marker version?', 'Why is the staged version easier to review even though it costs space?', 'What changes if the grid must not be mutated at all?'],
+    solution:
+      'function setZeroes(grid) {\n' +
+      '  const rows = new Set();\n' +
+      '  const cols = new Set();\n' +
+      '  for (let i = 0; i < grid.length; i += 1) {\n' +
+      '    for (let j = 0; j < grid[i].length; j += 1) {\n' +
+      '      if (grid[i][j] === 0) {\n' +
+      '        rows.add(i);\n' +
+      '        cols.add(j);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  for (const i of rows) grid[i].fill(0);\n' +
+      '  for (const j of cols) {\n' +
+      '    for (let i = 0; i < grid.length; i += 1) grid[i][j] = 0;\n' +
+      '  }\n' +
+      '  return grid;\n' +
+      '}',
+    modify: 'Do it with the first row and column as markers and say which two cells you have to remember separately.',
+  },
+  {
+    step: 3,
+    name: 'Rotate Matrix by 90 degrees',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Turn a square grid ninety degrees clockwise in place and give the index map that proves it.',
+    brief: 'Input: an n by n grid, mutated in place. Output: the rotated grid; every element must move exactly once per phase.',
+    concepts: ['dsa-transpose-reverse', 'dsa-coordinate-loops', 'dsa-boundary-conditions'],
+    shortAnswer: 'Transpose across the diagonal, then reverse each row — together they send (i, j) to (j, n - 1 - i).',
+    idealAnswer:
+      'The composition is the proof: transposing maps (i, j) to (j, i) and reversing a row maps column j to n - 1 - j, ' +
+      'so a cell ends where a clockwise rotation puts it. Doing it in place is what makes the two phases necessary — ' +
+      'the direct alternative moves four cells at a time in rings, which is correct but has to carry the ring and offset ' +
+      'bookkeeping that this version avoids entirely.',
+    walkthrough:
+      'Transposing only the upper triangle (starting the inner loop at the diagonal plus one) is what keeps every swap ' +
+      'from being undone by its own mirror. The four-ring rotation has the same O(n squared) cost and no second pass, so ' +
+      'the choice is between one dense loop and two obvious ones; in a review the two obvious ones win.',
+    commonMistake: 'Transposing the whole grid instead of one side of the diagonal, or reversing columns instead of rows.',
+    whyWrong:
+      'A full transpose swaps each pair twice and returns the original grid, so the rotation is missing exactly the ' +
+      'reversal — an output that looks plausible because every value is still present. Reversing columns instead of rows ' +
+      'produces the counter-clockwise result, which is a different rotation of the same data and the hardest kind of bug ' +
+      'to notice in a test that only checks the corners.',
+    followUps: ['Write the index map for a counter-clockwise turn.', 'How many swaps does the transpose phase make on an n by n grid?', 'Which rotation can be done with rings alone, and what does it lose?'],
+    solution:
+      'function rotateMatrix(a) {\n' +
+      '  const n = a.length;\n' +
+      '  for (let i = 0; i < n; i += 1) {\n' +
+      '    for (let j = i + 1; j < n; j += 1) {\n' +
+      '      const t = a[i][j];\n' +
+      '      a[i][j] = a[j][i];\n' +
+      '      a[j][i] = t;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  for (const row of a) row.reverse();\n' +
+      '  return a;\n' +
+      '}',
+    modify: 'Rotate 180 degrees using these two phases the right number of times, then rotate a non-square grid and say why it cannot be in place.',
+  },
+  {
+    step: 3,
+    name: 'Print the matrix in spiral manner',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Read a grid in a spiral inward and say which two guards stop rows being emitted twice.',
+    brief: 'Input: an r by c grid. Output: its values in spiral order, from the top-left, each exactly once.',
+    concepts: ['dsa-boundary-shrink', 'dsa-coordinate-loops', 'dsa-boundary-conditions'],
+    shortAnswer: 'Emit the top row, right column, bottom row, left column, then close all four boundaries by one.',
+    idealAnswer:
+      'Four indices describe the unread rectangle; each of the four walks consumes one edge and then moves its boundary ' +
+      'inward. The two returns to the start edge — the bottom and left walks — need a re-check of the bounds, because a ' +
+      'single remaining row or column would otherwise be read forwards and backwards. Every cell is visited exactly once, ' +
+      'so O(r * c) time and O(r * c) output.',
+    walkthrough:
+      'The asymmetry is that the first two walks of a layer always have cells left to read while the last two might not: ' +
+      'advancing the top boundary can leave top greater than bottom, and retreating the right boundary can leave right ' +
+      'below left. That single observation is the entire correctness argument, and it is the reason spiral code is ' +
+      'usually wrong at the innermost layer rather than the outer one.',
+    commonMistake: 'Forgetting the second guard before the bottom walk, or using one boundary flag for rows and columns.',
+    whyWrong:
+      'Without the guard a one-row remainder is emitted twice, and a one-column remainder does the same on its way up. ' +
+      'Both failures are invisible on a square matrix larger than two, so a test set of 3 by 3 samples passes and the ' +
+      'single-row case is where production finds it.',
+    followUps: ['Which input shapes exercise both guards?', 'Could a visited set replace the boundary bookkeeping, and at what cost?', 'Return the spiral of a grid with more columns than rows and check the count.'],
+    solution:
+      'function spiralOrder(a) {\n' +
+      '  const out = [];\n' +
+      '  let top = 0;\n' +
+      '  let bottom = a.length - 1;\n' +
+      '  let left = 0;\n' +
+      '  let right = a[0].length - 1;\n' +
+      '  while (top <= bottom && left <= right) {\n' +
+      '    for (let j = left; j <= right; j += 1) out.push(a[top][j]);\n' +
+      '    top += 1;\n' +
+      '    for (let i = top; i <= bottom; i += 1) out.push(a[i][right]);\n' +
+      '    right -= 1;\n' +
+      '    if (top <= bottom) {\n' +
+      '      for (let j = right; j >= left; j -= 1) out.push(a[bottom][j]);\n' +
+      '      bottom -= 1;\n' +
+      '    }\n' +
+      '    if (left <= right) {\n' +
+      '      for (let i = bottom; i >= top; i -= 1) out.push(a[i][left]);\n' +
+      '      left += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}',
+    modify: 'Fill a grid with 1..n squared in spiral order instead of reading it — which boundaries move the same way?',
+  },
+  {
+    step: 3,
+    name: 'Count Subarray sum Equals K',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Count the subarrays whose sum is exactly k with negative values allowed, and say why the window slides no more.',
+    brief: 'Input: an array of integers, negatives allowed, and a target k. Output: the number of contiguous subarrays summing to k.',
+    concepts: ['dsa-prefix-count-map', 'dsa-prefix-sum', 'dsa-hash-frequency'],
+    shortAnswer: 'Store how often each prefix sum has occurred and add the count of prefix - k at every step.',
+    idealAnswer:
+      'A subarray sum is a difference of two prefix sums, so the question "how many subarrays ending here equal k" is ' +
+      '"how many earlier prefixes equal current - k". That is a frequency map lookup per element: O(n) time and O(n) ' +
+      'space. The map has to be seeded with a prefix sum of zero occurring once, otherwise a subarray that starts at ' +
+      'index zero is never counted.',
+    walkthrough:
+      'The sliding window is the tempting answer and it is wrong here: with negatives present, extending a window can ' +
+      'decrease its sum, so shrinking past a target loses candidates rather than discarding them. Counting prefixes does ' +
+      'not need monotonicity at all, which is exactly the property that makes it the right structure when the input can ' +
+      'go backwards.',
+    commonMistake: 'Using a two-pointer window because it worked for the positives-only version, or seeding the map empty.',
+    whyWrong:
+      'A window over negatives silently skips valid subarrays — it reports fewer than the truth and no sample makes ' +
+      'that obvious. The unseeded map misses every prefix-reaching subarray, which shows up as an off-by-one in the ' +
+      'count that looks like an indexing bug rather than a missing initial entry.',
+    followUps: ['Which input separates this from the sliding window version?', 'Why is the seed a count of one rather than zero?', 'Now count subarrays whose sum is at most k — does the map still work?'],
+    solution:
+      'function countSubarraysWithSum(nums, k) {\n' +
+      '  const seen = new Map([[0, 1]]);\n' +
+      '  let prefix = 0;\n' +
+      '  let count = 0;\n' +
+      '  for (const value of nums) {\n' +
+      '    prefix += value;\n' +
+      '    count += seen.get(prefix - k) ?? 0;\n' +
+      '    seen.set(prefix, (seen.get(prefix) ?? 0) + 1);\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}',
+    modify: 'Return the indices of the first subarray that hits k — which value does the map have to hold instead of a count?',
+  },
+  {
+    step: 3,
+    name: "Pascal's Triangle",
+    difficulty: 'Easy',
+    topicSlug: ARRAYS,
+    stem: 'Build the first rows of Pascal\'s triangle from the row above and give the recurrence.',
+    brief: 'Input: a row count. Output: the triangle as an array of rows, each built from its predecessor.',
+    concepts: ['dsa-row-recurrence', 'dsa-coordinate-loops', 'dsa-boundary-conditions'],
+    shortAnswer: 'Every row starts and ends with one; an interior cell is the sum of the two cells above it.',
+    idealAnswer:
+      'The recurrence value(i, j) = value(i - 1, j - 1) + value(i - 1, j) with ones at both edges defines the whole ' +
+      'triangle, so building it row by row is O(n squared) time and output — which is the lower bound, because the ' +
+      'answer itself has that many cells. Computing a single binomial coefficient by factorials is the other question, ' +
+      'and it is the one that overflows.',
+    walkthrough:
+      'Keeping the previous row rather than the whole triangle is enough for generation, but then the answers are gone; ' +
+      'holding all rows is what makes this a dynamic-programming table instead of a stream. The edge handling — a row of ' +
+      'one element, then rows that push a trailing one — is where the loop bounds have to be exact.',
+    commonMistake: 'Using factorials for each cell, or letting the first row gain a spurious second one.',
+    whyWrong:
+      'Factorials hit the 53-bit integer window very quickly, so a row that is arithmetically fine comes back rounded, ' +
+      'while the additive recurrence never leaves the safe range for rows it can actually hold. A special case that ' +
+      'forgets the single-element row prints "1,1" as the first line and shifts the whole triangle.',
+    followUps: ['How large can n get before a cell exceeds Number.MAX_SAFE_INTEGER?', 'Generate only the nth row — what is the space cost then?', 'Which symmetry of the triangle does the loop take advantage of?'],
+    solution:
+      'function pascalTriangle(rows) {\n' +
+      '  const out = [];\n' +
+      '  for (let i = 0; i < rows; i += 1) {\n' +
+      '    const row = [1];\n' +
+      '    for (let j = 1; j < i; j += 1) row.push(out[i - 1][j - 1] + out[i - 1][j]);\n' +
+      '    if (i > 0) row.push(1);\n' +
+      '    out.push(row);\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}',
+    modify: 'Return only the nth row with a single backward-running array — why must the inner loop go right to left?',
+  },
+  {
+    step: 3,
+    name: 'Majority Elements (> n/3 times)',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Find every value occurring more than a third of the time using two candidate slots, and say why two is enough.',
+    brief: 'Input: an array of integers. Output: the values above n/3, in any order, with no duplicates in the result.',
+    concepts: ['dsa-two-candidate-vote', 'dsa-boyer-moore-vote', 'dsa-boundary-conditions'],
+    shortAnswer: 'Two slots and a decrement-everything rule; at most two values can clear a third, and both need counting.',
+    idealAnswer:
+      'A threshold above n/3 admits at most two survivors, so two candidates and two counters replace the frequency map. ' +
+      'Each foreign value either increments a matching slot or cancels one unit from both, which is the majority ' +
+      'argument generalised: a value above the threshold cannot be cancelled completely. The survivors are candidates ' +
+      'only, so a final counting pass decides which of them actually qualify.',
+    walkthrough:
+      'The subtlety is that cancelling two counters at once is not the same as tracking frequencies — the slots can hold ' +
+      'values that end up below the threshold, and only the verify pass separates them. This is the shape of every ' +
+      'Misra-Gries style summary: a bounded amount of state that is guaranteed to contain the heavy hitters, not a ' +
+      'guarantee that everything it holds is one.',
+    commonMistake: 'Reusing the n/2 algorithm with one slot, or returning the candidates without verifying them.',
+    whyWrong:
+      'One slot loses a legitimate second answer entirely — on [1, 1, 1, 2, 2, 2, 3] a single candidate stream keeps one ' +
+      'of the two real thirds and silently discards the other. Returning unverified candidates invents values that never ' +
+      'crossed the threshold, which is worse than missing one because the caller trusts the list.',
+    followUps: ['How many slots does a threshold above n/4 need?', 'Why is the cancel step applied to both slots at once?', 'What does the verify pass cost, and can it be folded in?'],
+    solution:
+      'function majorityThird(nums) {\n' +
+      '  const slots = [\n' +
+      '    { value: null, votes: 0 },\n' +
+      '    { value: null, votes: 0 },\n' +
+      '  ];\n' +
+      '  for (const value of nums) {\n' +
+      '    const owned = slots.find((slot) => slot.value === value);\n' +
+      '    if (owned) {\n' +
+      '      owned.votes += 1;\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const open = slots.find((slot) => slot.votes === 0);\n' +
+      '    if (open) {\n' +
+      '      open.value = value;\n' +
+      '      open.votes = 1;\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    for (const slot of slots) slot.votes -= 1;\n' +
+      '  }\n' +
+      '  return slots\n' +
+      '    .filter((slot) => slot.value !== null && nums.filter((v) => v === slot.value).length > nums.length / 3)\n' +
+      '    .map((slot) => slot.value);\n' +
+      '}',
+    modify: 'Generalise it to k slots for a threshold above n/(k+1) and say what the cancel step becomes.',
+  },
+  {
+    step: 3,
+    name: '3-Sum Problem',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'List every distinct triple that sums to zero and say why the sort is not the expensive part.',
+    brief: 'Input: an array of integers. Output: the unique triplets summing to zero, each reported once regardless of duplicates.',
+    concepts: ['dsa-sort-then-two-pointer', 'dsa-two-pointer', 'dsa-duplicate-skip', 'dsa-complexity-counting'],
+    shortAnswer: 'Sort, fix one element, then close a two-pointer window on the rest; skip equal values on every move.',
+    idealAnswer:
+      'Sorting turns the pair search into O(n) because the sum tells you which pointer has to move: too small advances ' +
+      'the low end, too large retreats the high. Fixing the first element makes the total O(n squared) after an O(n log ' +
+      'n) sort, and the duplicates are handled by never re-picking a value equal to the one just finished — uniqueness as ' +
+      'an index rule rather than a set of result strings.',
+    walkthrough:
+      'The hash-set alternative is also O(n squared) but cannot be made to emit each triple once without either ' +
+      'normalising the triple or comparing sorted key tuples, which is where it gets ugly. The two-pointer form gets ' +
+      'uniqueness almost free, because sorted order means duplicates are adjacent and adjacent equality is one cheap ' +
+      'test.',
+    commonMistake: 'Collecting triplets into a set of joined strings, or skipping duplicates only on the first element.',
+    whyWrong:
+      'String-keyed deduplication works but pays a hash of a serialised array per candidate and hides the real invariant, ' +
+      'so the next person cannot tell whether ordering was handled. Skipping only the outer element emits repeated ' +
+      'triplets from repeated inner values, which is the failure that survives a test built from distinct numbers.',
+    followUps: ['Why does the inner dedup test need the lo < hi guard?', 'Give the answer without sorting and name what you lose.', 'What is the complexity if the input is already sorted, and does the algorithm know?'],
+    solution:
+      'function threeSum(nums) {\n' +
+      '  const a = [...nums].sort((x, y) => x - y);\n' +
+      '  const out = [];\n' +
+      '  for (let i = 0; i < a.length - 2; i += 1) {\n' +
+      '    if (a[i] === a[i - 1]) continue;\n' +
+      '    let lo = i + 1;\n' +
+      '    let hi = a.length - 1;\n' +
+      '    while (lo < hi) {\n' +
+      '      const sum = a[i] + a[lo] + a[hi];\n' +
+      '      if (sum === 0) {\n' +
+      '        out.push([a[i], a[lo], a[hi]]);\n' +
+      '        lo += 1;\n' +
+      '        hi -= 1;\n' +
+      '        while (lo < hi && a[lo] === a[lo - 1]) lo += 1;\n' +
+      '      } else if (sum < 0) {\n' +
+      '        lo += 1;\n' +
+      '      } else {\n' +
+      '        hi -= 1;\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}',
+    modify: 'Return the count of triplets below a target instead of listing them — which moves can you stop making?',
+  },
+  {
+    step: 3,
+    name: '4-Sum Problem',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'List every distinct quadruplet that hits a target sum and account for the extra nesting.',
+    brief: 'Input: an array of integers and a target. Output: unique quadruplets summing to the target.',
+    concepts: ['dsa-sort-then-two-pointer', 'dsa-duplicate-skip', 'dsa-complexity-counting'],
+    shortAnswer: 'Fix two elements, then two-pointer the remainder: O(n cubed) after sorting, with adjacency tests for uniqueness.',
+    idealAnswer:
+      'One more fixed element buys one more factor of n, so the naive enumeration is O(n to the fourth) and the sorted ' +
+      'two-pointer tail brings it to O(n cubed). Uniqueness now needs a skip on both fixed levels — the second one ' +
+      'compared against the previous value only when it is not the first choice for this outer element — and that ' +
+      'condition is where 4Sum code is usually wrong.',
+    walkthrough:
+      'The general k-Sum recursion is the same idea with a loop that stops at k = 2, which is why writing 4Sum once by ' +
+      'hand is worth it: you see that the innermost two-pointer step is the only place the target enters, and the ' +
+      'rest is bookkeeping. Pruning helps the constant a lot — if the smallest possible completion already overshoots, ' +
+      'the loop can stop rather than continue.',
+    commonMistake: 'Skipping the second fixed element against its previous value unconditionally, or nesting four loops.',
+    whyWrong:
+      'An unconditional skip on the inner fixed index throws away the very first pair for every outer element, so valid ' +
+      'quadruplets vanish — a silent under-report. Four nested loops are O(n to the fourth) and still need a dedup ' +
+      'layer, which is the worst of both: slow and subtle.',
+    followUps: ['Which skip condition needs the "not the first choice" test, and why?', 'Write the recursive k-Sum version and say what it costs.', 'What pruning is available on the sorted array that 3Sum did not need?'],
+    solution:
+      'function fourSum(nums, target) {\n' +
+      '  const a = [...nums].sort((x, y) => x - y);\n' +
+      '  const out = [];\n' +
+      '  for (let i = 0; i < a.length - 3; i += 1) {\n' +
+      '    if (a[i] === a[i - 1]) continue;\n' +
+      '    for (let j = i + 1; j < a.length - 2; j += 1) {\n' +
+      '      if (j > i + 1 && a[j] === a[j - 1]) continue;\n' +
+      '      let lo = j + 1;\n' +
+      '      let hi = a.length - 1;\n' +
+      '      while (lo < hi) {\n' +
+      '        const sum = a[i] + a[j] + a[lo] + a[hi];\n' +
+      '        if (sum === target) {\n' +
+      '          out.push([a[i], a[j], a[lo], a[hi]]);\n' +
+      '          lo += 1;\n' +
+      '          hi -= 1;\n' +
+      '          while (lo < hi && a[lo] === a[lo - 1]) lo += 1;\n' +
+      '        } else if (sum < target) {\n' +
+      '          lo += 1;\n' +
+      '        } else {\n' +
+      '          hi -= 1;\n' +
+      '        }\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}',
+    modify: 'Add the smallest-and-largest pruning on both fixed levels and time the difference on an array of 500 values.',
   },
 ];
 
