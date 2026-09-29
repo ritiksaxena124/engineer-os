@@ -12,5 +12,8 @@
     "db:migrate": "bun run --cwd apps/api db:migrate",
     "db:seed": "bun run --cwd apps/api db:seed",
     "typecheck": "bun run --cwd apps/api typecheck && bun run --cwd apps/web typecheck"
+  },
+  "devDependencies": {
+    "xlsx": "^0.18.5"
   }
 }

@@ -1,10 +1,11 @@
 import { QUESTIONS_CORE } from './questions-core';
 import { QUESTIONS_DIAGNOSTIC } from './questions-diagnostic';
+import { QUESTIONS_DSA } from './questions-dsa';
 import { QUESTION_CATEGORIES, MASTERY_LEVELS } from './reference';
 import { ALL_TOPICS } from './curriculum';
 import type { QuestionSpec } from './types';
 
-export const ALL_QUESTIONS: QuestionSpec[] = [...QUESTIONS_DIAGNOSTIC, ...QUESTIONS_CORE];
+export const ALL_QUESTIONS: QuestionSpec[] = [...QUESTIONS_DIAGNOSTIC, ...QUESTIONS_CORE, ...QUESTIONS_DSA];
 
 const MIN_LENGTHS: Record<string, number> = {
   shortAnswer: 20,

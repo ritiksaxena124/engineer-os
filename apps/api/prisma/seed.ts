@@ -97,6 +97,17 @@ export async function seedContent(prisma: PrismaClient): Promise<{ topics: numbe
   ];
   await runInChunks(prisma, lookups);
 
+  // A phase's display order is unique per row, so resequencing it — inserting a topic between two
+  // existing ones — cannot be written in one pass: the second upsert would land on a number the
+  // first has not given up yet. Every row steps into a high band first, then the authored order
+  // writes the finals into the space that leaves empty.
+  await runInChunks(
+    prisma,
+    ALL_PHASES.map((phase) =>
+      prisma.topic.updateMany({ where: { phaseKey: phase.key }, data: { number: { increment: 1000 } } }),
+    ),
+  );
+
   const topicOps = ALL_TOPICS.map((topic) =>
     prisma.topic.upsert({
       where: { slug: topic.slug },
