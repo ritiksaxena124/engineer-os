@@ -64,6 +64,11 @@ export interface Lesson {
   sections: LessonSection[];
 }
 
+export interface CompanyTag {
+  key: string;
+  label: string;
+}
+
 export interface QuestionSummary {
   slug: string;
   stem: string;
@@ -74,9 +79,16 @@ export interface QuestionSummary {
   levelKey: string;
   isDiagnostic: boolean;
   conceptCount: number;
+  companies?: CompanyTag[];
   attemptCount?: number;
   body?: string;
   answer?: AnswerModel | null;
+}
+
+export interface QuestionFacets {
+  companies: (CompanyTag & { count: number })[];
+  difficulties: { difficulty: number; count: number }[];
+  untagged: number;
 }
 
 export interface AnswerModel {

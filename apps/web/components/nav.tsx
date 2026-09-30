@@ -9,6 +9,7 @@ const LINKS = [
   { href: '/', label: 'Dashboard' },
   { href: '/path', label: 'Learning path' },
   { href: '/practice', label: 'Practice' },
+  { href: '/questions', label: 'Questions' },
   { href: '/progress', label: 'Progress' },
   { href: '/diagnostic', label: 'Diagnostic' },
   { href: '/exam', label: 'Exam' },

@@ -13,7 +13,17 @@ interface QuestionPayload {
   topicSlug: string;
   isDiagnostic: boolean;
   conceptCount: number;
+  companies?: { key: string; label: string }[];
   answer?: Record<string, string> | null;
+}
+
+interface BrowsePayload {
+  questions: QuestionPayload[];
+  facets: {
+    companies: { key: string; label: string; count: number }[];
+    difficulties: { difficulty: number; count: number }[];
+    untagged: number;
+  };
 }
 
 interface AttemptPayload {
@@ -52,6 +62,11 @@ async function register(): Promise<{ token: string; userId: string }> {
   });
   const body = (await res.json()) as { accessToken: string; user: { id: string } };
   return { token: body.accessToken, userId: body.user.id };
+}
+
+async function browse(path: string): Promise<BrowsePayload> {
+  const { body } = await request(path, 'GET', token);
+  return body as BrowsePayload;
 }
 
 async function setLevel(topicSlug: string, levelKey: string) {
@@ -113,6 +128,73 @@ describe('question engine', () => {
     expect(filtered.length).toBeLessThan(total);
     expect(filtered.every((question) => question.category === 'debugging')).toBe(true);
     expect(filtered.every((question) => question.difficulty <= 4)).toBe(true);
+  });
+
+  test('every row carries its company tags and the response carries the facets to filter on', async () => {
+    const payload = await browse('/questions?diagnostic=false');
+    expect(payload.questions.length).toBeGreaterThan(100);
+    expect(payload.questions.every((row) => Array.isArray(row.companies))).toBe(true);
+    expect(payload.facets.companies.map((row) => row.key).sort()).toEqual(['amazon', 'google', 'microsoft']);
+    expect(payload.facets.companies.every((row) => row.count > 0 && row.label.length > 1)).toBe(true);
+    const rungs = payload.facets.difficulties.map((row) => row.difficulty);
+    expect(rungs).toEqual([...rungs].sort((a, b) => a - b));
+  });
+
+  test('a company filter returns exactly the questions tagged for it', async () => {
+    const amazon = await browse('/questions?diagnostic=false&company=amazon');
+    expect(amazon.questions.length).toBeGreaterThan(5);
+    expect(amazon.questions.every((row) => row.companies!.some((company) => company.key === 'amazon'))).toBe(true);
+
+    const everything = await browse('/questions?diagnostic=false');
+    const tagged = everything.questions.filter((row) => row.companies!.length > 0);
+    expect(amazon.questions.length).toBeLessThan(tagged.length);
+    expect(amazon.questions.length).toBeLessThan(everything.questions.length);
+  });
+
+  test('untagged is an answer rather than a missing tag', async () => {
+    const untagged = await browse('/questions?company=untagged');
+    expect(untagged.questions.length).toBeGreaterThan(0);
+    expect(untagged.questions.every((row) => row.companies!.length === 0)).toBe(true);
+
+    const all = await browse('/questions?diagnostic=false');
+    expect(all.facets.untagged).toBe(all.questions.filter((row) => row.companies!.length === 0).length);
+  });
+
+  test('the difficulty filter selects a rung on the same ladder the row shows', async () => {
+    const fives = await browse('/questions?minDifficulty=5&maxDifficulty=5');
+    expect(fives.questions.length).toBeGreaterThan(0);
+    expect(fives.questions.every((row) => row.difficulty === 5)).toBe(true);
+
+    const senior = await browse('/questions?minDifficulty=6');
+    expect(senior.questions.length).toBeGreaterThan(0);
+    expect(senior.questions.every((row) => row.difficulty >= 6)).toBe(true);
+    expect(senior.questions.length).toBeLessThan(fives.questions.length + senior.questions.length);
+  });
+
+  test('company and difficulty filters compose, and the facet counts follow the other filters', async () => {
+    const rows = await browse('/questions?diagnostic=false&company=amazon&minDifficulty=5');
+    expect(rows.questions.length).toBeGreaterThan(0);
+    expect(rows.questions.every((row) => row.difficulty >= 4 && row.companies!.some((c) => c.key === 'amazon'))).toBe(
+      true,
+    );
+    const googleAtFive = await browse('/questions?diagnostic=false&company=google&minDifficulty=5');
+    expect(googleAtFive.questions.length).toBeGreaterThan(0);
+    expect(rows.facets.companies.find((row) => row.key === 'google')!.count).toBe(
+      googleAtFive.questions.length,
+    );
+  });
+
+  test('the search matches the stem and nothing else is leaked', async () => {
+    const rows = await browse('/questions?search=rotated');
+    expect(rows.questions.length).toBeGreaterThan(0);
+    expect(rows.questions.every((row) => row.stem.toLowerCase().includes('rotated'))).toBe(true);
+    expect(JSON.stringify(rows)).not.toContain('idealAnswer');
+  });
+
+  test('an unknown company, an unknown rung and an inverted range are all refused', async () => {
+    expect((await request('/questions?company=bytedance', 'GET', token)).status).toBe(400);
+    expect((await request('/questions?minDifficulty=8', 'GET', token)).status).toBe(400);
+    expect((await request('/questions?minDifficulty=6&maxDifficulty=2', 'GET', token)).status).toBe(400);
   });
 
   test('a question is served without its answer until the learner has answered it', async () => {

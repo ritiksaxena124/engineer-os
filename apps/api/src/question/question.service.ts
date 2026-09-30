@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurriculumService } from '../curriculum/curriculum.service';
 import { MasteryService } from '../mastery/mastery.service';
@@ -23,20 +24,65 @@ export class QuestionService {
   ) {}
 
   async list(filter: QuestionQueryDto) {
-    const rows = await this.prisma.question.findMany({
-      where: {
-        isActive: true,
-        ...(filter.topic ? { topic: { slug: filter.topic } } : {}),
-        ...(filter.category ? { categoryKey: filter.category } : {}),
-        ...(filter.maxDifficulty ? { difficulty: { lte: filter.maxDifficulty } } : {}),
-        ...(filter.diagnostic === undefined ? {} : { isDiagnostic: filter.diagnostic }),
-      },
-      orderBy: [{ difficulty: 'asc' }, { slug: 'asc' }],
-      include: {
-        topic: { select: { slug: true } },
-        _count: { select: { expectedConcepts: true } },
-      },
-    });
+    /**
+     * Everything except the company clause: the facet counts are what a chip would select if it
+     * were clicked on top of the filters already applied, so the numbers never advertise a result
+     * set the learner cannot reach.
+     */
+    const scope: Prisma.QuestionWhereInput = {
+      isActive: true,
+      ...(filter.topic ? { topic: { slug: filter.topic } } : {}),
+      ...(filter.category ? { categoryKey: filter.category } : {}),
+      ...(filter.minDifficulty === undefined && filter.maxDifficulty === undefined
+        ? {}
+        : {
+            difficulty: {
+              ...(filter.minDifficulty === undefined ? {} : { gte: filter.minDifficulty }),
+              ...(filter.maxDifficulty === undefined ? {} : { lte: filter.maxDifficulty }),
+            },
+          }),
+      ...(filter.diagnostic === undefined ? {} : { isDiagnostic: filter.diagnostic }),
+      ...(filter.search ? { stem: { contains: filter.search, mode: 'insensitive' } } : {}),
+    };
+
+    const where: Prisma.QuestionWhereInput = {
+      ...scope,
+      ...(filter.company === undefined
+        ? {}
+        : filter.company === 'untagged'
+          ? { companies: { none: { isActive: true } } }
+          : { companies: { some: { isActive: true, companyKey: filter.company } } }),
+    };
+
+    const [rows, companyRows, tagged, rungs, untagged] = await Promise.all([
+      this.prisma.question.findMany({
+        where,
+        orderBy: [{ difficulty: 'asc' }, { slug: 'asc' }],
+        include: {
+          topic: { select: { slug: true } },
+          _count: { select: { expectedConcepts: true } },
+          companies: {
+            where: { isActive: true },
+            include: { company: { select: { key: true, label: true } } },
+          },
+        },
+      }),
+      this.prisma.company.findMany({ where: { isActive: true }, orderBy: { key: 'asc' } }),
+      this.prisma.questionCompany.groupBy({
+        by: ['companyKey'],
+        where: { isActive: true, question: scope },
+        _count: { _all: true },
+      }),
+      this.prisma.question.groupBy({
+        by: ['difficulty'],
+        where: scope,
+        _count: { _all: true },
+        orderBy: { difficulty: 'asc' },
+      }),
+      this.prisma.question.count({ where: { ...scope, companies: { none: { isActive: true } } } }),
+    ]);
+
+    const countByCompany = new Map(tagged.map((row) => [row.companyKey, row._count._all]));
 
     return {
       questions: rows.map((row) => ({
@@ -48,7 +94,19 @@ export class QuestionService {
         levelKey: row.levelKey,
         isDiagnostic: row.isDiagnostic,
         conceptCount: row._count.expectedConcepts,
+        companies: row.companies
+          .map((edge) => ({ key: edge.company.key, label: edge.company.label }))
+          .sort((a, b) => a.key.localeCompare(b.key)),
       })),
+      facets: {
+        companies: companyRows.map((company) => ({
+          key: company.key,
+          label: company.label,
+          count: countByCompany.get(company.key) ?? 0,
+        })),
+        difficulties: rungs.map((rung) => ({ difficulty: rung.difficulty, count: rung._count._all })),
+        untagged,
+      },
     };
   }
 

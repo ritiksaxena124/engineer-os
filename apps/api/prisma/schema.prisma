@@ -298,10 +298,39 @@ model Question {
   answer           QuestionAnswer?
   attempts         Attempt[]
   reviews          ReviewSchedule[]
+  companies        QuestionCompany[]
 
   @@index([topicId, categoryKey])
   @@index([difficulty])
   @@map("questions")
+}
+
+// Editorial tags, curated in prisma/content/companies.ts: where a problem is a well-known
+// interview staple. Not verified hiring data, and a question with no row is untagged rather
+// than unasked, so the filter has to be able to say both.
+model Company {
+  key      String  @id
+  label    String
+  isActive Boolean @default(true)
+
+  questions QuestionCompany[]
+
+  @@map("companies")
+}
+
+model QuestionCompany {
+  id         String  @id @default(uuid())
+  isActive   Boolean @default(true)
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  companyKey String
+  company    Company  @relation(fields: [companyKey], references: [key], onDelete: Restrict)
+
+  @@unique([questionId, companyKey])
+  @@index([companyKey])
+  @@map("question_companies")
 }
 
 model QuestionAnswer {

@@ -2,6 +2,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { ALL_PHASES, ALL_TOPICS, validateCurriculum, validateLessons } from './content/curriculum';
 import { LESSONS } from './content/lessons';
 import { ALL_QUESTIONS, validateQuestions } from './content/questions';
+import { ASKED_AT, COMPANIES, validateCompanies } from './content/companies';
 import type { ConceptSpec } from './content/types';
 import {
   ATTEMPT_VERDICTS,
@@ -51,6 +52,10 @@ export async function seedContent(prisma: PrismaClient): Promise<{ topics: numbe
   if (questionProblems.length > 0) {
     throw new Error(`question content invalid:\n${questionProblems.join('\n')}`);
   }
+  const companyProblems = validateCompanies(new Set(ALL_QUESTIONS.map((question) => question.slug)));
+  if (companyProblems.length > 0) {
+    throw new Error(`company tags invalid:\n${companyProblems.join('\n')}`);
+  }
   const referenceProblems = validateReference();
   if (referenceProblems.length > 0) {
     throw new Error(`reference content invalid:\n${referenceProblems.join('\n')}`);
@@ -73,6 +78,9 @@ export async function seedContent(prisma: PrismaClient): Promise<{ topics: numbe
     ),
     ...LESSON_SECTION_KINDS.map((row) =>
       prisma.lessonSectionKind.upsert({ where: { key: row.key }, create: row, update: row }),
+    ),
+    ...COMPANIES.map((row) =>
+      prisma.company.upsert({ where: { key: row.key }, create: row, update: { label: row.label, isActive: true } }),
     ),
     ...SESSION_TYPES.map((row) => prisma.sessionType.upsert({ where: { key: row.key }, create: row, update: row })),
     ...ATTEMPT_VERDICTS.map((row) =>
@@ -183,6 +191,8 @@ async function buildQuestionOperations(prisma: PrismaClient, topicIdBySlug: Map<
     (await prisma.question.findMany({ select: { id: true, slug: true } })).map((row) => [row.slug, row.id]),
   );
 
+  await seedCompanyTags(prisma, questionIdBySlug);
+
   // validateQuestions guarantees a shared concept slug always means the same thing, so the
   // first definition seen is the definition.
   const conceptBySlug = new Map<string, ConceptSpec>();
@@ -253,6 +263,31 @@ async function buildQuestionOperations(prisma: PrismaClient, topicIdBySlug: Map<
     }),
   );
   await runInChunks(prisma, edgeOperations);
+}
+
+/**
+ * Company tags are curated content, so refining companies.ts is a reseed: every live edge is
+ * turned off first and the map switches back the ones it still claims. An edge that the curator
+ * removed goes inactive rather than deleted, in line with the rest of the schema.
+ */
+async function seedCompanyTags(prisma: PrismaClient, questionIdBySlug: Map<string, string>) {
+  await prisma.questionCompany.updateMany({ where: { isActive: true }, data: { isActive: false } });
+
+  const operations: Operation[] = [];
+  for (const [slug, keys] of Object.entries(ASKED_AT)) {
+    const questionId = questionIdBySlug.get(slug);
+    if (!questionId) continue;
+    for (const companyKey of keys) {
+      operations.push(
+        prisma.questionCompany.upsert({
+          where: { questionId_companyKey: { questionId, companyKey } },
+          create: { questionId, companyKey, isActive: true },
+          update: { isActive: true },
+        }),
+      );
+    }
+  }
+  await runInChunks(prisma, operations);
 }
 
 /** topic_prerequisites has no natural unique key, so existing edges are matched by slug pair. */

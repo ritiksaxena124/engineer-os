@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { ALL_QUESTIONS, validateQuestions } from '../prisma/content/questions';
+import { ASKED_AT, COMPANIES, validateCompanies } from '../prisma/content/companies';
 import { QUESTION_CATEGORIES } from '../prisma/content/reference';
 import { ALL_TOPICS } from '../prisma/content/curriculum';
 import type { QuestionSpec } from '../prisma/content/types';
@@ -7,9 +8,28 @@ import type { QuestionSpec } from '../prisma/content/types';
 const clone = (question: QuestionSpec): QuestionSpec =>
   JSON.parse(JSON.stringify(question)) as QuestionSpec;
 
+const bankSlugs = () => new Set(ALL_QUESTIONS.map((question) => question.slug));
+
 describe('question content', () => {
   test('the authored bank validates', () => {
     expect(validateQuestions()).toEqual([]);
+  });
+
+  test('the curated company table resolves against the bank', () => {
+    expect(validateCompanies(bankSlugs())).toEqual([]);
+  });
+
+  test('every company the browser can filter on has questions behind it', () => {
+    const tagged = new Set(Object.values(ASKED_AT).flat());
+    for (const company of COMPANIES) {
+      expect(tagged.has(company.key), `facet "${company.key}" lists nothing`).toBe(true);
+    }
+  });
+
+  test('a tag renamed away from its question is refused rather than silently dropped', () => {
+    expect(validateCompanies(new Set(['dsa-2sum-problem']))).toContain(
+      'ASKED_AT: question "dsa-find-missing-number-in-an-array" does not exist',
+    );
   });
 
   test('every question sits on a real topic', () => {
