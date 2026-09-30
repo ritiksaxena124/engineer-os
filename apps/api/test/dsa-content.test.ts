@@ -241,6 +241,22 @@ const EXPECTS: Record<string, string> = {
     'isAnagram("anagram", "nagaram") && isAnagram("", "") && !isAnagram("rat", "car") && !isAnagram("a", "ab") && isAnagram("listen", "silent") && !isAnagram("aab", "abb")',
   'Reverse Every Word in a String':
     'reverseEachWord("Hello World") === "olleH dlroW" && reverseEachWord("I am a student") === "I ma a tneduts" && reverseEachWord(" ") === " " && reverseEachWord("") === "" && reverseEachWord("ab") === "ba"',
+  'Sort Characters by frequency':
+    'sortByFrequency("tree") === "eert" && sortByFrequency("ccaa") === "aacc" && sortByFrequency("Aabb") === "bbAa" && sortByFrequency("cccatcc") === "cccccat" && sortByFrequency("") === "" && sortByFrequency("aaaa") === "aaaa"',
+  'Maximum Nesting Depth of Parentheses':
+    'maxNestingDepth("(1+(2*3)+((8)/4))+1") === 3 && maxNestingDepth("(1)+((2))+(((3)))") === 3 && maxNestingDepth("()(())((()()))") === 3 && maxNestingDepth("1+(2*3)+((8)/4)") === 2 && maxNestingDepth("") === 0',
+  'Roman to Integer':
+    'romanToInt("III") === 3 && romanToInt("LVIII") === 58 && romanToInt("MCMXCIV") === 1994 && romanToInt("IV") === 4 && romanToInt("XC") === 90 && romanToInt("MMXXVI") === 2026 && romanToInt("") === 0',
+  'Integer to Roman':
+    'intToRoman(3) === "III" && intToRoman(4) === "IV" && intToRoman(9) === "IX" && intToRoman(58) === "LVIII" && intToRoman(1994) === "MCMXCIV" && intToRoman(2026) === "MMXXVI" && intToRoman(3999) === "MMMCMXCIX" && intToRoman(0) === ""',
+  'String to Integer (atoi)':
+    'myAtoi("42") === 42 && myAtoi("   -42") === -42 && myAtoi("4193 with words") === 4193 && myAtoi("words and 987") === 0 && myAtoi("-9128347233") === -2147483648 && myAtoi("9128347233") === 2147483647 && myAtoi("") === 0 && myAtoi("     +0 123") === 0 && myAtoi("2147483648") === 2147483647 && myAtoi("-0045001") === -45001 && myAtoi("+-13") === 0',
+  'Count number of Substrings with K distinct characters':
+    'substringsWithKDistinct("abcaba", 3) === 9 && substringsWithKDistinct("aba", 2) === 3 && substringsWithKDistinct("aaaa", 1) === 10 && substringsWithKDistinct("abc", 1) === 3 && substringsWithKDistinct("abaca", 2) === 6 && substringsWithKDistinct("abcaba", 0) === 0 && substringsWithKDistinct("", 2) === 0',
+  'Longest Palindromic Substring':
+    'longestPalindrome("babad") === "bab" && longestPalindrome("cbbd") === "bb" && longestPalindrome("a") === "a" && longestPalindrome("") === "" && longestPalindrome("racecar") === "racecar" && longestPalindrome("abba") === "abba" && longestPalindrome("aacabdkacaa") === "aca"',
+  'Sum of Beauty of all Substrings':
+    'beautySum("aabcb") === 5 && beautySum("aabb") === 2 && beautySum("abcd") === 0 && beautySum("aaa") === 0 && beautySum("aa") === 0 && beautySum("") === 0',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */

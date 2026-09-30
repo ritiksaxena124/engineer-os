@@ -6329,6 +6329,379 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '}',
     modify: 'Reverse only the words longer than one character — which test moves where?',
   },
+  {
+    step: 5,
+    name: 'Sort Characters by frequency',
+    difficulty: 'Medium',
+    topicSlug: STRINGS,
+    stem: 'Order a string by how often each character appears, and decide the tie before you write the comparator.',
+    brief: 'Input: a string of mixed characters. Output: the same multiset of characters with more frequent ones first; characters of equal frequency come out in ascending character code.',
+    concepts: ['dsa-frequency-ordering', 'dsa-hash-frequency', 'dsa-complexity-counting'],
+    shortAnswer: 'Count into a map, sort the entries by count descending, and declare a second key so equal counts have one order.',
+    idealAnswer:
+      'Two passes build the frequency table and one sort orders its distinct keys rather than the characters, so the ' +
+      'work is the length plus the alphabet times the log of the alphabet, which is the shape to state when the asked ' +
+      'about cost. The output is rebuilt by repeating each character its own count. Equal counts are the graded part: ' +
+      'the requirement is only that frequencies descend, so the comparator has to name a second key — ascending code — ' +
+      'or the same input produces different strings across runs and across engines.',
+    walkthrough:
+      'Sorting the entries of the map instead of the characters is what keeps the sort small, and it is the general ' +
+      'trick behind top-K over a stream: count first, then order the keys. The tie-break deserves the attention because ' +
+      'a comparator that returns zero for two different characters is not wrong, it is unspecified, and unspecified ' +
+      'output is what makes a test flaky rather than failed. The alphabet bound is also the honest reason this version ' +
+      'beats a general sort: with a huge input and a small character set the sort is effectively constant.',
+    commonMistake: 'Sorting every character occurrence, or leaving equal counts unordered.',
+    whyWrong:
+      'A per-character sort costs the length times its logarithm to order many identical items, and it hides the fact ' +
+      'that the real input to the sort is the table. An unordered tie is the worse of the two: the answer satisfies the ' +
+      'ask but cannot be asserted, so the next change to the sort implementation silently breaks the suite.',
+    followUps: ['What is the second key, and why does the comparator need it?', 'Which part of the cost disappears when the alphabet is fixed?', 'Give the version that puts the least frequent characters first instead.'],
+    solution:
+      'function sortByFrequency(text) {\n' +
+      '  const counts = new Map();\n' +
+      '  for (const char of text) counts.set(char, (counts.get(char) || 0) + 1);\n' +
+      '  const entries = [...counts.entries()].sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? -1 : 1));\n' +
+      '  let out = "";\n' +
+      '  for (const entry of entries) out += entry[0].repeat(entry[1]);\n' +
+      '  return out;\n' +
+      '}',
+    modify: 'Order by first appearance instead of character code — which argument of the comparator has to remember position?',
+  },
+  {
+    step: 5,
+    name: 'Maximum Nesting Depth of Parentheses',
+    difficulty: 'Easy',
+    topicSlug: STRINGS,
+    stem: 'Report the deepest nesting with the same counter that removes the outermost pairs.',
+    brief: 'Input: a valid parentheses expression possibly containing operands. Output: the greatest number of open parentheses at any point.',
+    concepts: ['dsa-parenthesis-depth', 'dsa-selection-min-scan', 'dsa-single-pass-tracking'],
+    shortAnswer: 'One counter up on open and down on close, and a running maximum over the values it takes.',
+    idealAnswer:
+      'Depth at any position is the counter, and the question is only its largest value, so the row is a nesting scan ' +
+      'with a running best attached — which is the pair of habits the two rows share. The order matters: an open ' +
+      'bracket raises the counter and is then compared, because the depth the bracket creates is the depth being ' +
+      'measured, and comparing before the increment reports one less on every input. Non-bracket characters are ' +
+      'ignored rather than handled, which is what makes the loop safe on operands.',
+    walkthrough:
+      'The answer is the peak of a walk, not its length, and the distinction is the same as between total steps and ' +
+      'highest water mark — a place where people reach for a stack that stores each level and then discover they only ' +
+      'ever needed its size. It is worth writing both rows next to each other for exactly that reason: one reads the ' +
+      'counter to decide emission, this one reads it to decide a maximum, and neither needs the structure the counter ' +
+      'is standing in for.',
+    commonMistake: 'Pushing and popping a stack of levels, or taking the maximum before incrementing.',
+    whyWrong:
+      'The stack is correct and costs an allocation per level to carry information no question asked for, and it is the ' +
+      'thing this row is meant to teach away from. Reading the maximum first is an off-by-one that survives a hand ' +
+      'check on the deepest group and reports one less than the true depth on everything.',
+    followUps: ['Why is the increment inside the comparison rather than after it?', 'What would the same counter say about an unbalanced input?', 'Give the version that returns the depth at every operand, not just the peak.'],
+    solution:
+      'function maxNestingDepth(text) {\n' +
+      '  let depth = 0;\n' +
+      '  let best = 0;\n' +
+      '  for (const char of text) {\n' +
+      '    if (char === "(") {\n' +
+      '      depth += 1;\n' +
+      '      if (depth > best) best = depth;\n' +
+      '    } else if (char === ")") {\n' +
+      '      depth -= 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Return the operands found at the deepest level — which second structure does that need?',
+  },
+  {
+    step: 5,
+    name: 'Roman to Integer',
+    difficulty: 'Easy',
+    topicSlug: NUMERIC,
+    stem: 'Read a Roman numeral with one lookahead instead of a table of exceptions.',
+    brief: 'Input: a Roman numeral string in canonical form. Output: its integer value.',
+    concepts: ['dsa-subtractive-notation', 'dsa-single-pass-tracking', 'dsa-boundary-conditions'],
+    shortAnswer: 'Add each symbol unless the next one is worth more, in which case subtract it.',
+    idealAnswer:
+      'The subtractive pairs are all instances of one local rule — a smaller symbol immediately before a larger one ' +
+      'negates itself — so a single comparison with the next character replaces the six exception cases, and the rest ' +
+      'of the string is ordinary addition. That is why the pass is linear and the table only needs the seven symbols. ' +
+      'The lookahead is bounded by the last character having nothing after it, which is where the second half of the ' +
+      'condition lives.',
+    walkthrough:
+      'Canonical input is doing quiet work here: the rule reads symbols left to right and never has to check that the ' +
+      'result is legal, so a numeral like IIX would be decoded confidently as 8 while being nothing at all. That is ' +
+      'the same trade the parser row makes — accept a stated grammar rather than validate it — and it is worth naming ' +
+      'because the honest failure mode of this function is a wrong number rather than an error. Comparing values rather ' +
+      'than characters is the other half, and it is what lets the rule survive an added symbol.',
+    commonMistake: 'Enumerating the subtractive pairs as special cases, or comparing character codes instead of values.',
+    whyWrong:
+      'The exception table is six branches that must stay in step with the general rule, and a numeral the table does ' +
+      'not list is added instead of subtracted — the classic wrong answer on the last case. Character codes happen to ' +
+      'order the same way as values for a few symbols and not for all of them, so that version is right on samples and ' +
+      'wrong on real dates.',
+    followUps: ['Which two conditions share the lookahead test?', 'What does the function do with a numeral outside the canonical grammar?', 'Give the version that validates the input while decoding it.'],
+    solution:
+      'function romanToInt(text) {\n' +
+      '  const values = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };\n' +
+      '  let total = 0;\n' +
+      '  for (let i = 0; i < text.length; i += 1) {\n' +
+      '    const value = values[text[i]];\n' +
+      '    if (i + 1 < text.length && values[text[i + 1]] > value) total -= value;\n' +
+      '    else total += value;\n' +
+      '  }\n' +
+      '  return total;\n' +
+      '}',
+    modify: 'Handle a numeral written in non-canonical form by rejecting it — what state does the loop have to carry?',
+  },
+  {
+    step: 5,
+    name: 'Integer to Roman',
+    difficulty: 'Medium',
+    topicSlug: NUMERIC,
+    stem: 'Emit a Roman numeral from one greedy pass over a table, with no branch for the subtractive forms.',
+    brief: 'Input: an integer between one and a few thousand. Output: its Roman numeral in canonical form.',
+    concepts: ['dsa-greedy-numeral-table', 'dsa-subtractive-notation', 'dsa-branch-exhaustiveness'],
+    shortAnswer: 'Walk a descending value table that already contains the subtractive values and repeat each symbol while it still fits.',
+    idealAnswer:
+      'Putting the six subtractive values into the table alongside the seven ordinary ones turns the writer into one ' +
+      'loop: take a symbol while the remainder still fits, subtract, move to the next value. Greediness is correct ' +
+      'because each table entry is a multiple of everything after it in its decade, so the largest fit is what the ' +
+      'canonical form asks for, and the table is data rather than control flow — the same reason the app keeps business ' +
+      'constants in lookup tables instead of branching on them.',
+    walkthrough:
+      'The alternative is an if cascade over digits and positions, and it is longer, easier to get wrong and impossible ' +
+      'to extend: adding a symbol means editing the logic rather than the table. Ordering the pairs strictly descending ' +
+      'is the whole correctness of the loop, since a later entry must never be preferred over an earlier fit. Keeping ' +
+      'value and symbol together in one row is what makes that order checkable at a glance.',
+    commonMistake: 'Branching on each digit position, or ordering the table by symbol length instead of by value.',
+    whyWrong:
+      'A digit-cascade duplicates the subtractive rule nine times, so one missed decade becomes a wrong numeral that no ' +
+      'test happens to cover. Table order is the greedy assumption: if CD were read after C the loop would take C four ' +
+      'times before it saw the pair, producing a non-canonical string that reads back as a different number.',
+    followUps: ['Why does the largest fit give the canonical form?', 'Which entries have to sit between which, and what breaks if they move?', 'Add a thousands digit beyond M using the same table shape.'],
+    solution:
+      'function intToRoman(value) {\n' +
+      '  const table = [\n' +
+      '    [1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"],\n' +
+      '    [90, "XC"], [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"],\n' +
+      '  ];\n' +
+      '  let out = "";\n' +
+      '  for (const entry of table) {\n' +
+      '    while (value >= entry[0]) {\n' +
+      '      out += entry[1];\n' +
+      '      value -= entry[0];\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}',
+    modify: 'Write it without the subtractive entries and add them back as post-processing — which is easier to read?',
+  },
+  {
+    step: 5,
+    name: 'String to Integer (atoi)',
+    difficulty: 'Medium',
+    topicSlug: NUMERIC,
+    stem: 'Parse the prefix a caller asked for, clamp at the range, and never let the accumulator leave the exact window.',
+    brief: 'Input: an arbitrary string. Output: the integer read from leading spaces, one optional sign and then digits, stopping at the first non-digit, clamped to the signed 32-bit range.',
+    concepts: ['dsa-saturating-parse', 'dsa-double-precision', 'dsa-character-codes'],
+    shortAnswer: 'Cursor over spaces, then a sign, then digits accumulated one at a time, returning the boundary the moment the value passes it.',
+    idealAnswer:
+      'The stages are ordered and each one consumes its own part of the input: leading spaces, one sign character, then ' +
+      'as many digits as there are, stopping at the first character that is not a digit rather than failing. Clamping ' +
+      'has to happen inside the accumulation, per digit, because the number being parsed is unbounded while the ' +
+      'representable integer window is not — a ten thousand digit input must answer with the boundary and not with ' +
+      'whatever the double lands on. Testing the bound before writing it keeps the accumulator exact throughout.',
+    walkthrough:
+      'In JavaScript the accumulator is a double, so overflow does not wrap, it quietly loses low digits: past two to ' +
+      'the power of fifty-three the value stops being the number being typed. That is why the clamp is checked as ' +
+      'soon as a digit is appended and why the answer for an absurd input is a boundary rather than an approximation. ' +
+      'Digit extraction by character code minus the offset of zero is what makes the stop condition one comparison ' +
+      'against a range instead of a set of legal characters.',
+    commonMistake: 'Parsing the whole string and clamping afterwards, or treating a non-digit as an error.',
+    whyWrong:
+      'Clamping after the parse reads a number that has already left the exact window, so the two billion digit case ' +
+      'returns a rounded value that is neither the true integer nor the boundary. Stopping with an error is a different ' +
+      'contract than the one asked for: this parser returns what it read, which is why the words-and-a-number input ' +
+      'answers zero and the number-then-words input answers the number.',
+    followUps: ['Which check has to happen before the accumulator is stored, and why?', 'What does the sign do to the two clamp boundaries?', 'Give the version that reports the position where parsing stopped.'],
+    solution:
+      'function myAtoi(text) {\n' +
+      '  const maxSigned = 2 ** 31 - 1;\n' +
+      '  const minSigned = -(2 ** 31);\n' +
+      '  let index = 0;\n' +
+      '  while (index < text.length && text[index] === " ") index += 1;\n' +
+      '  let sign = 1;\n' +
+      '  if (text[index] === "+") index += 1;\n' +
+      '  else if (text[index] === "-") {\n' +
+      '    sign = -1;\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  let value = 0;\n' +
+      '  while (index < text.length) {\n' +
+      '    const digit = text.charCodeAt(index) - 48;\n' +
+      '    if (digit < 0 || digit > 9) break;\n' +
+      '    value = value * 10 + digit;\n' +
+      '    if (sign === 1 && value > maxSigned) return maxSigned;\n' +
+      '    if (sign === -1 && -value < minSigned) return minSigned;\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  return sign * value;\n' +
+      '}',
+    modify: 'Clamp to an arbitrary signed range passed in by the caller — which two constants stop being constants?',
+  },
+  {
+    step: 5,
+    name: 'Count number of Substrings with K distinct characters',
+    difficulty: 'Medium',
+    topicSlug: STRINGS,
+    stem: 'Count substrings with exactly K distinct characters by asking a different question twice.',
+    brief: 'Input: a string and a k. Output: the number of contiguous substrings holding exactly k distinct characters.',
+    concepts: ['dsa-at-most-difference', 'dsa-two-pointer', 'dsa-hash-frequency'],
+    shortAnswer: 'Count windows with at most k distinct and subtract the count with at most k minus one.',
+    idealAnswer:
+      'At most a bound is the easy question: keep a window whose distinct count never exceeds it, and every right ' +
+      'endpoint contributes its own window length, because all of its suffixes are legal too. Exactly k is then the ' +
+      'difference of two at-most counts, so the hard constraint disappears by being restated as the difference of two ' +
+      'easier ones. Two linear passes cost the length twice, and the map only ever holds the bound plus one keys.',
+    walkthrough:
+      'The subtraction is an inclusion argument rather than a trick: the at-most-k count contains every window the ' +
+      'at-most-(k minus one) count contains, and the leftovers are exactly the windows with k distinct characters, so '
+      + 'no window is counted twice or missed. Getting the per-step contribution right is the other half — adding the ' +
+      'window length once per right endpoint, not once per shrink — and that is where this shape is usually written ' +
+      'wrong. The bound of minus one has to be answered separately, since a negative limit is not a window anyone can ' +
+      'shrink to.',
+    commonMistake: 'Trying to maintain an exactly-k window directly, or adding the window length before shrinking.',
+    whyWrong:
+      'An exact window has no monotone shrink rule: widening can satisfy k and widening further can break it, so the ' +
+      'left endpoint stops being a function of the right one and the argument collapses. Adding the length before the ' +
+      'shrink counts illegal windows, which is the off-by-stage error that shows up only when the text exceeds the ' +
+      'limit.',
+    followUps: ['Why does the difference leave exactly the k-distinct windows?', 'What must the at-most function return for a negative limit, and why is that not an accident?', 'Give the same argument for arrays of integers instead of characters.'],
+    solution:
+      'function substringsWithKDistinct(text, k) {\n' +
+      '  const atMost = (limit) => {\n' +
+      '    if (limit < 0) return 0;\n' +
+      '    const counts = new Map();\n' +
+      '    let left = 0;\n' +
+      '    let total = 0;\n' +
+      '    for (let right = 0; right < text.length; right += 1) {\n' +
+      '      const char = text[right];\n' +
+      '      counts.set(char, (counts.get(char) || 0) + 1);\n' +
+      '      while (counts.size > limit) {\n' +
+      '        const leaving = text[left];\n' +
+      '        const next = counts.get(leaving) - 1;\n' +
+      '        if (next === 0) counts.delete(leaving);\n' +
+      '        else counts.set(leaving, next);\n' +
+      '        left += 1;\n' +
+      '      }\n' +
+      '      total += right - left + 1;\n' +
+      '    }\n' +
+      '    return total;\n' +
+      '  };\n' +
+      '  return atMost(k) - atMost(k - 1);\n' +
+      '}',
+    modify: 'Count substrings with at most K distinct instead — which call disappears?',
+  },
+  {
+    step: 5,
+    name: 'Longest Palindromic Substring',
+    difficulty: 'Medium',
+    topicSlug: STRINGS,
+    stem: 'Grow every centre outward and explain why there are twice the length minus one of them.',
+    brief: 'Input: a string. Output: the earliest longest substring that reads the same backwards.',
+    concepts: ['dsa-centre-expansion', 'dsa-two-pointer', 'dsa-selection-min-scan'],
+    shortAnswer: 'Expand from each of the odd and even centres, keep the longest span, and slice it out at the end.',
+    idealAnswer:
+      'A palindrome is fixed by its middle, so instead of asking which substrings are palindromes the loop asks, for ' +
+      'each centre, how far it can grow — which is two pointers moving apart while the characters match. There are as ' +
+      'many odd centres as positions and one fewer even ones, which is the count worth stating, and both kinds have to ' +
+      'be tried or a word like abba is missed entirely. Keeping the start and length rather than the best string is ' +
+      'what keeps the growth O(1) extra space, and the total cost is the length squared in the worst case.',
+    walkthrough:
+      'The outward growth reuses work the naive test throws away: a substring that fails at some width cannot become ' +
+      'legal by growing further, so one comparison decides the whole rest of that centre. Recording the best as a ' +
+      'start and a length makes the tie rule a strict comparison, which is what makes the earliest longest answer ' +
+      'deterministic instead of whichever centre happened to win. The Manacher form that avoids the quadratic cost is ' +
+      'the same loop with a mirrored centre remembered, and it is worth naming as the answer to a follow-up rather ' +
+      'than as the first version written.',
+    commonMistake: 'Testing every substring for being a palindrome, or giving even-length centres the same start as odd ones.',
+    whyWrong:
+      'The cubic version pays a length-sized check for each of a length-squared number of substrings, and every ' +
+      'comparison it makes was already made by a shorter substring. An even centre written as a single position can ' +
+      'never produce abba, so the answer comes back too short on exactly the inputs whose longest run is even.',
+    followUps: ['Why does a failed comparison end that centre rather than continue?', 'Which tie rule gives the earliest answer, and where does it live?', 'What does Manacher remember that this loop recomputes?'],
+    solution:
+      'function longestPalindrome(text) {\n' +
+      '  let bestStart = 0;\n' +
+      '  let bestLength = 0;\n' +
+      '  const grow = (left, right) => {\n' +
+      '    let l = left;\n' +
+      '    let r = right;\n' +
+      '    while (l >= 0 && r < text.length && text[l] === text[r]) {\n' +
+      '      l -= 1;\n' +
+      '      r += 1;\n' +
+      '    }\n' +
+      '    const length = r - l - 1;\n' +
+      '    if (length > bestLength) {\n' +
+      '      bestLength = length;\n' +
+      '      bestStart = l + 1;\n' +
+      '    }\n' +
+      '  };\n' +
+      '  for (let centre = 0; centre < text.length; centre += 1) {\n' +
+      '    grow(centre, centre);\n' +
+      '    grow(centre, centre + 1);\n' +
+      '  }\n' +
+      '  return text.slice(bestStart, bestStart + bestLength);\n' +
+      '}',
+    modify: 'Count all palindromic substrings instead of finding the longest — which counter replaces the best?',
+  },
+  {
+    step: 5,
+    name: 'Sum of Beauty of all Substrings',
+    difficulty: 'Medium',
+    topicSlug: STRINGS,
+    stem: 'Sum the frequency spread of every substring without rebuilding the frequency table.',
+    brief: 'Input: a lowercase string. Output: for every contiguous substring, the largest character frequency minus the smallest, added together.',
+    concepts: ['dsa-hash-frequency', 'dsa-character-codes', 'dsa-complexity-counting'],
+    shortAnswer: 'Fix the left end, extend the right one character at a time, and update the table instead of rebuilding it.',
+    idealAnswer:
+      'Every substring is a start and an end, so the outer loop fixes the start and the inner one extends it, carrying ' +
+      'one counter array that gains exactly one character per step. That turns a rebuild of the table into a single ' +
+      'increment, so the maximum is a running value and only the minimum still costs a pass over the twenty-six slots ' +
+      '— a constant that is worth paying because the alternative is recomputing counts the previous substring already ' +
+      'knew. Cost is the length squared times the alphabet, with the alphabet small enough to disappear from the ' +
+      'statement.',
+    walkthrough:
+      'The reason to keep the table between inner steps is the same as for the prefix-sum rows: consecutive substrings ' +
+      'share almost all of their content, and a loop that forgets that is doing the same work twice. Reading the ' +
+      'minimum by scanning the fixed slots rather than maintaining it is the deliberate trade — the scan is bounded by ' +
+      'the alphabet and a maintained minimum would have to handle a count rising again after a fall. Character-to-slot ' +
+      'arithmetic is what makes the increment O(1) in the first place.',
+    commonMistake: 'Rebuilding the frequency table for each substring, or treating the minimum as always one.',
+    whyWrong:
+      'The rebuild costs the substring length inside a loop already quadratic in it, turning a cubic answer where a ' +
+      'quadratic one was available. The minimum is one only when some character appears once: a substring like aabb has ' +
+      'spread zero and aabcb has spread two, so assuming one silently reports beauty that the substring does not have.',
+    followUps: ['Which of the two bounds costs a scan, and why is that acceptable?', 'What would the loop look like if the alphabet were not fixed?', 'Give the version that reports the single most beautiful substring.'],
+    solution:
+      'function beautySum(text) {\n' +
+      '  let total = 0;\n' +
+      '  for (let start = 0; start < text.length; start += 1) {\n' +
+      '    const counts = new Array(26).fill(0);\n' +
+      '    let maxCount = 0;\n' +
+      '    for (let end = start; end < text.length; end += 1) {\n' +
+      '      const slot = text.charCodeAt(end) - 97;\n' +
+      '      counts[slot] += 1;\n' +
+      '      if (counts[slot] > maxCount) maxCount = counts[slot];\n' +
+      '      let minCount = Infinity;\n' +
+      '      for (const count of counts) {\n' +
+      '        if (count > 0 && count < minCount) minCount = count;\n' +
+      '      }\n' +
+      '      total += maxCount - minCount;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return total;\n' +
+      '}',
+    modify: 'Define beauty over distinct character counts instead of frequencies — which line changes and which loop survives?',
+  },
 ];
 
 /** The sheet matches a row by step and problem name; the app never invents either. */
