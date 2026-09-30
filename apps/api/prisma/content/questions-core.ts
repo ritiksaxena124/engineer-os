@@ -1245,4 +1245,604 @@ export const QUESTIONS_CORE: QuestionSpec[] = [
         'the pool and memory consequences of it, and the number that would reopen the decision.',
     },
   },
+
+  // ─── system-calls-io (3 questions) ──────────────────────────────────────
+
+  {
+    slug: 'drill-what-is-a-syscall',
+    topicSlug: 'system-calls-io',
+    categoryKey: 'conceptual',
+    levelKey: 'understanding',
+    difficulty: 2,
+    stem: 'What is a system call, and how does it differ from calling a function in your own code?',
+    body: 'Name the boundary crossed and who owns each side. One sentence for the mechanism, one for the cost.',
+    concepts: [
+      {
+        slug: 'syscall-crosses-user-kernel-boundary',
+        name: 'A syscall crosses from user space into kernel space',
+        detail: 'The CPU switches privilege rings; the kernel validates arguments and executes on behalf of the caller.',
+        terms: ['user space', 'kernel space', 'privilege ring', 'boundary', 'context switch'],
+        weight: 2,
+      },
+      {
+        slug: 'syscall-is-expensive-context-switch',
+        name: 'A syscall is expensive because of the context switch',
+        detail: 'Registers saved, TLB entries flushed, scheduler may run — not a free jump like a normal function call.',
+        terms: ['expensive', 'context switch', 'registers saved', 'TLB flush', 'not free'],
+        weight: 2,
+      },
+      {
+        slug: 'kernel-validates-syscall-args',
+        name: 'The kernel validates every syscall argument',
+        detail: 'Pointers are checked against the caller\'s address space, permissions verified, so a bad pointer returns EFAULT rather than crashing the machine.',
+        terms: ['validates', 'checks pointers', 'permissions', 'EFAULT', 'address space'],
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'A system call is a controlled entry into the kernel where the OS performs privileged work on behalf of ' +
+        'a process. It differs from a normal function call because it crosses a privilege boundary and costs a ' +
+        'full context switch.',
+      idealAnswer:
+        'When your code calls read(), the CPU traps into the kernel, saves all registers, checks that the buffer ' +
+        'pointer belongs to this process and has write permission, then performs the actual I/O. A normal function ' +
+        'call stays in user space: no privilege change, no validation, no TLB flush. The syscall is orders of ' +
+        'magnitude more expensive — which is why batching reads or using epoll matters.',
+      deepAnswer:
+        'This distinction explains almost every performance surprise in systems programming. When someone says ' +
+        '"my loop is slow" and it turns out they are calling stat() on every file instead of reading a directory ' +
+        'once, the root cause is treating syscalls as free. And when a containerised service hits "too many open ' +
+        'files", the limit is per-process but enforced by the kernel at the syscall boundary. Understanding the ' +
+        'cost also makes sense of io_uring: it exists to amortise that context-switch overhead across many ' +
+        'operations.',
+      commonMistakes:
+        '- "A syscall is just a function in the OS library."\n' +
+        '- Thinking the kernel trusts your pointers.\n' +
+        '- Not realising that every console.log goes through a syscall.',
+      whyWrong:
+        'Treating syscalls as cheap produces the classic N+1 pattern at the filesystem level, and believing the ' +
+        'kernel trusts you is how a segfault becomes an exploit.',
+      followUps:
+        '1. How many syscalls does console.log("hi") actually make?\n' +
+        '2. What happens if you pass a pointer to freed memory into read()?\n' +
+        '3. Why does strace slow down a program so much?',
+      exercise:
+        'Run `strace -c node -e "console.log(42)"` and count the syscalls. Then rewrite the script to print 1000 ' +
+        'lines and compare the syscall count per line.',
+    },
+  },
+
+  {
+    slug: 'drill-blocking-read-vs-nonblocking',
+    topicSlug: 'system-calls-io',
+    categoryKey: 'internal',
+    levelKey: 'implementation',
+    difficulty: 4,
+    stem: 'Explain the difference between a blocking read() and a non-blocking read() on a socket. What does the kernel do differently, and what must the application do to handle each?',
+    body: 'Two paragraphs: one for the kernel behaviour, one for the application pattern.',
+    concepts: [
+      {
+        slug: 'blocking-read-waits-in-kernel',
+        name: 'A blocking read puts the thread to sleep until data arrives',
+        detail: 'The kernel marks the thread as waiting on the file descriptor and schedules another thread. The caller gets control back only when bytes are available.',
+        terms: ['sleep', 'wait', 'blocked', 'scheduled away', 'control returned later'],
+        weight: 2,
+      },
+      {
+        slug: 'nonblocking-read-returns-immediately',
+        name: 'A non-blocking read returns immediately with EAGAIN if no data is ready',
+        detail: 'The kernel checks the socket buffer once and returns either the available bytes or EAGAIN/EWOULDBLOCK. The application must retry later.',
+        terms: ['EAGAIN', 'EWOULDBLOCK', 'immediate return', 'retry', 'poll again'],
+        weight: 2,
+      },
+      {
+        slug: 'application-must-poll-or-use-event-loop',
+        name: 'Non-blocking I/O requires the application to poll or use an event multiplexer',
+        detail: 'Without epoll/kqueue/select, the app would busy-loop. The event loop batches readiness notifications so the app only acts when data is actually there.',
+        terms: ['epoll', 'kqueue', 'select', 'event loop', 'readiness notification', 'no busy loop'],
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'A blocking read sleeps the thread inside the kernel until data arrives. A non-blocking read returns ' +
+        'immediately with EAGAIN if nothing is ready, so the application must use an event multiplexer like epoll ' +
+        'to know when to retry.',
+      idealAnswer:
+        'With O_NONBLOCK set, read(fd, buf, n) checks the socket receive buffer once. If it is empty, the kernel ' +
+        'returns -1 with errno EAGAIN — the thread never leaves user space. With blocking mode, the kernel parks ' +
+        'the thread on a wait queue attached to that fd and wakes it when the NIC DMA\'s data into the buffer. ' +
+        'The application using non-blocking I/O cannot spin; it registers the fd with epoll and only calls read ' +
+        'when epoll_wait reports EPOLLIN. That is the entire Node.js event loop.',
+      deepAnswer:
+        'This is the fork in the road between thread-per-request servers and event-driven ones. Apache pre-fork ' +
+        'uses blocking reads and pays for thousands of sleeping threads; nginx uses non-blocking reads with epoll ' +
+        'and handles tens of thousands of connections on a handful of threads. The cost model is completely ' +
+        'different: blocking ties up a stack (8 MB default on Linux) per connection, while non-blocking ties up ' +
+        'only a few bytes of kernel state per fd. But non-blocking shifts complexity into the application: you ' +
+        'must handle partial reads, reassembly, and backpressure yourself.',
+      commonMistakes:
+        '- "Non-blocking means the kernel does the work in the background."\n' +
+        '- Busy-looping on a non-blocking fd without epoll.\n' +
+        '- Forgetting that a non-blocking read can return fewer bytes than requested.',
+      whyWrong:
+        'Busy-looping burns a core for zero throughput, and assuming the kernel buffers everything leads to data ' +
+        'loss when the receive buffer fills. Both are production incidents waiting to happen.',
+      followUps:
+        '1. What does a partial read look like, and how do you reassemble it?\n' +
+        '2. Why does epoll scale better than select?\n' +
+        '3. What is edge-triggered vs level-triggered epoll?',
+      exercise:
+        'Write a Node.js TCP server that reads a line from each client using only net.Socket in non-blocking mode ' +
+        '(setEncoding(null), read() in a loop). Handle partial lines and backpressure. Compare it to the same ' +
+        'server using the standard "data" event emitter.',
+    },
+  },
+
+  {
+    slug: 'drill-file-descriptor-table',
+    topicSlug: 'system-calls-io',
+    categoryKey: 'internal',
+    levelKey: 'understanding',
+    difficulty: 3,
+    stem: 'Every process has a file-descriptor table. What lives in it, and what happens when you exceed the limit?',
+    body: 'Name three kinds of things that share this table. Say what error the kernel returns and what the symptom looks like in a Node process.',
+    concepts: [
+      {
+        slug: 'fd-table-holds-open-files-sockets-pipes',
+        name: 'The fd table maps small integers to kernel objects: files, sockets, pipes',
+        detail: 'fd 0/1/2 are stdin/stdout/stderr; everything else is allocated sequentially. Sockets, regular files, and pipes all live here.',
+        terms: ['stdin stdout stderr', 'socket', 'pipe', 'regular file', 'integer mapping'],
+        weight: 2,
+      },
+      {
+        slug: 'emfile-error-on-exhaustion',
+        name: 'Exceeding the limit returns EMFILE ("Too many open files")',
+        detail: 'The kernel refuses new open()/socket() calls. In Node, this surfaces as uncaught exceptions on accept() or connect().',
+        terms: ['EMFILE', 'Too many open files', 'refuses new', 'accept fails', 'connect fails'],
+        weight: 2,
+      },
+      {
+        slug: 'ulimit-controls-fd-limit',
+        name: 'The limit is configurable via ulimit -n or /proc/sys/fs/file-max',
+        detail: 'Per-process soft/hard limits and a system-wide ceiling. Raising the soft limit is often enough for a single service.',
+        terms: ['ulimit', 'soft limit', 'hard limit', 'file-max', 'configurable'],
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'The fd table maps integers to kernel objects: regular files, sockets, and pipes. When exhausted, the ' +
+        'kernel returns EMFILE ("Too many open files"), which in Node crashes accept() or connect() unless caught.',
+      idealAnswer:
+        'Every open resource — a log file, an outgoing HTTP socket, a child-process pipe — consumes one entry. ' +
+        'The default soft limit on most Linux distros is 1024, which sounds like a lot until you realise each ' +
+        'HTTP connection uses two fds (one for the socket, one internally for the TLS layer if present). When ' +
+        'the table is full, open() returns -1 with errno EMFILE. In a Node server, this means the next incoming ' +
+        'connection is silently dropped at the TCP level because accept() fails, and the client sees a timeout.',
+      deepAnswer:
+        'This is why connection pooling matters even for outbound requests: creating a new https.Agent per request ' +
+        'leaks fds faster than garbage collection can close them. And it is why graceful shutdown must drain active ' +
+        'connections before exit — otherwise the OS forcibly closes all fds, truncating in-flight writes. The ' +
+        'table is also inherited across fork(), which is how cluster workers share listening sockets: the parent ' +
+        'opens the listen fd, forks, and each child inherits the same fd number pointing at the same kernel ' +
+        'socket.',
+      commonMistakes:
+        '- "Closing the file handle in JS is enough" without awaiting the close.\n' +
+        '- Creating a new Agent per request instead of reusing one.\n' +
+        '- Ignoring that child_process.spawn() opens three pipes by default.',
+      whyWrong:
+        'Leaking fds is the silent killer of long-running services: the first symptom is sporadic timeouts that ' +
+        'look like network issues, and by the time anyone runs lsof, the process is already at 1023.',
+      followUps:
+        '1. How do you find which fds a running Node process has open?\n' +
+        '2. What does graceful shutdown have to do with fd cleanup?\n' +
+        '3. Why does cluster inherit the listen fd?',
+      exercise:
+        'Write a Node script that opens 1050 files in a loop without closing them. Observe the EMFILE error, then ' +
+        'fix it by raising ulimit -n and by properly closing each fd. Use `lsof -p $$` to verify.',
+    },
+  },
+
+  // ─── networking-basics (3 questions) ────────────────────────────────────
+
+  {
+    slug: 'drill-latency-vs-bandwidth',
+    topicSlug: 'networking-basics',
+    categoryKey: 'conceptual',
+    levelKey: 'understanding',
+    difficulty: 2,
+    stem: 'Latency and bandwidth are often confused. Define each, give their units, and explain why reducing latency helps more than increasing bandwidth for small requests.',
+    body: 'One sentence per definition. One example with numbers.',
+    concepts: [
+      {
+        slug: 'latency-is-round-trip-time',
+        name: 'Latency is the time for a single packet to travel round-trip',
+        detail: 'Measured in milliseconds. Determined by distance, router hops, and queuing delay.',
+        terms: ['round trip', 'RTT', 'milliseconds', 'time', 'delay'],
+        weight: 2,
+      },
+      {
+        slug: 'bandwidth-is-throughput-capacity',
+        name: 'Bandwidth is the maximum data rate the link can carry',
+        detail: 'Measured in bits per second (Mbps, Gbps). Determined by the physical medium and link aggregation.',
+        terms: ['throughput', 'bits per second', 'Mbps', 'capacity', 'data rate'],
+        weight: 2,
+      },
+      {
+        slug: 'small-requests-are-latency-bound',
+        name: 'Small requests are latency-bound because they fit in one or two packets',
+        detail: 'A 1 KB response takes the same RTT whether the link is 10 Mbps or 10 Gbps; only the last byte\'s transmission time changes, which is negligible.',
+        terms: ['one packet', 'two packets', 'fits in MTU', 'RTT dominates', 'transmission time negligible'],
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'Latency is round-trip time in ms; bandwidth is throughput in bits/s. A 1 KB response fits in one packet, ' +
+        'so sending it over a 10 Gbps link instead of 10 Mbps saves microseconds while the RTT stays at 50 ms.',
+      idealAnswer:
+        'Latency (RTT) is the time for a signal to go there and back — say 50 ms from Mumbai to Frankfurt. ' +
+        'Bandwidth is how much data the pipe carries per second — 100 Mbps vs 1 Gbps. For a 1 KB API response, ' +
+        'the transmission time at 100 Mbps is 0.08 ms, dwarfed by the 50 ms RTT. Doubling bandwidth to 200 Mbps ' +
+        'saves 0.04 ms; halving latency to 25 ms saves 25 ms. That is why CDN edge locations matter more than ' +
+        'fat pipes for JSON APIs.',
+      deepAnswer:
+        'This distinction underlies every distributed-systems decision. Database replication across regions is ' +
+        'limited by latency, not bandwidth: you can ship terabytes overnight, but you cannot make a synchronous ' +
+        'write cross an ocean in under 100 ms. It also explains why HTTP/2 multiplexing helps: it reduces the ' +
+        'number of round trips by packing multiple streams into one TCP handshake, whereas increasing bandwidth ' +
+        'does nothing for the handshake itself.',
+      commonMistakes:
+        '- "More bandwidth means faster responses" for small payloads.\n' +
+        '- Confusing throughput (bytes delivered over time) with latency (time for one unit).\n' +
+        '- Not realising that TCP slow start makes the first RTT even more expensive.',
+      whyWrong:
+        'Throwing bandwidth at a latency problem is like widening a highway to fix traffic lights: the bottleneck ' +
+        'is the stop-and-go, not the lane count.',
+      followUps:
+        '1. What is the bandwidth-delay product, and why does it matter for TCP window sizing?\n' +
+        '2. How does TCP slow start interact with latency?\n' +
+        '3. Why does QUIC reduce latency compared to TCP+TLS?',
+      exercise:
+        'Use `curl -w "%{time_total} %{size_download}"` to fetch a 100-byte endpoint from localhost and from a ' +
+        'server in another region. Compare the times and calculate what fraction is transmission vs RTT.',
+    },
+  },
+
+  {
+    slug: 'drill-tcp-handshake-steps',
+    topicSlug: 'networking-basics',
+    categoryKey: 'internal',
+    levelKey: 'implementation',
+    difficulty: 4,
+    stem: 'Describe the TCP three-way handshake step by step. What state does each side transition through, and what does each segment carry?',
+    body: 'Name the three segments in order. Say what SYN and ACK mean. Mention the initial sequence numbers.',
+    concepts: [
+      {
+        slug: 'syn-sends-initial-sequence-number',
+        name: 'SYN carries the client\'s initial sequence number (ISN)',
+        detail: 'The client sends SYN with ISN=c. The server records this and replies with its own ISN=s.',
+        terms: ['initial sequence number', 'ISN', 'SYN', 'client sends first'],
+        weight: 2,
+      },
+      {
+        slug: 'syn-ack-acknowledges-and-assigns-server-isn',
+        name: 'SYN-ACK acknowledges the client\'s ISN and sends the server\'s ISN',
+        detail: 'The server replies with SYN+ACK: ack=c+1 (acknowledging the client), seq=s (its own ISN).',
+        terms: ['SYN-ACK', 'ack=c+1', 'seq=s', 'server responds', 'acknowledges client'],
+        weight: 2,
+      },
+      {
+        slug: 'ack-completes-handshake',
+        name: 'The final ACK completes the handshake and both sides enter ESTABLISHED',
+        detail: 'Client sends ACK with seq=c+1, ack=s+1. Both sockets are now ESTABLISHED and can exchange data.',
+        terms: ['ESTABLISHED', 'ack=s+1', 'handshake complete', 'can send data'],
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'Client sends SYN with ISN=c. Server replies SYN-ACK with ack=c+1 and its own ISN=s. Client sends ACK ' +
+        'with ack=s+1. Both sides enter ESTABLISHED.',
+      idealAnswer:
+        'Step 1: Client → Server: SYN, seq=c (client\'s random ISN). Server moves to SYN_RECEIVED. Step 2: ' +
+        'Server → Client: SYN+ACK, seq=s (server\'s random ISN), ack=c+1 (acknowledging the client\'s SYN). ' +
+        'Client moves to ESTABLISHED. Step 3: Client → Server: ACK, seq=c+1, ack=s+1. Server moves to ' +
+        'ESTABLISHED. Now both sides have agreed on initial sequence numbers and can send payload. The ISNs are ' +
+        'random to prevent prediction attacks.',
+      deepAnswer:
+        'This handshake is why HTTPS adds ~100 ms of latency on a cold connection: TCP handshake (1 RTT) + TLS ' +
+        'handshake (2 RTTs for full handshake, 1 RTT for TLS 1.3 session resumption). Connection pooling and ' +
+        'keep-alive exist to amortise this cost. The random ISN is critical: if it were predictable, an attacker ' +
+        'could inject packets into an existing connection (TCP spoofing). Modern kernels use cryptographic ISN ' +
+        'generation to prevent this.',
+      commonMistakes:
+        '- "The server sends ACK first" — forgetting the SYN part of SYN-ACK.\n' +
+        '- Thinking the handshake exchanges capabilities like window size only.\n' +
+        '- Not knowing that ISNs are random, not zero.',
+      whyWrong:
+        'Misunderstanding the handshake leads to debugging failures: thinking a firewall dropping SYN-ACK is a ' +
+        '"server issue" when it is actually a network policy. And not knowing ISNs are random hides the security ' +
+        'rationale behind the design.',
+      followUps:
+        '1. What is a SYN flood, and how does SYN cookies mitigate it?\n' +
+        '2. Why does TLS 1.3 need only 1 RTT for resumption?\n' +
+        '3. What happens if the final ACK is lost?',
+      exercise:
+        'Use `tcpdump -i any port 443` while curling an HTTPS URL. Identify the SYN, SYN-ACK, and ACK packets ' +
+        'by their flags. Note the sequence numbers and verify ack = previous seq + 1.',
+    },
+  },
+
+  {
+    slug: 'drill-dns-resolution-chain',
+    topicSlug: 'networking-basics',
+    categoryKey: 'internal',
+    levelKey: 'understanding',
+    difficulty: 3,
+    stem: 'When you type api.example.com into a browser, DNS resolution happens before any TCP connection. Walk through the chain of servers queried, and say what each one knows.',
+    body: 'Name four levels: stub resolver, recursive resolver, root/TLD servers, authoritative nameserver. Say which one caches.',
+    concepts: [
+      {
+        slug: 'stub-resolver-asks-local-cache',
+        name: 'The stub resolver checks the local cache and forwards to the recursive resolver',
+        detail: 'Built into the OS. Checks /etc/hosts and the local DNS cache first, then queries the configured recursive resolver (usually the ISP or 8.8.8.8).',
+        terms: ['OS resolver', '/etc/hosts', 'local cache', 'forwards to recursive', 'ISP DNS'],
+        weight: 2,
+      },
+      {
+        slug: 'recursive-resolver-caches-and-iterates',
+        name: 'The recursive resolver caches answers and iterates through the hierarchy',
+        detail: 'It starts at the root servers, follows referrals to TLD (.com), then to the domain\'s authoritative nameservers. It caches each answer with its TTL.',
+        terms: ['caches', 'TTL', 'root servers', 'TLD', 'authoritative', 'iterative query'],
+        weight: 2,
+      },
+      {
+        slug: 'authoritative-nameserver-owns-the-zone',
+        name: 'The authoritative nameserver holds the zone file and returns the definitive answer',
+        detail: 'Configured by the domain owner (e.g., Route 53, Cloudflare DNS). Returns A/AAAA/CNAME records for the requested name.',
+        terms: ['zone file', 'definitive', 'A record', 'AAAA record', 'domain owner'],
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'Stub resolver checks local cache, then asks the recursive resolver. The recursive resolver queries root ' +
+        'servers → TLD servers (.com) → authoritative nameserver for example.com, caching each answer. The ' +
+        'authoritative server returns the A record.',
+      idealAnswer:
+        '1. Stub resolver (in the OS): checks /etc/hosts and local DNS cache. If miss, forwards to the recursive ' +
+        'resolver configured in /etc/resolv.conf. 2. Recursive resolver (ISP or public like 8.8.8.8): checks its ' +
+        'own cache. If miss, queries a root server (.), which refers it to the .com TLD servers. 3. TLD server: ' +
+        'refers to the authoritative nameservers for example.com (e.g., ns1.example.com). 4. Authoritative ' +
+        'nameserver: returns the A record (e.g., 93.184.216.34) with a TTL. The recursive resolver caches this ' +
+        'answer and returns it to the stub resolver, which caches it locally too.',
+      deepAnswer:
+        'DNS is the most cached protocol on the internet, which is both its strength and its weakness. Strength: ' +
+        'once cached, resolution is instant and free. Weakness: stale caches serve old IPs after a migration, and ' +
+        'DNS propagation delays are really TTL expiry delays. This is why blue-green deployments update DNS with ' +
+        'low TTLs ahead of time. And DNS-over-HTTPS (DoH) exists because traditional DNS is plaintext UDP, visible ' +
+        'to every router on the path.',
+      commonMistakes:
+        '- "The browser queries DNS directly" — it uses the OS stub resolver.\n' +
+        '- Thinking the root server knows every domain.\n' +
+        '- Not realising that DNS caching happens at multiple levels.',
+      whyWrong:
+        'Believing the browser talks directly to DNS hides the OS layer, which is where /etc/hosts overrides live. ' +
+        'And not understanding caching leads to "why is my DNS change not taking effect" panic during deploys.',
+      followUps:
+        '1. What is DNSSEC, and what attack does it prevent?\n' +
+        '2. How does a CNAME record differ from an A record?\n' +
+        '3. Why is DNS over UDP, and when does it fall back to TCP?',
+      exercise:
+        'Run `dig +trace api.example.com` and trace the full resolution chain. Note which server returns the ' +
+        'final answer and what the TTL is. Then run it again immediately and observe the cached response.',
+    },
+  },
+
+  // ─── concurrency-parallelism (3 questions) ──────────────────────────────
+
+  {
+    slug: 'drill-concurrency-vs-parallelism',
+    topicSlug: 'concurrency-parallelism',
+    categoryKey: 'conceptual',
+    levelKey: 'understanding',
+    difficulty: 2,
+    stem: 'What is the difference between concurrency and parallelism? Give one example of each in Node.js.',
+    body: 'One sentence per definition. One concrete Node.js example per concept.',
+    concepts: [
+      {
+        slug: 'concurrency-is-interleaving',
+        name: 'Concurrency is interleaving multiple tasks on a single thread',
+        detail: 'The event loop switches between pending callbacks, giving the illusion of simultaneity. Only one task runs at any instant.',
+        terms: ['interleaving', 'single thread', 'event loop', 'one at a time', 'illusion'],
+        weight: 2,
+      },
+      {
+        slug: 'parallelism-is-simultaneous-execution',
+        name: 'Parallelism is executing multiple tasks simultaneously on multiple cores',
+        detail: 'True simultaneity: two CPU instructions execute at the same clock cycle on different cores.',
+        terms: ['simultaneous', 'multiple cores', 'same clock cycle', 'true parallelism', 'hardware threads'],
+        weight: 2,
+      },
+      {
+        slug: 'node-concurrency-example',
+        name: 'Node achieves concurrency via the event loop handling multiple I/O callbacks',
+        detail: 'Two HTTP requests arrive; the event loop processes their callbacks one after another, interleaving with timers and microtasks.',
+        terms: ['event loop', 'HTTP requests', 'callbacks', 'timers', 'microtasks'],
+      },
+      {
+        slug: 'node-parallelism-example',
+        name: 'Node achieves parallelism via worker_threads or cluster workers on separate cores',
+        detail: 'Eight cluster workers each run their own event loop on a different CPU core, processing requests truly in parallel.',
+        terms: ['worker_threads', 'cluster', 'separate cores', 'multiple event loops', 'CPU parallelism'],
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'Concurrency is interleaving tasks on one thread (Node\'s event loop handling multiple requests). ' +
+        'Parallelism is simultaneous execution on multiple cores (Node cluster workers on different CPUs).',
+      idealAnswer:
+        'Concurrency: two async functions await different promises; the event loop suspends one, runs the other, ' +
+        'then resumes the first. They overlap in wall-clock time but never execute JavaScript simultaneously. ' +
+        'Parallelism: eight cluster workers each handle requests on their own core; at any given nanosecond, eight ' +
+        'different V8 instances are executing JavaScript instructions at the same time. Concurrency is about ' +
+        'structure; parallelism is about hardware.',
+      deepAnswer:
+        'This distinction is where most "Node is slow" complaints originate: someone measures a CPU-bound hash ' +
+        'on a single thread, sees 100% CPU, and concludes Node cannot scale. The fix is not rewriting in Go; it ' +
+        'is recognising that the workload is parallelisable and using worker_threads or offloading to a GPU. ' +
+        'Conversely, adding workers to an I/O-bound service that already saturates the event loop adds coordination ' +
+        'overhead for zero gain. The right model depends on whether the bottleneck is CPU cycles or I/O latency.',
+      commonMistakes:
+        '- Using "concurrent" and "parallel" interchangeably.\n' +
+        '- Thinking async/await gives parallelism.\n' +
+        '- Adding cluster workers to solve an I/O-bound latency problem.',
+      whyWrong:
+        'Confusing the two leads to wrong scaling decisions: throwing cores at a problem that needs better I/O ' +
+        'multiplexing, or trying to interleave CPU work that genuinely needs simultaneous execution.',
+      followUps:
+        '1. Can a single-threaded event loop be concurrent but not parallel?\n' +
+        '2. What is the difference between a thread and a process in terms of parallelism?\n' +
+        '3. When would you choose worker_threads over cluster?',
+      exercise:
+        'Write a CPU-bound loop that takes 2 seconds. Run it in the main thread and measure total time. Then split ' +
+        'it across 4 worker_threads and measure again. Explain why the speedup is less than 4x.',
+    },
+  },
+
+  {
+    slug: 'drill-race-condition-definition',
+    topicSlug: 'concurrency-parallelism',
+    categoryKey: 'debugging',
+    levelKey: 'debugging',
+    difficulty: 4,
+    stem: 'What is a race condition? Describe one in a Node.js context involving a shared counter incremented by two async functions, and explain how to fix it.',
+    body: 'Show the buggy code in three lines. Name the fix and why it works.',
+    concepts: [
+      {
+        slug: 'race-condition-is-order-dependent',
+        name: 'A race condition occurs when correctness depends on the relative timing of concurrent operations',
+        detail: 'Two threads or async flows read-modify-write the same variable; the final value depends on which write happens last.',
+        terms: ['timing dependent', 'read-modify-write', 'order matters', 'non-deterministic', 'last write wins'],
+        weight: 2,
+      },
+      {
+        slug: 'async-counter-bug',
+        name: 'Two async functions incrementing a shared counter without synchronisation lose updates',
+        detail: 'Both read counter=0, both write counter=1, losing one increment. The bug is invisible in single-step debugging.',
+        terms: ['lost update', 'counter=0', 'both write 1', 'invisible in debugger', 'non-deterministic failure'],
+        weight: 2,
+      },
+      {
+        slug: 'fix-with-atomic-operation-or-lock',
+        name: 'Fix with an atomic operation, a mutex, or by avoiding shared mutable state',
+        detail: 'Use Atomics in SharedArrayBuffer, a mutex library, or redesign to avoid sharing (e.g., message passing between workers).',
+        terms: ['atomic', 'mutex', 'lock', 'SharedArrayBuffer', 'message passing', 'no shared state'],
+      },
+    ],
+    answer: {
+      shortAnswer:
+        'A race condition is when correctness depends on timing. Two async functions reading counter=0 and both ' +
+        'writing counter=1 lose an increment. Fix with a mutex or by avoiding shared mutable state entirely.',
+      idealAnswer:
+        '```js\nlet counter = 0;\nasync function inc() { const c = counter; await delay(1); counter = c + 1; }\n```\n' +
+        'If inc() runs twice concurrently, both read 0, both write 1, and one increment is lost. The fix is to ' +
+        'serialise access: use a mutex so only one inc() executes the read-modify-write at a time, or avoid the ' +
+        'shared variable by having each flow return its delta and summing at the end. In multi-worker Node, the ' +
+        'real fix is to not share state at all — use message passing or a database.',
+      deepAnswer:
+        'Race conditions are the hardest bugs because they do not reproduce under a debugger (which serialises ' +
+        'execution) and they surface only under load. The classic fix — a mutex — introduces its own problems: ' +
+        'deadlock if two locks are acquired in different orders, and priority inversion if a low-priority thread ' +
+        'holds the lock a high-priority thread needs. This is why functional programming emphasises immutability: ' +
+        'if nothing is mutated, nothing races. In distributed systems, the equivalent is idempotency: designing ' +
+        'operations so that running them twice has the same effect as running them once.',
+      commonMistakes:
+        '- "Adding await fixes it" — await yields but does not serialise.\n' +
+        '- Using a global variable across cluster workers (each has its own copy).\n' +
+        '- Thinking setTimeout ordering is guaranteed.',
+      whyWrong:
+        'Awaiting between read and write does not help; it actually makes the race more likely by increasing the ' +
+        'window. And global variables in cluster are per-process, so the bug disappears in testing but appears in ' +
+        'production when you add a second instance.',
+      followUps:
+        '1. What is a deadlock, and how does it differ from a race condition?\n' +
+        '2. Why does SharedArrayBuffer require Atomics?\n' +
+        '3. How do databases prevent lost updates?',
+      exercise:
+        'Write the buggy counter code above. Run it 10,000 times in a loop and observe that the final counter is ' +
+        'less than 10,000. Then fix it with a simple mutex (use async-mutex or implement one with a promise queue) ' +
+        'and verify the counter reaches 10,000.',
+    },
+  },
+
+  {
+    slug: 'drill-event-loop-phases',
+    topicSlug: 'concurrency-parallelism',
+    categoryKey: 'internal',
+    levelKey: 'implementation',
+    difficulty: 5,
+    stem: 'List the six phases of the Node.js event loop in order. For each phase, name one kind of callback that runs there.',
+    body: 'Say which phase runs setTimeout, which runs setImmediate, and which runs process.nextTick. Explain why nextTick is not a phase.',
+    concepts: [
+      {
+        slug: 'timers-phase-runs-settimeout',
+        name: 'Timers phase executes setTimeout and setInterval callbacks',
+        detail: 'Checks if any timer\'s threshold has been reached since the last iteration. Does not guarantee exact timing.',
+        terms: ['setTimeout', 'setInterval', 'threshold', 'not exact', 'timer expiry'],
+        weight: 2,
+      },
+      {
+        slug: 'poll-phase-handles-io-callbacks',
+        name: 'Poll phase retrieves and executes I/O callbacks',
+        detail: 'Where most application code runs: fs.readFile completions, HTTP response handlers, database query results.',
+        terms: ['I/O callbacks', 'fs.readFile', 'HTTP response', 'database result', 'most code runs here'],
+        weight: 2,
+      },
+      {
+        slug: 'check-phase-runs-setimmediate',
+        name: 'Check phase executes setImmediate callbacks',
+        detail: 'Runs after the poll phase, before the next iteration. Useful for breaking up long-running sync work.',
+        terms: ['setImmediate', 'after poll', 'break up work', 'before next iteration'],
+      },
+      {
+        slug: 'nexttick-is-not-a-phase',
+        name: 'process.nextTick is not an event-loop phase; it runs between every phase transition',
+        detail: 'nextTick queue is drained after each phase completes, before moving to the next phase. This is why it can starve I/O.',
+        terms: ['between phases', 'drained after each phase', 'starves I/O', 'not a phase', 'microtask-like'],
+      },
+    ],
+    answer: {
+      shortAnswer:
+        '1. Timers (setTimeout/setInterval). 2. Pending callbacks. 3. Idle/prepare. 4. Poll (I/O callbacks). ' +
+        '5. Check (setImmediate). 6. Close callbacks. process.nextTick runs between every phase, not in one.',
+      idealAnswer:
+        'Phase 1 — Timers: setTimeout and setInterval callbacks whose thresholds have elapsed. Phase 2 — Pending ' +
+        'callbacks: system-level callbacks deferred from the previous iteration (rarely used by applications). ' +
+        'Phase 3 — Idle/prepare: internal housekeeping. Phase 4 — Poll: the main phase, where I/O callbacks ' +
+        '(fs, net, http) execute. If the poll queue is empty and setImmediate was scheduled, Node exits the poll ' +
+        'phase early. Phase 5 — Check: setImmediate callbacks. Phase 6 — Close: close handlers (socket.on("close")). ' +
+        'Between every phase, Node drains the nextTick queue, then the microtask queue (Promise.then). nextTick ' +
+        'is not a phase because it interrupts the loop: it runs after every phase, which is why a recursive ' +
+        'nextTick can block I/O forever.',
+      deepAnswer:
+        'Understanding these phases explains subtle bugs: calling setImmediate inside a polling I/O callback ' +
+        'guarantees it runs before the next I/O event, making it useful for yielding to the loop without ' +
+        'setTimeout\'s minimum 1 ms delay. And knowing that nextTick runs before microtasks explains why ' +
+        'Promise.resolve().then(...) runs after nextTick but before setTimeout. This ordering is critical for ' +
+        'libraries that need to defer work without introducing visible latency.',
+      commonMistakes:
+        '- "setTimeout(fn, 0) runs immediately" — it waits for the next timers phase.\n' +
+        '- Thinking nextTick is the same as Promise.then.\n' +
+        '- Not knowing that setImmediate is designed to run after I/O, not before.',
+      whyWrong:
+        'Using setTimeout(0) for deferral introduces unnecessary latency (minimum 1 ms, often more under load). ' +
+        'And confusing nextTick with microtasks leads to incorrect assumptions about when Promises resolve.',
+      followUps:
+        '1. Why does setImmediate exist when setTimeout(0) seems similar?\n' +
+        '2. What is the maximum delay for setTimeout?\n' +
+        '3. How does libuv\'s thread pool interact with the event loop?',
+      exercise:
+        'Write code that schedules setTimeout, setImmediate, process.nextTick, and Promise.resolve().then() in ' +
+        'that order. Run it and observe the execution order. Then wrap the whole thing in a setTimeout(0) and ' +
+        'observe how the order changes.',
+    },
+  },
 ];
