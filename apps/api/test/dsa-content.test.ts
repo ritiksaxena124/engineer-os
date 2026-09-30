@@ -129,6 +129,32 @@ const EXPECTS: Record<string, string> = {
     'threeSum([-1, 0, 1, 2, -1, -4]).map((t) => t.join()).join("|") === "-1,-1,2|-1,0,1" && threeSum([0, 0, 0]).map((t) => t.join()).join("|") === "0,0,0" && threeSum([0, 0, 0, 0]).length === 1 && threeSum([1, 2]).length === 0',
   '4-Sum Problem':
     'fourSum([1, 0, -1, 0, -2, 2], 0).map((q) => q.join()).join("|") === "-2,-1,1,2|-2,0,0,2|-1,0,0,1" && fourSum([2, 2, 2, 2, 2], 8).map((q) => q.join()).join("|") === "2,2,2,2" && fourSum([0, 0, 0], 0).length === 0',
+  'Largest Subarray with 0 Sum':
+    'longestZeroSum([1, -1, 1, -1]) === 4 && longestZeroSum([1, 2, -3, 4]) === 3 && longestZeroSum([1, 2, 3]) === 0 && longestZeroSum([0]) === 1 && longestZeroSum([]) === 0',
+  'Count number of subarrays with given xor K':
+    'countXorSubarrays([4, 2, 2, 6, 4], 4) === 4 && countXorSubarrays([1, 1, 1], 1) === 4 && countXorSubarrays([5], 5) === 1 && countXorSubarrays([5], 2) === 0 && countXorSubarrays([], 0) === 0',
+  'Merge Overlapping Subintervals':
+    'mergeIntervals([[1, 3], [2, 6], [8, 10], [15, 18]]).map((p) => p.join()).join("|") === "1,6|8,10|15,18" && mergeIntervals([[1, 4], [4, 5]]).map((p) => p.join()).join("|") === "1,5" && mergeIntervals([[1, 10], [2, 3], [4, 6]]).map((p) => p.join()).join("|") === "1,10" && mergeIntervals([]).length === 0',
+  'Merge two sorted arrays without extra space':
+    '(() => { const a = [1, 4, 8, 9, 10]; const b = [2, 3, 4, 7, 9, 11, 12, 13]; mergeInPlace(a, b); return a.join() === "1,2,3,4,4" && b.join() === "7,8,9,9,10,11,12,13"; })()',
+  'Find the repeating and missing number':
+    'repeatingMissing([3, 1, 2, 5, 3]).join() === "3,4" && repeatingMissing([4, 4, 2, 3]).join() === "4,1" && repeatingMissing([1, 2, 2]).join() === "2,3" && repeatingMissing([1, 1]).join() === "1,2"',
+  'Count Inversions':
+    'countInversions([2, 1, 3]) === 1 && countInversions([5, 4, 3, 2, 1]) === 10 && countInversions([1, 2, 3]) === 0 && countInversions([]) === 0 && countInversions([1, 2, 3, 4, 5, 0]) === 5',
+  'Reverse Pairs':
+    'reversePairs([2, 4, 3, 1]) === 2 && reversePairs([1, 3, 2, 3, 1]) === 2 && reversePairs([2, 4, 3, 5]) === 0 && reversePairs([5, 1]) === 1 && reversePairs([]) === 0',
+  'Maximum Product Subarray':
+    'maxProduct([2, 3, -2, 4]) === 6 && maxProduct([-2, 3, -4]) === 24 && maxProduct([-2]) === -2 && maxProduct([-2, 0, -1]) === 0 && maxProduct([-1, -2, -3]) === 6 && maxProduct([0, -2]) === 0',
+  'Max Subarray Product':
+    'maxProductTwoSweep([2, 3, -2, 4]) === 6 && maxProductTwoSweep([-2, 3, -4]) === 24 && maxProductTwoSweep([-2]) === -2 && maxProductTwoSweep([-2, 0, -1]) === 0 && maxProductTwoSweep([-1, -2, -3]) === 6 && maxProductTwoSweep([0, -2]) === 0 && maxProductTwoSweep([-1, 2]) === 2',
+  'Check if Array is Sorted':
+    'isRotatedSorted([3, 4, 5, 1, 2]) && isRotatedSorted([1, 2, 3]) && isRotatedSorted([3, 1, 2]) && isRotatedSorted([1]) && !isRotatedSorted([2, 1, 3]) && !isRotatedSorted([1, 3, 2])',
+  'Find the element that appears once in sorted array':
+    'singleInSorted([1, 1, 2, 3, 3]) === 2 && singleInSorted([3, 3, 7, 7, 10, 11, 11]) === 10 && singleInSorted([1, 2, 2, 3, 3]) === 1 && singleInSorted([1, 1, 2, 2, 3, 3, 4]) === 4 && singleInSorted([7]) === 7',
+  'Rotate Matrix by 90 Degrees Clockwise':
+    'rotateRings([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).map((r) => r.join()).join("|") === "7,4,1|8,5,2|9,6,3" && rotateRings([[1, 2], [3, 4]]).map((r) => r.join()).join("|") === "3,1|4,2" && rotateRings([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]).map((r) => r.join()).join("|") === "13,9,5,1|14,10,6,2|15,11,7,3|16,12,8,4" && rotateRings([[7]]).join() === "7"',
+  'Find missing and repeating numbers':
+    'repeatingMissingOnce([3, 1, 2, 5, 3]).join() === "3,4" && repeatingMissingOnce([1, 2, 2]).join() === "2,3" && repeatingMissingOnce([4, 4, 2, 3]).join() === "4,1" && repeatingMissingOnce([1, 1]).join() === "1,2"',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */

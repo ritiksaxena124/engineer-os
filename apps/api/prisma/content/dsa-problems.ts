@@ -399,6 +399,76 @@ export const DSA_CONCEPTS = {
     terms: ['skip duplicates', 'same as previous', 'unique results', 'advance past repeats'],
     weight: 2,
   },
+  'dsa-first-occurrence': {
+    slug: 'dsa-first-occurrence',
+    name: 'The first time a prefix appeared fixes the longest span',
+    detail: 'Storing only the earliest index of each running total turns a repeat of that total into a window whose length is one subtraction.',
+    terms: ['first occurrence', 'earliest index', 'running total', 'repeated prefix', 'distance between'],
+    weight: 2,
+  },
+  'dsa-interval-sweep': {
+    slug: 'dsa-interval-sweep',
+    name: 'Ordering by start leaves only one interval that can overlap',
+    detail: 'Sorted by left edge, each incoming interval can only meet the open merged one, so merging is a single sweep with a max on the end.',
+    terms: ['sort by start', 'overlapping', 'running end', 'merged into', 'open interval'],
+    weight: 2,
+  },
+  'dsa-gap-shrink': {
+    slug: 'dsa-gap-shrink',
+    name: 'Compare elements a shrinking gap apart',
+    detail: 'Treating both arrays as one virtual sequence and swapping pairs gap positions apart exchanges out-of-order elements with no buffer.',
+    terms: ['gap', 'shrinking gap', 'apart by gap', 'no extra array', 'round up the half'],
+    weight: 2,
+  },
+  'dsa-sum-system': {
+    slug: 'dsa-sum-system',
+    name: 'Two aggregate equations recover two unknown values',
+    detail: 'The expected minus actual sum gives one difference and the same on squares gives the matching sum, which pins down both unknowns.',
+    terms: ['sum of squares', 'two equations', 'expected sum', 'difference of sums', 'solve the pair'],
+    weight: 2,
+  },
+  'dsa-cycle-in-rings': {
+    slug: 'dsa-cycle-in-rings',
+    name: 'A rotation moves four cells per ring',
+    detail: 'Each layer is turned by cycling top to left to bottom to right with one temporary, so every cell is written exactly once.',
+    terms: ['four-way swap', 'ring', 'layer', 'one temporary', 'cycle four cells'],
+    weight: 2,
+  },
+  'dsa-rotation-drop-count': {
+    slug: 'dsa-rotation-drop-count',
+    name: 'A rotated sorted array drops at most once',
+    detail: 'Counting every adjacent pair that decreases, including the wrap from last back to first, is the whole sorted-and-rotated test.',
+    terms: ['number of drops', 'at most one inversion', 'wrap around', 'adjacent pair', 'decreasing step'],
+    weight: 2,
+  },
+  'dsa-pair-parity-search': {
+    slug: 'dsa-pair-parity-search',
+    name: 'Before the single value every pair starts on an even index',
+    detail: 'Pairs occupy even-odd slots up to the answer and odd-even slots after it, so one comparison tells binary search which half to keep.',
+    terms: ['even index', 'paired slot', 'binary search', 'parity breaks', 'which half'],
+    weight: 2,
+  },
+  'dsa-inversion-count': {
+    slug: 'dsa-inversion-count',
+    name: 'A merge can count the pairs it is ordering',
+    detail: 'With both halves sorted, taking from the right means every element still waiting on the left forms a pair with it, which is one addition.',
+    terms: ['inversion', 'counted during merge', 'remaining left', 'sorted halves', 'crossing pairs'],
+    weight: 2,
+  },
+  'dsa-dual-product-track': {
+    slug: 'dsa-dual-product-track',
+    name: 'A negative flips the best product, so carry the worst too',
+    detail: 'The largest product ending here can come from the smallest so far, so Kadane over multiplication needs two running states.',
+    terms: ['maximum ending here', 'minimum ending here', 'sign flip', 'two running states', 'negative times negative'],
+    weight: 2,
+  },
+  'dsa-negation-mirror': {
+    slug: 'dsa-negation-mirror',
+    name: 'A value can address another slot in the same array',
+    detail: 'Using the value as an index and negating what is there leaves a footprint that survives the scan, as long as the magnitude is read before the sign.',
+    terms: ['negate in place', 'index from value', 'seen marker', 'absolute value', 'mutating the input'],
+    weight: 2,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -3491,6 +3561,573 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return out;\n' +
       '}',
     modify: 'Add the smallest-and-largest pruning on both fixed levels and time the difference on an array of 500 values.',
+  },
+  {
+    step: 3,
+    name: 'Largest Subarray with 0 Sum',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Find the longest contiguous run whose sum is zero and say what the map has to store to keep it maximal.',
+    brief: 'Input: an array of integers, both signs. Output: the length of the longest subarray summing to zero, or zero when there is none.',
+    concepts: ['dsa-first-occurrence', 'dsa-prefix-sum', 'dsa-boundary-conditions'],
+    shortAnswer: 'A zero-sum run is two equal prefix sums, so store each running total the first time it appears and subtract.',
+    idealAnswer:
+      'Every range is a difference of two prefix sums, so a range summing to zero is a prefix sum that repeats. One pass ' +
+      'that records the earliest index at which each total occurred gives a candidate length at every repeat, which is ' +
+      'O(n) time and O(n) space. The map has to start with a total of zero at the position before the first element, ' +
+      'otherwise a run that begins at index zero has no earlier equal total to be measured against.',
+    walkthrough:
+      'Two decisions carry the whole algorithm. Keeping the first occurrence rather than the newest is what makes the ' +
+      'span the longest one, since length is the gap between the two equal totals; and the seed entry is what lets a ' +
+      'prefix that is itself zero count as a run. Both are invisible on a sample built so that no answer starts at the ' +
+      'front, which is why they are usually written wrong and shipped.',
+    commonMistake: 'Overwriting the stored index every time the total appears, or measuring between unequal prefix sums.',
+    whyWrong:
+      'Overwriting leaves the newest index in the map, so every measured span collapses to the distance since the last '
+      + 'repeat — the length that was the answer is thrown away. Measuring between unequal totals answers a different ' +
+      'question entirely and reports a run that does not sum to zero.',
+    followUps: ['Switch the target from zero to k — which lookup changes and does the seed survive?', 'Return the run itself, not its length — what extra state does the map hold?', 'Why is the shortest such run a different algorithm?'],
+    solution:
+      'function longestZeroSum(nums) {\n' +
+      '  const first = new Map([[0, -1]]);\n' +
+      '  let prefix = 0;\n' +
+      '  let best = 0;\n' +
+      '  for (let i = 0; i < nums.length; i += 1) {\n' +
+      '    prefix += nums[i];\n' +
+      '    const seen = first.get(prefix);\n' +
+      '    if (seen === undefined) first.set(prefix, i);\n' +
+      '    else best = Math.max(best, i - seen);\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Now find the longest run whose sum equals k instead of zero, with negatives allowed — write the lookup.',
+  },
+  {
+    step: 3,
+    name: 'Count number of subarrays with given xor K',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Count the subarrays whose XOR is exactly k using prefix XOR, and say why no window can shrink here.',
+    brief: 'Input: an array of non-negative integers and a target k. Output: how many contiguous subarrays have XOR equal to k.',
+    concepts: ['dsa-prefix-count-map', 'dsa-xor-cancellation', 'dsa-complexity-counting'],
+    shortAnswer: 'Prefix XOR is its own inverse, so count how many earlier prefixes equal current XOR combined with k.',
+    idealAnswer:
+      'The XOR of a range is the combination of two prefix XORs, and because a value XORed twice cancels, the range hits ' +
+      'k exactly when an earlier prefix equals the current prefix combined with k. A frequency map of prefix values ' +
+      'gives one lookup per element: O(n) time, O(n) space. The map is seeded with a prefix of zero occurring once so a ' +
+      'range starting at index zero is counted.',
+    walkthrough:
+      'The same shape as the subarray-sum count, and the same two traps: without the seed the prefixes that reach k on ' +
+      'their own are lost, and incrementing after the lookup rather than before it lets a range pair with itself. What ' +
+      'differs is that no sliding window exists for XOR, so the frequency map is the only linear answer rather than the ' +
+      'better of two.',
+    commonMistake: 'Two nested loops over ranges, or reaching for a sliding window because it worked on the positive-sum version.',
+    whyWrong:
+      'Nested loops are O(n squared) on the sizes where the count matters, and they are the answer the question exists ' +
+      'to retire. A window cannot shrink: the running XOR can move either direction when a value arrives, so dropping ' +
+      'the left edge discards candidates that were valid.',
+    followUps: ['Why does combining with k replace subtracting it?', 'Give the version that returns the ranges rather than the count.', 'What breaks if the input is not non-negative?'],
+    solution:
+      'function countXorSubarrays(nums, k) {\n' +
+      '  const seen = new Map([[0, 1]]);\n' +
+      '  let prefix = 0;\n' +
+      '  let count = 0;\n' +
+      '  for (const value of nums) {\n' +
+      '    prefix ^= value;\n' +
+      '    count += seen.get(prefix ^ k) ?? 0;\n' +
+      '    seen.set(prefix, (seen.get(prefix) ?? 0) + 1);\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}',
+    modify: 'Count the ranges whose XOR is at most k instead — does the frequency map still answer it?',
+  },
+  {
+    step: 3,
+    name: 'Merge Overlapping Subintervals',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Merge every overlapping interval into one and say which ordering makes a single sweep enough.',
+    brief: 'Input: a list of start and end pairs. Output: a list covering the same ranges where no two intervals overlap.',
+    concepts: ['dsa-interval-sweep', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer: 'Sort by start, then either extend the open interval or start a new one — after sorting only its neighbour can overlap.',
+    idealAnswer:
+      'Unsorted, an interval can overlap any other, so a pairwise merge is quadratic. Once ordered by the left edge, ' +
+      'every later start is at least as large as the open one, so overlap is a single test against the running end and ' +
+      'the fix is a max on that end. The sort is O(n log n) and the sweep O(n), and the merged list reuses its own rows ' +
+      'rather than rebuilding them.',
+    walkthrough:
+      'The max on the end is not decoration: an interval completely inside the open one must not shrink it, which is the ' +
+      'failure mode of a merge that assigns instead of comparing. Whether touching edges merge is a definition you have ' +
+      'to state out loud — the comparison is less-than-or-equal when they merge and strict when they stay apart — and ' +
+      'sorting by the end answers the scheduling question, not this one.',
+    commonMistake: 'Comparing each interval with the previous input row instead of the open merged row, or sorting by end.',
+    whyWrong:
+      'After a merge the previous input row no longer describes what is covered, so a contained interval like a short one ' +
+      'inside a long one starts a second row that overlaps the first. Sorting by end breaks the adjacency of starts ' +
+      'entirely, and the sweep then needs a data structure it was supposed to avoid.',
+    followUps: ['Should touching intervals merge, and where in the code does that choice live?', 'Why is sorting by end correct for a different question?', 'Insert one interval into a merged list — how much of the sweep do you reuse?'],
+    solution:
+      'function mergeIntervals(intervals) {\n' +
+      '  const sorted = [...intervals].sort((a, b) => a[0] - b[0]);\n' +
+      '  const out = [];\n' +
+      '  for (const row of sorted) {\n' +
+      '    const open = out[out.length - 1];\n' +
+      '    if (open && row[0] <= open[1]) {\n' +
+      '      if (row[1] > open[1]) open[1] = row[1];\n' +
+      '    } else {\n' +
+      '      out.push([row[0], row[1]]);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}',
+    modify: 'Now find the largest gap between merged intervals — which row of the output do you read?',
+  },
+  {
+    step: 3,
+    name: 'Merge two sorted arrays without extra space',
+    difficulty: 'Easy',
+    topicSlug: ARRAYS,
+    stem: 'Merge two sorted arrays in place with no third array and give the bound you actually paid.',
+    brief: 'Input: two sorted arrays, both mutated. Output: the first ends up holding the smallest elements and the second the rest.',
+    concepts: ['dsa-gap-shrink', 'dsa-sorted-merge', 'dsa-complexity-counting'],
+    shortAnswer: 'Treat both as one virtual sequence, swap pairs a gap apart, and halve the gap until it reaches one.',
+    idealAnswer:
+      'With the two arrays viewed as one sequence of length m plus n, a pass compares every index with the one gap ' +
+      'positions later and swaps when they are out of order; halving the gap leaves the two sorted halves able to be ' +
+      'out of order only at distances the passes already cleared. Nothing is allocated, so the space is O(1), and the ' +
+      'time is logarithmic in the total length times that length — not the linear bound a buffered merge gets.',
+    walkthrough:
+      'Each half starts ordered, so the only inversions are the ones crossing the boundary between the arrays, and those ' +
+      'sit at bounded distances that the shrinking gap walks from wide to narrow. The gap rounds up when it halves and ' +
+      'the loop has to break at one, because rounding a gap of one up gives one again — that is where this style of loop ' +
+      'hangs rather than fails.',
+    commonMistake: 'Calling the gap merge linear, or allocating a third array and describing it as constant space.',
+    whyWrong:
+      'The passes are logarithmic in the combined length, so claiming linearity mis-states the trade the question is ' +
+      'about — a reviewer asks for the linear merge, gets O(1) space instead, and wants both numbers named. A third ' +
+      'array is exactly the memory the constraint removes.',
+    followUps: ['Which array has spare room at the back, and what does that buy?', 'Why does the gap round up rather than down?', 'Give the rotation variant and compare its passes with this one.'],
+    solution:
+      'function mergeInPlace(a, b) {\n' +
+      '  const total = a.length + b.length;\n' +
+      '  const read = (index) => (index < a.length ? a[index] : b[index - a.length]);\n' +
+      '  const write = (index, value) => {\n' +
+      '    if (index < a.length) a[index] = value;\n' +
+      '    else b[index - a.length] = value;\n' +
+      '  };\n' +
+      '  let gap = Math.ceil(total / 2);\n' +
+      '  while (gap > 0) {\n' +
+      '    for (let i = 0; i + gap < total; i += 1) {\n' +
+      '      if (read(i) > read(i + gap)) {\n' +
+      '        const held = read(i);\n' +
+      '        write(i, read(i + gap));\n' +
+      '        write(i + gap, held);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (gap === 1) break;\n' +
+      '    gap = Math.ceil(gap / 2);\n' +
+      '  }\n' +
+      '}',
+    modify: 'Now the first array has room at the back for all of the second — merge in linear time from the end.',
+  },
+  {
+    step: 3,
+    name: 'Find the repeating and missing number',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'One value is missing from a 1..n array and another appears twice — recover both without a hash table.',
+    brief: 'Input: an array of length n holding each value from 1 to n, with one value absent and one doubled. Output: the repeating value and the missing one.',
+    concepts: ['dsa-sum-system', 'dsa-boundary-conditions', 'dsa-double-precision'],
+    shortAnswer: 'Two aggregate equations — the sum and the sum of squares against their expected values — pin down both unknowns.',
+    idealAnswer:
+      'Let the missing value be x and the repeating one r. Expected minus actual sum is x minus r, one equation in two ' +
+      'unknowns; expected minus actual sum of squares is x squared minus r squared, which factors into that same ' +
+      'difference times x plus r. Dividing the second by the first gives x plus r, so both values fall out of a sum and ' +
+      'a difference pair. O(n) time, O(1) space, and the difference can never be zero because the two values differ.',
+    walkthrough:
+      'The algebra is the easy half; the part that marks a senior answer is naming where it stops working. The sum of ' +
+      'squares grows with the cube of n, so past a few hundred thousand the accumulator leaves the exact integer range ' +
+      'and the two equations quietly return a plausible wrong pair. The marker version — negate the slot each value ' +
+      'points at — keeps O(1) extra space without the overflow, and costs a mutated input and a second reading rule.',
+    commonMistake: 'Trying to recover both values from the sum alone, or reporting the pair in the wrong order.',
+    whyWrong:
+      'One equation in two unknowns has many solutions, so a sum-only argument is a guess dressed as a derivation. ' +
+      'Swapping the order is worse than a crash: the caller is told a present value is absent and an absent value is a ' +
+      'duplicate, and a symmetric sample will not show it.',
+    followUps: ['At what n does the squares accumulator leave the safe integer range, and how do you check?', 'Give the negation-marker version and name what it destroys.', 'What if the range is 0..n-1 instead — which index rule changes?'],
+    solution:
+      'function repeatingMissing(nums) {\n' +
+      '  const n = nums.length;\n' +
+      '  const expectedSum = (n * (n + 1)) / 2;\n' +
+      '  const expectedSquares = (n * (n + 1) * (2 * n + 1)) / 6;\n' +
+      '  let sum = 0;\n' +
+      '  let squares = 0;\n' +
+      '  for (const value of nums) {\n' +
+      '    sum += value;\n' +
+      '    squares += value * value;\n' +
+      '  }\n' +
+      '  const difference = expectedSum - sum;\n' +
+      '  const combined = (expectedSquares - squares) / difference;\n' +
+      '  const missing = (difference + combined) / 2;\n' +
+      '  return [missing - difference, missing];\n' +
+      '}',
+    modify: 'Do it with negation markers in the array itself and say which input shape breaks the markers.',
+  },
+  {
+    step: 3,
+    name: 'Count Inversions',
+    difficulty: 'Hard',
+    topicSlug: SORTING,
+    stem: 'Count the pairs that are out of order and explain what the merge step is able to count for free.',
+    brief: 'Input: an array. Output: the number of index pairs i before j where the value at i is larger than the value at j.',
+    concepts: ['dsa-inversion-count', 'dsa-divide-and-conquer', 'dsa-complexity-counting'],
+    shortAnswer: 'Count cross pairs while merging two sorted halves: taking from the right means every left element still waiting pairs with it.',
+    idealAnswer:
+      'An inversion lies either inside one half or across the two, and the recursive calls handle the inside ones while ' +
+      'returning sorted halves. With both halves ordered, if the left cursor cannot be emitted before the right one, ' +
+      'then every element behind it in the left half is also larger, so one addition of the remaining left count covers ' +
+      'a whole block of pairs. The recurrence is merge sort exactly, so O(n log n) time and O(n) scratch space.',
+    walkthrough:
+      'The addition is only valid because the halves came back sorted — that is the invariant that turns a per-element ' +
+      'question into a block question, and it is why counting without sorting cannot beat quadratic. The count is also ' +
+      'the number of swaps bubble sort performs on the same array, which is the clearest way to see why a quadratic ' +
+      'counter is really a sort you threw away.',
+    commonMistake: 'Two nested loops comparing every pair, or adding the remaining right elements instead of the left.',
+    whyWrong:
+      'The nested scan is quadratic on precisely the input that makes the number interesting: a reverse-sorted array of ' +
+      'a hundred thousand elements holds billions of pairs. Adding the wrong remainder is a matching-shaped bug — it is ' +
+      'right on two-element samples and diverges as soon as the halves differ in length.',
+    followUps: ['Why does taking from the left add nothing?', 'Relate the count to the swaps bubble sort makes.', 'Count only pairs at most a fixed distance apart — which pass changes?'],
+    solution:
+      'function countInversions(nums) {\n' +
+      '  const work = [...nums];\n' +
+      '  const scratch = new Array(work.length);\n' +
+      '  const sort = (lo, hi) => {\n' +
+      '    if (lo >= hi) return 0;\n' +
+      '    const mid = (lo + hi) >> 1;\n' +
+      '    let count = sort(lo, mid) + sort(mid + 1, hi);\n' +
+      '    let i = lo;\n' +
+      '    let j = mid + 1;\n' +
+      '    let k = lo;\n' +
+      '    while (i <= mid && j <= hi) {\n' +
+      '      if (work[i] <= work[j]) {\n' +
+      '        scratch[k++] = work[i++];\n' +
+      '      } else {\n' +
+      '        scratch[k++] = work[j++];\n' +
+      '        count += mid - i + 1;\n' +
+      '      }\n' +
+      '    }\n' +
+      '    while (i <= mid) scratch[k++] = work[i++];\n' +
+      '    while (j <= hi) scratch[k++] = work[j++];\n' +
+      '    for (let m = lo; m <= hi; m += 1) work[m] = scratch[m];\n' +
+      '    return count;\n' +
+      '  };\n' +
+      '  return sort(0, work.length - 1);\n' +
+      '}',
+    modify: 'Count the pairs where the left value is more than twice the right — the merge comparison no longer answers it.',
+  },
+  {
+    step: 3,
+    name: 'Reverse Pairs',
+    difficulty: 'Hard',
+    topicSlug: SORTING,
+    stem: 'Count the pairs where an earlier value exceeds twice a later one, and say why the merge cannot count them.',
+    brief: 'Input: an array of integers. Output: the number of index pairs i before j with the value at i greater than twice the value at j.',
+    concepts: ['dsa-inversion-count', 'dsa-sort-then-two-pointer', 'dsa-boundary-conditions'],
+    shortAnswer: 'Same divide and conquer, but a separate two-pointer sweep counts the doubled pairs before the merge runs.',
+    idealAnswer:
+      'The doubling condition is not the ordering the merge uses, so the count needs its own pass over the two sorted ' +
+      'halves: for each left element advance a cursor through the right half while twice the right value stays below ' +
+      'it, and add how far the cursor moved. Both cursors only travel forward, so the sweep is linear per level and the ' +
+      'total stays O(n log n) time with the merge sort scratch space.',
+    walkthrough:
+      'Counting before merging is what keeps the halves ordered for the sweep, because the decision that the cursor never ' +
+      'has to retreat depends on the left values arriving in increasing order. The inversion count and the reverse-pair ' +
+      'count disagree on ordinary input — a pair can satisfy the ordering test without satisfying the doubled one — so ' +
+      'the two questions need two comparisons, not one.',
+    commonMistake: 'Folding the doubling test into the merge step, or assuming the inversion count answers both.',
+    whyWrong:
+      'The merge cursor is consumed by the ordering comparison, so reusing it for a second predicate makes the count ' +
+      'depend on which element was emitted first and silently under-reports. On the array four, three, one the inversion ' +
+      'count and the reverse-pair count give different numbers, which is the counter-example to any single-pass answer.',
+    followUps: ['Why must the sweep run before the merge rather than after?', 'Which cursor would break if the halves were unsorted?', 'Count pairs where the left value is at least the right plus a constant — what changes?'],
+    solution:
+      'function reversePairs(nums) {\n' +
+      '  const work = [...nums];\n' +
+      '  const scratch = new Array(work.length);\n' +
+      '  const solve = (lo, hi) => {\n' +
+      '    if (lo >= hi) return 0;\n' +
+      '    const mid = (lo + hi) >> 1;\n' +
+      '    let count = solve(lo, mid) + solve(mid + 1, hi);\n' +
+      '    let j = mid + 1;\n' +
+      '    for (let i = lo; i <= mid; i += 1) {\n' +
+      '      while (j <= hi && work[i] > 2 * work[j]) j += 1;\n' +
+      '      count += j - (mid + 1);\n' +
+      '    }\n' +
+      '    let i = lo;\n' +
+      '    j = mid + 1;\n' +
+      '    let k = lo;\n' +
+      '    while (i <= mid && j <= hi) {\n' +
+      '      if (work[i] <= work[j]) scratch[k++] = work[i++];\n' +
+      '      else scratch[k++] = work[j++];\n' +
+      '    }\n' +
+      '    while (i <= mid) scratch[k++] = work[i++];\n' +
+      '    while (j <= hi) scratch[k++] = work[j++];\n' +
+      '    for (let m = lo; m <= hi; m += 1) work[m] = scratch[m];\n' +
+      '    return count;\n' +
+      '  };\n' +
+      '  return solve(0, work.length - 1);\n' +
+      '}',
+    modify: 'Count the pairs across the two halves only, ignoring pairs inside either half — which recursion disappears?',
+  },
+  /*
+   * The sheet lists five rows again at the end of step 3 under slightly different names. They are
+   * authored as different drills rather than as copies: each one asks for the mechanism the first
+   * version did not, so a learner who already passed the original is not graded twice for the same
+   * sentence and the verifier still finds a row for every line the sheet has.
+   */
+  {
+    step: 3,
+    name: 'Maximum Product Subarray',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Find the largest product of a contiguous run and explain why one running best is not enough state.',
+    brief: 'Input: a non-empty array of integers, negatives and zeros allowed. Output: the largest product over all non-empty contiguous subarrays.',
+    concepts: ['dsa-dual-product-track', 'dsa-kadane-reset', 'dsa-boundary-conditions'],
+    shortAnswer: 'Carry the largest and the smallest product ending here, because a negative turns the smallest into the largest candidate.',
+    idealAnswer:
+      'The best product ending at a position is the maximum of the value alone, the value times the best so far, and the ' +
+      'value times the worst so far — the last term exists only because two negatives make a positive. Updating both ' +
+      'states together, and taking the overall best from the maximum state at each step, is O(n) time and O(1) space. A ' +
+      'zero clears both states, and an all-negative array is answered by the largest single element.',
+    walkthrough:
+      'Sum Kadane needs one state because addition cannot change the sign of what it is applied to; multiplication can, ' +
+      'which is why the minimum is not a hedge but a required input. The array minus two, three, minus four is the whole ' +
+      'case: the best product is twenty-four and it comes from multiplying the running minimum minus-six by the final ' +
+      'minus-four, a pair a single-maximum tracker never even holds.',
+    commonMistake: 'Tracking only the maximum and resetting it to one at a zero.',
+    whyWrong:
+      'A maximum-only tracker reports three for minus-two, three, minus-four when the answer is twenty-four, and the ' +
+      'output looks reasonable enough to ship. Resetting the tracker to one at a zero is fine for the product but wrong ' +
+      'for the overall best, which a fresh one would report for an all-negative array.',
+    followUps: ['Give the input that proves the minimum state is load-bearing.', 'Why does the sum version not need this second state?', 'Where would exact precision break down on huge products?'],
+    solution:
+      'function maxProduct(nums) {\n' +
+      '  let best = nums[0];\n' +
+      '  let maxEnding = nums[0];\n' +
+      '  let minEnding = nums[0];\n' +
+      '  for (let i = 1; i < nums.length; i += 1) {\n' +
+      '    const value = nums[i];\n' +
+      '    const options = [value, value * maxEnding, value * minEnding];\n' +
+      '    maxEnding = Math.max(...options);\n' +
+      '    minEnding = Math.min(...options);\n' +
+      '    best = Math.max(best, maxEnding);\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Report the index range of the best product too — which state has to remember where it started?',
+  },
+  {
+    step: 3,
+    name: 'Max Subarray Product',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Get the maximum subarray product with two sweeps and no pair of states, and say what the zero is doing.',
+    brief: 'Input: a non-empty array of integers. Output: the largest contiguous product, found by scanning left to right and right to left.',
+    concepts: ['dsa-kadane-reset', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer: 'Multiply forward, multiply backward, reset both at a zero, and keep the best value either sweep reached.',
+    idealAnswer:
+      'Between two zeros the sign pattern is fixed, so the best product in that segment is either the whole segment or ' +
+      'the segment with a leading negative dropped, or one with a trailing negative dropped. The forward sweep discards ' +
+      'prefixes and the backward sweep discards suffixes, so two linear passes cover both directions without carrying a ' +
+      'minimum state. Each pass resets its running product at a zero, because otherwise the segment on the other side ' +
+      'would keep multiplying through the zero and report nothing.',
+    walkthrough:
+      'The two directions are not symmetry for its own sake: a forward pass can only ever lose leading negatives, so an ' +
+      'answer that needs a suffix — minus one followed by two — exists only in the backward sweep. Zeros are the split ' +
+      'that makes both sweeps independent, and the reset has to happen after reading the zero itself, which is the ' +
+      'off-by-one that turns a zero-containing array into an answer of one.',
+    commonMistake: 'Running the forward sweep alone, or seeding the best with one instead of the first element.',
+    whyWrong:
+      'One sweep misses every answer whose leading term is negative, so the algorithm is correct on positive-majority ' +
+      'samples and wrong on minus-one, two, where the true answer is two and the forward pass reports minus-one. ' +
+      'Seeding the best with one claims an empty subarray is a candidate and beats every all-negative input.',
+    followUps: ['Which array is answered only by the backward sweep?', 'Compare the states each pass holds with the two-state version.', 'Why must the reset come after the comparison rather than before?'],
+    solution:
+      'function maxProductTwoSweep(nums) {\n' +
+      '  let best = nums[0];\n' +
+      '  let forward = 1;\n' +
+      '  for (const value of nums) {\n' +
+      '    forward *= value;\n' +
+      '    best = Math.max(best, forward);\n' +
+      '    if (value === 0) forward = 1;\n' +
+      '  }\n' +
+      '  let backward = 1;\n' +
+      '  for (let i = nums.length - 1; i >= 0; i -= 1) {\n' +
+      '    backward *= nums[i];\n' +
+      '    best = Math.max(best, backward);\n' +
+      '    if (nums[i] === 0) backward = 1;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Add a third pass that skips zeros entirely and say which of the three is actually redundant.',
+  },
+  {
+    step: 3,
+    name: 'Check if Array is Sorted',
+    difficulty: 'Easy',
+    topicSlug: ARRAYS,
+    stem: 'Decide whether an array is sorted or a rotation of a sorted array in one pass, and name the pair a plain scan forgets.',
+    brief: 'Input: an array of integers. Output: whether it is non-decreasing, or a rotation of a non-decreasing array.',
+    concepts: ['dsa-rotation-drop-count', 'dsa-boundary-conditions', 'dsa-branch-exhaustiveness'],
+    shortAnswer: 'Count the adjacent pairs that decrease, the wrap from the last element to the first included; at most one is allowed.',
+    idealAnswer:
+      'A non-decreasing array has no decreasing adjacent pair, and a rotation of one has exactly one — the join where ' +
+      'the tail meets the head. Two drops would mean an inversion inside a run that was supposed to be ordered, so the ' +
+      'test is a count of at most one over all cyclic neighbours. One pass with the index taken modulo the length is ' +
+      'O(n) time and O(1) space.',
+    walkthrough:
+      'The wrap pair is the entire question, because it is the only adjacency that a linear scan does not visit by ' +
+      'accident: without it the test silently becomes "at most one interior drop", which accepts two, one, three — an ' +
+      'array no rotation of a sorted list can produce. Equal neighbours do not count as drops, so duplicates do not ' +
+      'change the bound.',
+    commonMistake: 'Checking interior neighbours only, or comparing the first and last elements as a separate rule.',
+    whyWrong:
+      'Dropping the wrap accepts anything with a single interior decrease, which is the shape a random test input often ' +
+      'has. Treating the first-to-last comparison as a bolt-on rule rather than one more adjacency gets duplicated ' +
+      'checks and a special case for length one that no cyclic loop needs.',
+    followUps: ['Which input separates this from the plain sorted check?', 'What changes if the array must be strictly increasing?', 'Can the position of the single drop give you the rotation amount?'],
+    solution:
+      'function isRotatedSorted(nums) {\n' +
+      '  let drops = 0;\n' +
+      '  for (let i = 0; i < nums.length; i += 1) {\n' +
+      '    if (nums[i] > nums[(i + 1) % nums.length]) drops += 1;\n' +
+      '  }\n' +
+      '  return drops <= 1;\n' +
+      '}',
+    modify: 'Return the rotation index when the array is a rotation, and report the ambiguity when it is not.',
+  },
+  {
+    step: 3,
+    name: 'Find the element that appears once in sorted array',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Every value appears twice but one in a sorted array — find the single value in logarithmic time.',
+    brief: 'Input: a sorted array of odd length where each value occurs twice except one. Output: the value that occurs once.',
+    concepts: ['dsa-pair-parity-search', 'dsa-index-parity', 'dsa-boundary-conditions'],
+    shortAnswer: 'Every pair starts on an even index until the single value; force the midpoint even and binary search on where that stops.',
+    idealAnswer:
+      'Up to the answer, pairs occupy even-odd index slots; after it, they sit odd-even. Forcing the midpoint down to an ' +
+      'even index and comparing it with its neighbour therefore says which side the invariant broke on, and the search ' +
+      'keeps that half. Halving gives O(log n) time and O(1) space, which is the only logarithmic answer the sorted ' +
+      'input makes possible.',
+    walkthrough:
+      'The invariant is positional rather than a value property — nothing about the single element is unusual, only where ' +
+      'it sits in the pair layout — and that is why the comparison has to be with the neighbour at the paired index and ' +
+      'not with a target. The parity fix is the step people drop: a midpoint that lands on the second half of a pair ' +
+      'points the search into the fully paired side and returns a duplicate.',
+    commonMistake: 'XORing the whole array and claiming the logarithmic bound, or comparing the midpoint with its neighbour without forcing parity.',
+    whyWrong:
+      'XOR is correct and simpler but linear, so it fails the ask rather than the output — the sorted input is exactly ' +
+      'what buys the log n. Skipping the parity fix lets the window converge on a half with no answer in it, which on a ' +
+      'short sample often still returns a plausible value.',
+    followUps: ['Why does the window stay inclusive of the answer when hi moves to the midpoint?', 'Give the one-line linear version and name what it throws away.', 'What breaks if some value appears three times?'],
+    solution:
+      'function singleInSorted(nums) {\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length - 1;\n' +
+      '  while (lo < hi) {\n' +
+      '    let mid = (lo + hi) >> 1;\n' +
+      '    if (mid % 2 === 1) mid -= 1;\n' +
+      '    if (nums[mid] === nums[mid + 1]) lo = mid + 2;\n' +
+      '    else hi = mid;\n' +
+      '  }\n' +
+      '  return nums[lo];\n' +
+      '}',
+    modify: 'Now every other value appears four times instead of twice — does the same parity rule decide the half?',
+  },
+  {
+    step: 3,
+    name: 'Rotate Matrix by 90 Degrees Clockwise',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Rotate a square grid ninety degrees clockwise by cycling four cells per ring, then compare it with transpose and reversal.',
+    brief: 'Input: an n by n grid, mutated in place. Output: the clockwise rotation, with each cell written exactly once.',
+    concepts: ['dsa-cycle-in-rings', 'dsa-coordinate-loops', 'dsa-boundary-conditions'],
+    shortAnswer: 'Walk the rings and cycle four symmetric cells with one temporary, iterating only a quarter of each side.',
+    idealAnswer:
+      'A clockwise turn sends the position (i, j) to (j, n - 1 - i), and following that map four times returns to the ' +
+      'start, so the cells of a ring fall into four-cycles. Holding one value and shifting the other three rotates a ' +
+      'cycle; running the offset along a quarter of the side covers the ring, and the rings close toward the centre. ' +
+      'Every cell is read and written once — O(n squared) time, O(1) space, one pass.',
+    walkthrough:
+      'The single pass is the difference from transpose-then-reverse, which is the same order but writes the grid twice, ' +
+      'so the ring form wins on traffic and loses on legibility. The loop bound is the part to say out loud: iterating a ' +
+      'whole side would replay each cycle from its other corner, and the odd-sized centre cell is a cycle of one that the ' +
+      'bounds already exclude.',
+    commonMistake: 'Iterating the full width of each side per ring, or using a temporary per cell instead of one per cycle.',
+    whyWrong:
+      'Covering a whole side rotates cells twice, so the ring ends up turned 180 degrees while the inner rings are ' +
+      'scrambled — an output that has every value present and is still wrong. Allocating a copy of the grid to rotate it ' +
+      'answers a different question, the one the in-place constraint was written to rule out.',
+    followUps: ['Write the counter-clockwise cycle and say which neighbour moves first.', 'How many swaps does an n by n grid need in total?', 'Why does transpose-plus-reverse win in a code review anyway?'],
+    solution:
+      'function rotateRings(a) {\n' +
+      '  const n = a.length;\n' +
+      '  for (let ring = 0; ring < n / 2; ring += 1) {\n' +
+      '    const last = n - 1 - ring;\n' +
+      '    for (let offset = 0; offset < last - ring; offset += 1) {\n' +
+      '      const top = a[ring][ring + offset];\n' +
+      '      a[ring][ring + offset] = a[last - offset][ring];\n' +
+      '      a[last - offset][ring] = a[last][last - offset];\n' +
+      '      a[last][last - offset] = a[ring + offset][last];\n' +
+      '      a[ring + offset][last] = top;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return a;\n' +
+      '}',
+    modify: 'Rotate 180 degrees with the same four-cell cycle and count how many writes each cell takes.',
+  },
+  {
+    step: 3,
+    name: 'Find missing and repeating numbers',
+    difficulty: 'Medium',
+    topicSlug: ARRAYS,
+    stem: 'Recover the duplicate and the gap by writing the answer into the array itself, and name what the input costs.',
+    brief: 'Input: an array of length n holding the values 1 to n with one repeated and one absent; the array is mutated. Output: the repeating value and the missing one.',
+    concepts: ['dsa-negation-mirror', 'dsa-in-place-markers', 'dsa-boundary-conditions'],
+    shortAnswer: 'Use each value as an index and negate the slot it points at; the slot already negative when you arrive is the repeat.',
+    idealAnswer:
+      'A value in one to n addresses a slot of the same array, so the sign of that slot records whether the value has ' +
+      'been seen. Reading the magnitude before the sign keeps the addressing valid after the first negation. The slot ' +
+      'that is already negative when you reach it is the repeating value, and the only slot still positive after a full ' +
+      'pass is the missing one — O(n) time and O(1) extra space.',
+    walkthrough:
+      'The pass must not break when it finds the repeat, because a value that only appears later still has to flip its ' +
+      'own slot or it looks missing too. That is the difference between detecting and recording: detection lets you stop, '
+      + 'recording has to finish the scan. The cost is a mutated input, which is why the arithmetic version exists for ' +
+      'data you do not own.',
+    commonMistake: 'Breaking out of the first loop as soon as the duplicate shows up, or reading the index without the absolute value.',
+    whyWrong:
+      'An early break leaves untouched slots that read as missing, so the second pass reports values that are present — ' +
+      'a wrong answer that only shows up when the duplicate happens to sit early. Ignoring the magnitude turns a negated ' +
+      'slot into a negative index, which is undefined behaviour rather than a bug you can see.',
+    followUps: ['Which input position makes the early-break version report two missing values?', 'How do you restore the array afterwards, and should you?', 'What does the arithmetic version cost that this one does not?'],
+    solution:
+      'function repeatingMissingOnce(nums) {\n' +
+      '  let repeating = -1;\n' +
+      '  for (const value of nums) {\n' +
+      '    const index = Math.abs(value) - 1;\n' +
+      '    if (nums[index] < 0) repeating = index + 1;\n' +
+      '    else nums[index] = -nums[index];\n' +
+      '  }\n' +
+      '  let missing = -1;\n' +
+      '  for (let i = 0; i < nums.length; i += 1) {\n' +
+      '    if (nums[i] > 0) missing = i + 1;\n' +
+      '  }\n' +
+      '  return [repeating, missing];\n' +
+      '}',
+    modify: 'Do it so the array is left exactly as it was found — which pass has to undo the marks?',
   },
 ];
 
