@@ -756,6 +756,20 @@ export const DSA_CONCEPTS = {
     terms: ['swap prev and next', 'every node', 'old tail becomes head', 'in place', 'no new nodes'],
     weight: 3,
   },
+  'dsa-fast-slow-pointers': {
+    slug: 'dsa-fast-slow-pointers',
+    name: 'Fast and slow pointers halve the traversal cost for midpoint and cycle detection',
+    detail: 'One pointer advances by two steps per iteration while the other advances by one. When fast reaches the end, slow is at the middle. In a cycle they must meet because the gap closes by one per step.',
+    terms: ['fast moves two', 'slow moves one', 'halfway', 'tortoise and hare', 'gap closes by one'],
+    weight: 2,
+  },
+  'dsa-cycle-detection': {
+    slug: 'dsa-cycle-detection',
+    name: 'A cycle means a node is reachable from itself by following next repeatedly',
+    detail: 'In a linked list, a cycle exists when some node\'s .next eventually points back to an earlier node. Floyd\'s algorithm detects this in O(1) space by proving that two pointers at different speeds must collide inside a loop.',
+    terms: ['reachable from itself', 'points back', 'Floyd\'s algorithm', 'O(1) space', 'collision proves cycle'],
+    weight: 2,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -7601,6 +7615,228 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return tail;\n' +
       '}',
     modify: 'Reverse only the first k nodes and leave the rest attached. Which two seams do you have to rejoin afterwards?',
+  },
+  {
+    step: 6,
+    name: 'Middle of a LinkedList (Tortoise-Hare)',
+    difficulty: 'Easy',
+    topicSlug: LINKED,
+    stem: 'Return the middle node of a singly linked list. If there are two middles, return the second one.',
+    brief: 'Input: head of a chain. Output: the node at position ⌊n/2⌋ using zero-based indexing. Use two pointers moving at different speeds; name both and say how many steps each takes.',
+    concepts: ['dsa-linear-position-walk', 'dsa-fast-slow-pointers', 'dsa-null-termination'],
+    shortAnswer:
+      'Use fast and slow pointers: fast moves two steps per iteration, slow moves one. When fast reaches the end, slow is at the middle.',
+    idealAnswer:
+      'The fast–slow technique turns a length-unknown traversal into a race: if fast advances by two nodes while slow ' +
+      'advances by one, then when fast hits null (or its next is null), slow has covered exactly half the distance. For ' +
+      'an even-length list like [1,2,3,4], fast stops at null after visiting 4, and slow lands on 3 — the second middle, ' +
+      'which matches the spec. The loop condition `fast !== null && fast.next !== null` guarantees we never dereference ' +
+      'null, and the invariant is that slow is always at position floor(i/2) after i iterations.',
+    walkthrough:
+      'The key insight is that doubling the speed of one pointer halves the number of iterations needed to reach the end, ' +
+      'and the slower pointer naturally ends up at the midpoint. Initialising both at head means the first iteration moves ' +
+      'fast to head.next.next and slow to head.next, so after k iterations slow is at index k and fast is at index 2k. ' +
+      'When fast exits at index n (null) or n−1 (last node), slow is at n/2.',
+    commonMistake:
+      'Initialising fast at head.next instead of head, which shifts the midpoint by one, or using the wrong loop condition and dereferencing null.',
+    whyWrong:
+      'Starting fast one step ahead makes it reach the end one iteration early, so slow stops one node before the true middle. And checking only `fast !== null` without `fast.next !== null` causes a crash on even-length lists when fast tries to read null.next.',
+    followUps: [
+      'How does this change if you want the first middle instead of the second?',
+      'Can you find the middle in one pass without extra space? What about two passes?',
+      'Extend this to find the k-th node from the end.',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const result = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    result.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return result;\n' +
+      '}\n' +
+      '\n' +
+      'function findMiddle(head) {\n' +
+      '  let slow = head;\n' +
+      '  let fast = head;\n' +
+      '  while (fast !== null && fast.next !== null) {\n' +
+      '    slow = slow.next;\n' +
+      '    fast = fast.next.next;\n' +
+      '  }\n' +
+      '  return slow;\n' +
+      '}',
+    modify: 'Find the middle node but return the first middle for even-length lists. How does the initialisation change?',
+  },
+  {
+    step: 6,
+    name: 'Reverse a LinkedList (Iterative & Recursive)',
+    difficulty: 'Easy',
+    topicSlug: LINKED,
+    stem: 'Reverse a singly linked list in place and return the new head. Do not allocate new nodes.',
+    brief: 'Input: head of a chain. Output: the same nodes in reverse order. Name the three pointers used and state the invariant after each iteration.',
+    concepts: ['dsa-linear-position-walk', 'dsa-pointer-swap-mirror', 'dsa-null-termination'],
+    shortAnswer:
+      'Iterate with prev=null, curr=head, next=curr.next. At each step set curr.next=prev, then advance all three. Return prev when curr is null.',
+    idealAnswer:
+      'Reversing a singly linked list is a three-pointer dance: prev trails behind, curr is the node being rewired, and next ' +
+      'holds the remainder of the original chain so it is not lost. Before each iteration, prev points to the already-reversed ' +
+      'prefix, curr points to the first unreversed node, and next is curr.next. After setting curr.next = prev, the link is ' +
+      'flipped, and advancing all three maintains the invariant. When curr becomes null, prev is the last node visited — the ' +
+      'original tail — which is now the new head. No nodes are allocated; the cost is exactly n writes to .next fields.',
+    walkthrough:
+      'The mental model is peeling off the front node and prepending it to a growing reversed prefix. Initially the prefix ' +
+      'is empty (prev = null). Each iteration detaches curr from the forward chain and attaches it to the prefix by pointing ' +
+      'its .next backwards. The next pointer is critical: without saving it before the flip, the rest of the list is lost. ' +
+      'The recursive version does the same work on the way back up the call stack, returning the original tail as the new head.',
+    commonMistake:
+      'Forgetting to save next before flipping curr.next, or returning curr instead of prev at the end.',
+    whyWrong:
+      'Losing the next pointer severs the chain after the first node, so only the first two elements are reversed and the rest vanish. Returning curr (which is null) gives an empty list instead of the reversed one.',
+    followUps: [
+      'Reverse the list recursively. What does the base case look like?',
+      'Reverse only a sublist from position m to n. Which four boundaries must you reconnect?',
+      'Why is reversing twice equivalent to the identity operation?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const result = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    result.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return result;\n' +
+      '}\n' +
+      '\n' +
+      'function reverseList(head) {\n' +
+      '  let prev = null;\n' +
+      '  let curr = head;\n' +
+      '  while (curr !== null) {\n' +
+      '    const next = curr.next;\n' +
+      '    curr.next = prev;\n' +
+      '    prev = curr;\n' +
+      '    curr = next;\n' +
+      '  }\n' +
+      '  return prev;\n' +
+      '}',
+    modify: 'Reverse every pair of adjacent nodes (swap in pairs). How does the pointer bookkeeping change?',
+  },
+  {
+    step: 6,
+    name: 'Detect a loop in LL',
+    difficulty: 'Easy',
+    topicSlug: LINKED,
+    stem: 'Determine whether a singly linked list contains a cycle. Return true if any node is reachable by following next repeatedly, false otherwise.',
+    brief: 'Input: head of a chain that may or may not loop back. Output: boolean. Use two pointers at different speeds; explain why they meet if and only if there is a cycle.',
+    concepts: ['dsa-fast-slow-pointers', 'dsa-null-termination', 'dsa-cycle-detection'],
+    shortAnswer:
+      'Use Floyd\'s tortoise-and-hare: slow moves one step, fast moves two. If they ever point to the same node, there is a cycle. If fast reaches null, there is not.',
+    idealAnswer:
+      'If the list has no cycle, fast eventually reaches null because it advances faster than slow. If there is a cycle of ' +
+      'length L, then once both pointers enter the cycle, the distance between them decreases by one each iteration (fast ' +
+      'gains one step on slow per iteration), so they must meet within L steps. The meeting proves a cycle exists because ' +
+      'in an acyclic list the only way two pointers can be equal is if they started at the same node — and they start at ' +
+      'head but diverge immediately since fast moves twice as fast. The algorithm uses O(1) space and O(n) time.',
+    walkthrough:
+      'The intuition is a racetrack: if two runners start at the same point and one runs twice as fast, the faster runner ' +
+      'laps the slower one. In a linear track (no cycle), the faster runner simply finishes first. The proof relies on the ' +
+      'fact that the relative speed is 1 step per iteration, so the gap closes deterministically. Initialising both at head ' +
+      'means the first check compares head with itself, so the loop body must advance before comparing, or the initial ' +
+      'condition must exclude the trivial equality.',
+    commonMistake:
+      'Checking for equality before advancing, which returns true immediately for any non-empty list, or not handling the null check for fast.next.',
+    whyWrong:
+      'Comparing before advancing catches the initial state where both pointers are at head, producing a false positive for every list with at least one node. And skipping the fast.next null check crashes on even-length acyclic lists.',
+    followUps: [
+      'Once you detect a cycle, how do you find the node where the cycle begins?',
+      'What is the length of the cycle?',
+      'Can you detect a cycle using only one pointer and O(n) extra space?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArrayWithCycle(values, cycleAt) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  const nodes = [];\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    nodes.push(node);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  if (cycleAt >= 0 && cycleAt < nodes.length) {\n' +
+      '    tail.next = nodes[cycleAt];\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function hasCycle(head) {\n' +
+      '  if (head === null || head.next === null) return false;\n' +
+      '  let slow = head;\n' +
+      '  let fast = head;\n' +
+      '  while (fast !== null && fast.next !== null) {\n' +
+      '    slow = slow.next;\n' +
+      '    fast = fast.next.next;\n' +
+      '    if (slow === fast) return true;\n' +
+      '  }\n' +
+      '  return false;\n' +
+      '}',
+    modify: 'Find the starting node of the cycle. Once slow and fast meet, reset one pointer to head and advance both one step at a time — prove why they meet at the entry point.',
   },
 ];
 

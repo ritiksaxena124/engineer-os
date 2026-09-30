@@ -275,6 +275,12 @@ const EXPECTS: Record<string, string> = {
     '(() => { const l = fromArrayD([1, 2, 3, 4]); const afterHead = deleteAtD(l, 0); const headRead = toArrayD(afterHead).join(); const boundary = afterHead.prev === null; const afterTail = deleteAtD(afterHead, 2); return headRead === "2,3,4" && boundary && toArrayD(afterTail).join() === "2,3" && toArrayBack(afterTail).join() === "3,2" && toArrayD(deleteAtD(fromArrayD([1, 2, 3]), 9)).join() === "1,2,3" && deleteAtD(null, 0) === null && l.next === null && l.prev === null; })()',
   'Reverse a Doubly Linked List':
     '(() => { const l = fromArrayD([1, 2, 3, 4]); const r = reverseD(l); const once = toArrayD(r).join() === "4,3,2,1" && toArrayBack(r).join() === "1,2,3,4"; const twice = toArrayD(reverseD(r)).join() === "1,2,3,4"; return once && twice && toArrayD(reverseDRec(fromArrayD([1, 2, 3]))).join() === "3,2,1" && reverseD(null) === null && toArrayD(reverseD(fromArrayD([9]))).join() === "9"; })()',
+  'Middle of a LinkedList (Tortoise-Hare)':
+    'findMiddle(fromArray([1, 2, 3, 4, 5])).value === 3 && findMiddle(fromArray([1, 2, 3, 4])).value === 3 && findMiddle(fromArray([1])).value === 1 && findMiddle(null) === null',
+  'Reverse a LinkedList (Iterative & Recursive)':
+    '(() => { const r = reverseList(fromArray([1, 2, 3, 4])); return toArray(r).join() === "4,3,2,1" && toArray(reverseList(r)).join() === "1,2,3,4" && toArray(reverseList(fromArray([1]))).join() === "1" && toArray(reverseList(null)).join() === ""; })()',
+  'Detect a loop in LL':
+    '(() => { const h = fromArrayWithCycle([1, 2, 3, 4], 1); return hasCycle(h) && hasCycle(fromArrayWithCycle([1, 2], 0)) && !hasCycle(fromArrayWithCycle([1, 2, 3], -1)) && !hasCycle(null) && !hasCycle(fromArrayWithCycle([], -1)); })()',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */
