@@ -532,6 +532,41 @@ export const DSA_CONCEPTS = {
     terms: ['xor with one', 'partner index', 'flip the last bit', 'pair neighbour', 'no parity branch'],
     weight: 2,
   },
+  'dsa-answer-range-search': {
+    slug: 'dsa-answer-range-search',
+    name: 'Halve the range of answers, not the range of indices',
+    detail: 'When a predicate is monotone in a candidate value, the window is the set of possible answers and the loop keeps the smallest or largest feasible one.',
+    terms: ['search on the answer', 'feasible', 'monotone predicate', 'smallest feasible', 'candidate value'],
+    weight: 3,
+  },
+  'dsa-feasibility-scan': {
+    slug: 'dsa-feasibility-scan',
+    name: 'One greedy pass says whether a candidate rate works',
+    detail: 'A fixed candidate turns the ask into a count over the array, and the count is monotone in the candidate, so the check is linear and the search is logarithmic.',
+    terms: ['feasibility check', 'greedy count', 'days needed', 'at most', 'running load'],
+    weight: 3,
+  },
+  'dsa-minimize-maximum': {
+    slug: 'dsa-minimize-maximum',
+    name: 'A bottleneck objective is monotone in the budget',
+    detail: 'Minimising the worst part becomes decidable once you fix a cap and ask whether the parts fit under it, which is what makes halving legal.',
+    terms: ['minimise the maximum', 'bottleneck', 'worst part', 'cap', 'largest load'],
+    weight: 3,
+  },
+  'dsa-capped-power': {
+    slug: 'dsa-capped-power',
+    name: 'Stop a power the moment it passes the target',
+    detail: 'Comparing an exponentiated candidate only needs the first value that exceeds the target, which bounds the work and keeps the accumulator inside the exact range.',
+    terms: ['overflow guard', 'stop early', 'exceeds the target', 'cap the product', 'safe integer range'],
+    weight: 2,
+  },
+  'dsa-deficit-counting': {
+    slug: 'dsa-deficit-counting',
+    name: 'How far an array trails the natural numbers is a count',
+    detail: 'For distinct increasing values, value minus index minus one is exactly how many numbers are missing before that position, and it never decreases.',
+    terms: ['missing count', 'value minus index', 'deficit', 'gap before', 'falls behind'],
+    weight: 2,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -4778,6 +4813,361 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return lo;\n' +
       '}',
     modify: 'Return the largest peak instead of any peak — what does that cost, and can halving still do it?',
+  },
+  {
+    step: 4,
+    name: 'Find square root of a number in O(log N)',
+    difficulty: 'Easy',
+    topicSlug: SPACE,
+    stem: 'Return the integer square root without Newton and give the range you were actually searching.',
+    brief: 'Input: a non-negative integer. Output: the largest integer whose square does not exceed it.',
+    concepts: ['dsa-answer-range-search', 'dsa-search-exit-index', 'dsa-capped-power'],
+    shortAnswer: 'Halve the answer range: the predicate that mid squared is at most n is monotone, so the last true mid is the root.',
+    idealAnswer:
+      'Nothing here is indexed — the window is the set of possible answers, and the loop keeps the largest candidate that ' +
+      'satisfies the predicate. Halving a value range still takes logarithmic steps, and the upper bound has to be ' +
+      'justified rather than guessed: half the number is enough for anything above one, so the window is defensible and ' +
+      'not merely large. Keeping the best true midpoint as the answer is the ceiling-versus-floor decision made explicit.',
+    walkthrough:
+      'Choosing the range is the problem, because an index window comes free and an answer window does not: the ' +
+      'justification is that once a candidate fails, every larger one fails too. The other choice worth stating is ' +
+      'testing with division instead of squaring, which keeps the comparison inside the exact integer range for inputs ' +
+      'whose squares would not fit — in JavaScript a double stops being exact long before it wraps.',
+    commonMistake: 'Scanning upward until the square passes the number, or returning the first midpoint whose square is at least it.',
+    whyWrong:
+      'A linear scan forfeits the row entirely and is the answer that gets rejected on a large input. The first-true ' +
+      'formulation returns the ceiling rather than the floor, so it is one too big on every value that is not a perfect ' +
+      'square, which is most of them.',
+    followUps: ['Why is half the number enough as an upper bound?', 'Which comparison changes if you must avoid squaring at all?', 'Add a tolerance: what does the loop stop on now?'],
+    solution:
+      'function integerSqrt(n) {\n' +
+      '  if (n < 2) return n;\n' +
+      '  let lo = 1;\n' +
+      '  let hi = Math.floor(n / 2);\n' +
+      '  let best = 1;\n' +
+      '  while (lo <= hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (mid <= Math.floor(n / mid)) {\n' +
+      '      best = mid;\n' +
+      '      lo = mid + 1;\n' +
+      '    } else {\n' +
+      '      hi = mid - 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Return the root to three decimal places using the same window — what ends the loop now?',
+  },
+  {
+    step: 4,
+    name: 'Find the Nth root of a number',
+    difficulty: 'Medium',
+    topicSlug: SPACE,
+    stem: 'Find the integer whose n-th power is the target, or report that none exists, without leaving the exact range.',
+    brief: 'Input: a degree and a target. Output: the integer root when its power equals the target, otherwise a value saying there is none.',
+    concepts: ['dsa-answer-range-search', 'dsa-capped-power', 'dsa-boundary-conditions'],
+    shortAnswer: 'Halve the candidate range and abandon a power the moment it passes the target instead of finishing it.',
+    idealAnswer:
+      'Any candidate above the target would power past it, so the answer window is one to the target and halving covers ' +
+      'it in logarithmic steps. The part worth the marks is the power routine: it stops as soon as the running product ' +
+      'exceeds the target, which bounds the work for large degrees and keeps the accumulator inside the range where ' +
+      'equality can be tested at all. A capped power above the target sends the window left, a finished one below it ' +
+      'sends the window right.',
+    walkthrough:
+      'Two properties make this row worth doing rather than skipping: monotonicity of the power in the candidate, which ' +
+      'is what licenses halving, and the early exit, which is what makes a large degree and a large target a bounded ' +
+      'amount of work. In JavaScript the accumulator is a double, so the cap is not about wrapping but about losing low ' +
+      'digits — once the power has left the exact range the equality test can never be true.',
+    commonMistake: 'Computing the whole power before comparing, or taking the floating point root and rounding it.',
+    whyWrong:
+      'A full power on a large candidate leaves the exact integer window, so a root that genuinely exists is reported as ' +
+      'absent. Rounding a floating result inherits the same error from the other side and answers with the nearest ' +
+      'integer even when the target has no integer root — the wrong answer that always looks right.',
+    followUps: ['Where exactly does the accumulator stop being exact?', 'Which two comparisons decide the direction of the step?', 'Give the version that accepts a tolerance and what changes in the test.'],
+    solution:
+      'function nthRoot(degree, target) {\n' +
+      '  if (target === 0) return 0;\n' +
+      '  if (degree === 1) return target;\n' +
+      '  let lo = 1;\n' +
+      '  let hi = target;\n' +
+      '  while (lo <= hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    let power = 1;\n' +
+      '    let over = false;\n' +
+      '    for (let step = 0; step < degree; step += 1) {\n' +
+      '      power *= mid;\n' +
+      '      if (power > target) {\n' +
+      '        over = true;\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (over) hi = mid - 1;\n' +
+      '    else if (power < target) lo = mid + 1;\n' +
+      '    else return mid;\n' +
+      '  }\n' +
+      '  return -1;\n' +
+      '}',
+    modify: 'Use the same capped power to report the largest degree for which a base still fits.',
+  },
+  {
+    step: 4,
+    name: 'Koko Eating Bananas',
+    difficulty: 'Medium',
+    topicSlug: SPACE,
+    stem: 'Find the least rate of bananas per hour that finishes every pile before the guard returns.',
+    brief: 'Input: an array of pile sizes and an hour limit. Output: the smallest integer rate at which all piles are eaten within that many hours.',
+    concepts: ['dsa-answer-range-search', 'dsa-feasibility-scan', 'dsa-minimize-maximum'],
+    shortAnswer: 'Halve the rate and add up the hours each pile costs at it, rounding a partial hour up.',
+    idealAnswer:
+      'Finishing in the limit is monotone in the rate, so the answer is the smallest feasible one, and the window runs ' +
+      'from one to the largest pile: a faster rate than that buys nothing, because an hour cannot be shared between ' +
+      'piles. Each pile costs the ceiling of its size over the rate, which keeps the check in integers, so feasibility ' +
+      'is a linear scan and the total cost is O(n log of the largest pile).',
+    walkthrough:
+      'The upper bound is where the row is lost: the largest pile rather than the sum, and the reason is that a pile is ' +
+      'never split across hours, so no rate above the biggest pile can finish sooner. The ceiling is the other half of ' +
+      'the argument — a pile of four at rate three takes two hours, not a third of an hour of slack — and writing it as ' +
+      'an integer expression avoids a floating comparison against the limit entirely.',
+    commonMistake: 'Bounding the window by the total number of bananas, or charging a partial hour as a fraction.',
+    whyWrong:
+      'The total makes the window needlessly wide and costs extra halvings for no correctness, and it hides the fact that ' +
+      'the rate is bounded by a single pile. Fractional hours pass whenever the sizes happen to divide evenly and fail ' +
+      'otherwise, presenting as an off-by-one rate that only an odd pile exposes.',
+    followUps: ['Why is the largest pile the right upper bound and not the sum?', 'Which input makes the ceiling matter most?', 'What is the answer when the hour limit is below the number of piles?'],
+    solution:
+      'function minEatingSpeed(piles, hours) {\n' +
+      '  const needed = (rate) => piles.reduce((total, pile) => total + Math.ceil(pile / rate), 0);\n' +
+      '  let lo = 1;\n' +
+      '  let hi = Math.max(...piles);\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (needed(mid) <= hours) hi = mid;\n' +
+      '    else lo = mid + 1;\n' +
+      '  }\n' +
+      '  return lo;\n' +
+      '}',
+    modify: 'Report the rate that finishes in exactly the given hours, and say when no rate does.',
+  },
+  {
+    step: 4,
+    name: 'Minimum days to make M bouquets',
+    difficulty: 'Medium',
+    topicSlug: SPACE,
+    stem: 'Find the earliest day on which the flowers allow the bouquets, and give the two resets the scan needs.',
+    brief: 'Input: an array of bloom days, a bouquet count and a bouquet size. Output: the smallest day by which that many disjoint runs of adjacent bloomed flowers exist, or -1.',
+    concepts: ['dsa-answer-range-search', 'dsa-feasibility-scan', 'dsa-boundary-conditions'],
+    shortAnswer: 'Halve the day range; the check counts runs of bloomed flowers and hands over a run when it reaches the size.',
+    idealAnswer:
+      'By a given day the bloomed positions form runs, and a run of length L yields L divided by the size bouquets, so ' +
+      'feasibility is one linear pass carrying a run length. The predicate is monotone because a later day can only ' +
+      'bloom more flowers, and the window is from the earliest bloom day to the latest: O(n log of that spread). The ' +
+      'impossible case is arithmetic, not search — if the flowers needed exceed the flowers planted, no day works.',
+    walkthrough:
+      'Two resets live in the scan and they are different rules: an unbloomed flower ends the current run, and a ' +
+      'completed bouquet starts a fresh one because a stem cannot be used twice. Forgetting the second lets a long run ' +
+      'be counted once and a half, and the check then claims feasibility at a day that cannot produce the bouquets. ' +
+      'Bounding the window by the bloom days rather than by the calendar is the same discipline as the rate problems.',
+    commonMistake: 'Counting bloomed neighbours without handing them over, or returning the largest day when the order is impossible.',
+    whyWrong:
+      'Without the second reset one run of flowers is reused across bouquets, so the search reports a day too early and ' +
+      'the caller cannot build anything at it. Returning the upper bound for the impossible case is a wrong answer that ' +
+      'looks like a slow one; the length check is what turns it into -1.',
+    followUps: ['Which of the two resets is a rule about adjacency and which about reuse?', 'Why does the window start at the earliest bloom day?', 'Give the input where the answer is the latest bloom day.'],
+    solution:
+      'function minDays(bloomDay, m, k) {\n' +
+      '  if (m * k > bloomDay.length) return -1;\n' +
+      '  const possible = (day) => {\n' +
+      '    let bouquets = 0;\n' +
+      '    let run = 0;\n' +
+      '    for (const value of bloomDay) {\n' +
+      '      if (value <= day) {\n' +
+      '        run += 1;\n' +
+      '        if (run === k) {\n' +
+      '          bouquets += 1;\n' +
+      '          run = 0;\n' +
+      '        }\n' +
+      '      } else {\n' +
+      '        run = 0;\n' +
+      '      }\n' +
+      '    }\n' +
+      '    return bouquets >= m;\n' +
+      '  };\n' +
+      '  let lo = Math.min(...bloomDay);\n' +
+      '  let hi = Math.max(...bloomDay);\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (possible(mid)) hi = mid;\n' +
+      '    else lo = mid + 1;\n' +
+      '  }\n' +
+      '  return lo;\n' +
+      '}',
+    modify: 'Ask for the latest day that still leaves at least one spare bouquet — which side of the predicate moves?',
+  },
+  {
+    step: 4,
+    name: 'Find the smallest divisor given a threshold',
+    difficulty: 'Medium',
+    topicSlug: SPACE,
+    stem: 'Find the least divisor whose rounded-up divisions of an array sum to at most a threshold.',
+    brief: 'Input: an array of positive integers and a threshold. Output: the smallest divisor such that the sum of the ceilings is at most the threshold.',
+    concepts: ['dsa-answer-range-search', 'dsa-feasibility-scan', 'dsa-minimize-maximum'],
+    shortAnswer: 'Halve the divisor between one and the largest value and check the ceiling sum with one scan.',
+    idealAnswer:
+      'The sum of ceilings never increases as the divisor grows, so feasibility is monotone and the answer is the first ' +
+      'divisor that brings the sum under the threshold. The window is one to the largest element, because above it ' +
+      'every term is already one and the only thing left to shrink is the number of terms. Cost is O(n log of the ' +
+      'largest value), the same shape as the eating-rate problem with a different check.',
+    walkthrough:
+      'The threshold has to be at least the length of the array or nothing works, since each positive term rounds up to ' +
+      'at least one — naming that first is what makes the impossible case a decision rather than an artefact of where ' +
+      'the loop happens to end. Keeping the ceiling in integer arithmetic matters for the same reason as before: the ' +
+      'comparison is against an exact count, not an approximation of one.',
+    commonMistake: 'Bounding the window by the sum of the array, or comparing the plain sum instead of the sum of ceilings.',
+    whyWrong:
+      'The sum is orders of magnitude wider than any answer, so the extra halvings are pure cost and the bound stops ' +
+      'explaining anything about the problem. Dropping the ceiling under-counts the terms, so the check calls a divisor ' +
+      'feasible when it is not and the search returns an answer the caller cannot satisfy.',
+    followUps: ['What is the answer when the threshold equals the length?', 'Which two bounds would you defend if the values could be zero?', 'Give the version that maximises the divisor under a minimum sum.'],
+    solution:
+      'function smallestDivisor(nums, threshold) {\n' +
+      '  if (threshold < nums.length) return -1;\n' +
+      '  const cost = (divisor) => nums.reduce((total, value) => total + Math.ceil(value / divisor), 0);\n' +
+      '  let lo = 1;\n' +
+      '  let hi = Math.max(...nums);\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (cost(mid) <= threshold) hi = mid;\n' +
+      '    else lo = mid + 1;\n' +
+      '  }\n' +
+      '  return lo;\n' +
+      '}',
+    modify: 'Now the threshold caps the largest single term instead of the sum — is that still monotone?',
+  },
+  {
+    step: 4,
+    name: 'Capacity to Ship Packages within D Days',
+    difficulty: 'Medium',
+    topicSlug: SPACE,
+    stem: 'Find the least capacity that ships every package in order inside the day limit.',
+    brief: 'Input: an array of weights in shipping order and a day limit. Output: the smallest per-day capacity that loads all of them within that many days without reordering.',
+    concepts: ['dsa-answer-range-search', 'dsa-feasibility-scan', 'dsa-minimize-maximum'],
+    shortAnswer: 'Halve the capacity; the check loads each day greedily and starts a new day when the next package would overflow.',
+    idealAnswer:
+      'A capacity below the heaviest package cannot ship at all and the sum of everything ships in one day, so those two ' +
+      'numbers are the window. Feasibility is a single scan that opens a new day exactly when the next package would ' +
+      'overflow, because the order is fixed and a greedy fill of an ordered sequence is optimal for it: O(n log of the ' +
+      'weight range) time and O(1) space.',
+    walkthrough:
+      'The greedy check is correct only because reordering is forbidden — an optimal loading of a fixed sequence never ' +
+      'leaves room on a day it could have used, so counting the breaks that become necessary is the true minimum day ' +
+      'count for that capacity. Allow reordering and the same outer search is still monotone, but the inner problem ' +
+      'becomes bin packing and the scan stops being exact.',
+    commonMistake: 'Starting the window at zero or at the sum, or letting a package be split across two days.',
+    whyWrong:
+      'A lower bound under the heaviest package spends halvings on capacities that cannot be tested and can return one ' +
+      'that leaves a package unshipped. Splitting a package is the silent failure: the day count is honest only in a ' +
+      'model where cargo can be cut, so the real load overflows on the first day that carries half of something.',
+    followUps: ['Why is the heaviest package a legal lower bound?', 'Which part of the proof needs the fixed order?', 'What does the answer become when the day limit equals the number of packages?'],
+    solution:
+      'function shipWithinDays(weights, days) {\n' +
+      '  const needed = (capacity) => {\n' +
+      '    let count = 1;\n' +
+      '    let load = 0;\n' +
+      '    for (const weight of weights) {\n' +
+      '      if (load + weight > capacity) {\n' +
+      '        count += 1;\n' +
+      '        load = 0;\n' +
+      '      }\n' +
+      '      load += weight;\n' +
+      '    }\n' +
+      '    return count;\n' +
+      '  };\n' +
+      '  let lo = Math.max(...weights);\n' +
+      '  let hi = weights.reduce((total, weight) => total + weight, 0);\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (needed(mid) <= days) hi = mid;\n' +
+      '    else lo = mid + 1;\n' +
+      '  }\n' +
+      '  return lo;\n' +
+      '}',
+    modify: 'Report the day-by-day loading for the chosen capacity — how much of the scan do you keep?',
+  },
+  {
+    step: 4,
+    name: 'Kth Missing Positive Number',
+    difficulty: 'Easy',
+    topicSlug: SPACE,
+    stem: 'Find the k-th positive integer absent from a sorted array and say what the gap at an index measures.',
+    brief: 'Input: a sorted array of distinct positive integers and a k. Output: the k-th positive integer that is not in the array.',
+    concepts: ['dsa-deficit-counting', 'dsa-search-exit-index', 'dsa-boundary-conditions'],
+    shortAnswer: 'The count missing before an index is the value minus that index minus one, and it is non-decreasing.',
+    idealAnswer:
+      'For distinct increasing values, the quantity at a position that tells you how far the array trails the natural ' +
+      'numbers is value minus index minus one, and it never decreases, so the window can halve on it. Keep the last ' +
+      'position whose deficit is still below k; from there the missing numbers are consecutive, and the answer is that ' +
+      'position plus k. O(log n) time and O(1) space, with both edges falling out of the same arithmetic.',
+    walkthrough:
+      'The formula survives a stretch with no gaps because a present value does not increase the deficit, so the quantity ' +
+      'only grows when the array skips. Reading the answer as index plus k after the loop is the step people cannot ' +
+      'justify: the window exits at the last position still short of k missing numbers, so the k-th one sits exactly k ' +
+      'places further along the number line, not k places further along the array.',
+    commonMistake: 'Walking the number line until k absent values are counted, or returning the value at the found index plus k.',
+    whyWrong:
+      'The walk costs the magnitude of the answer rather than the size of the input, which is not a fallback when k is ' +
+      'large. Adding k to a value rather than to an index double-counts the deficit already paid at that position, so ' +
+      'the result is too large by exactly how far the array had drifted — invisible on a gap-free sample.',
+    followUps: ['Why does a present element leave the deficit unchanged?', 'Which index does the loop exit on when k exceeds every deficit?', 'What does the same formula answer on an array of consecutive values?'],
+    solution:
+      'function kthMissing(nums, k) {\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length - 1;\n' +
+      '  while (lo <= hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (nums[mid] - mid - 1 < k) lo = mid + 1;\n' +
+      '    else hi = mid - 1;\n' +
+      '  }\n' +
+      '  return lo + k;\n' +
+      '}',
+    modify: 'Return every missing value up to k — does the deficit formula still let you skip ahead?',
+  },
+  {
+    step: 4,
+    name: 'Find Kth missing positive number',
+    difficulty: 'Easy',
+    topicSlug: SPACE,
+    stem: 'Solve the k-th missing number in one pass by spending each gap, and say when the linear form is the better answer.',
+    brief: 'Input: a sorted array of distinct positive integers and a k. Output: the k-th missing positive integer, computed in a single scan.',
+    concepts: ['dsa-deficit-counting', 'dsa-single-pass-tracking', 'dsa-complexity-counting'],
+    shortAnswer: 'Carry the previous value, spend each gap from k, and answer inside the gap where k finally fits.',
+    idealAnswer:
+      'The gap between consecutive present values is how many numbers are missing there, so walking the array and ' +
+      'subtracting each gap from k locates the answer as soon as k fits inside the current gap: the previous value plus ' +
+      'the remaining k. O(n) time and O(1) space, with no indexing requirement — which is exactly the property that ' +
+      'makes it the right form when the data arrives as a stream or the array is short.',
+    walkthrough:
+      'Both forms compute the same deficit; one halves over it and one accumulates it, so the choice is about access ' +
+      'rather than cleverness. A binary search needs random access and a settled bound, and neither exists for a cursor ' +
+      'over a page of results — that is the situation where the linear pass is not the worse answer. The tail case is ' +
+      'the same code path: after the last element the remaining k is just added.',
+    commonMistake: 'Iterating every integer up to the answer, or subtracting a gap without first testing whether k fits in it.',
+    whyWrong:
+      'Counting over the number line costs the magnitude of the answer, which is unbounded in k, while this pass costs ' +
+      'only the length of the input. Subtracting a gap that contains the answer steps past it, and the returned value ' +
+      'is too large by precisely the amount that was consumed — a drift that grows with the array.',
+    followUps: ['Which input shape makes the linear pass the right choice?', 'What is the answer when k outlasts the whole array?', 'Compare the two forms on the cost they charge for a large k.'],
+    solution:
+      'function kthMissingLinear(nums, k) {\n' +
+      '  let previous = 0;\n' +
+      '  for (const value of nums) {\n' +
+      '    const gap = value - previous - 1;\n' +
+      '    if (k <= gap) return previous + k;\n' +
+      '    k -= gap;\n' +
+      '    previous = value;\n' +
+      '  }\n' +
+      '  return previous + k;\n' +
+      '}',
+    modify: 'Stream the values from a cursor instead of an array and keep the answer correct at the end of the stream.',
   },
 ];
 

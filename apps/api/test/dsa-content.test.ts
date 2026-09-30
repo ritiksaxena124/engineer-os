@@ -183,6 +183,22 @@ const EXPECTS: Record<string, string> = {
     'singleNonPair([1, 1, 2, 3, 3]) === 2 && singleNonPair([3, 3, 7, 7, 10, 11, 11]) === 10 && singleNonPair([1, 2, 2, 3, 3]) === 1 && singleNonPair([1, 1, 2, 2, 3, 3, 4]) === 4 && singleNonPair([7]) === 7 && singleNonPair([1, 1, 2, 2, 3]) === 3',
   'Find Peak Element':
     'findPeak([1, 2, 3, 1]) === 2 && findPeak([1, 2, 1, 3, 5, 6, 4]) === 5 && findPeak([1]) === 0 && findPeak([3, 1]) === 0 && findPeak([1, 2]) === 1 && findPeak([5, 4, 3, 2, 1]) === 0',
+  'Find square root of a number in O(log N)':
+    'integerSqrt(4) === 2 && integerSqrt(8) === 2 && integerSqrt(0) === 0 && integerSqrt(1) === 1 && integerSqrt(16) === 4 && integerSqrt(1000000) === 1000 && integerSqrt(999999) === 999',
+  'Find the Nth root of a number':
+    'nthRoot(2, 9) === 3 && nthRoot(2, 8) === -1 && nthRoot(3, 27) === 3 && nthRoot(4, 81) === 3 && nthRoot(1, 5) === 5 && nthRoot(2, 0) === 0 && nthRoot(2, 1) === 1 && nthRoot(10, 1024) === 2',
+  'Koko Eating Bananas':
+    'minEatingSpeed([3, 6, 7, 11], 8) === 4 && minEatingSpeed([30, 11, 23, 4, 20], 5) === 30 && minEatingSpeed([30, 11, 23, 4, 20], 6) === 23 && minEatingSpeed([1, 4], 2) === 4 && minEatingSpeed([1000000000], 1000000000) === 1',
+  'Minimum days to make M bouquets':
+    'minDays([1, 10, 3, 10, 2], 3, 3) === -1 && minDays([7, 7, 7, 7, 12, 7, 7], 2, 3) === 12 && minDays([1000000000, 1000000000], 1, 2) === 1000000000 && minDays([1, 1, 1, 1, 1, 1], 2, 2) === 1 && minDays([2, 3, 5, 1, 3], 3, 1) === 3',
+  'Find the smallest divisor given a threshold':
+    'smallestDivisor([1, 2, 5, 9], 6) === 5 && smallestDivisor([2, 3, 5, 7, 11], 11) === 3 && smallestDivisor([19], 5) === 4 && smallestDivisor([1000000], 1) === 1000000 && smallestDivisor([1, 2], 1) === -1',
+  'Capacity to Ship Packages within D Days':
+    'shipWithinDays([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 5) === 15 && shipWithinDays([5, 1, 2, 4, 2, 7], 3) === 8 && shipWithinDays([7, 7, 7, 7, 7, 7], 4) === 14 && shipWithinDays([1], 1) === 1 && shipWithinDays([10], 2) === 10',
+  'Kth Missing Positive Number':
+    'kthMissing([2, 3, 4, 7, 11], 5) === 9 && kthMissing([1, 2, 3, 4], 2) === 6 && kthMissing([2], 1) === 1 && kthMissing([], 5) === 5 && kthMissing([5], 1) === 1 && kthMissing([1, 2], 3) === 5',
+  'Find Kth missing positive number':
+    'kthMissingLinear([2, 3, 4, 7, 11], 5) === 9 && kthMissingLinear([1, 2, 3, 4], 2) === 6 && kthMissingLinear([2], 1) === 1 && kthMissingLinear([], 5) === 5 && kthMissingLinear([1, 2], 3) === 5',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */
