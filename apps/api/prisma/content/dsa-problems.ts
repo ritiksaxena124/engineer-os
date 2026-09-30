@@ -630,6 +630,76 @@ export const DSA_CONCEPTS = {
     terms: ['count less than or equal', 'rank', 'value range', 'per row upper bound', 'without merging'],
     weight: 3,
   },
+  'dsa-parenthesis-depth': {
+    slug: 'dsa-parenthesis-depth',
+    name: 'A nesting level is one integer, not a stack',
+    detail: 'When only the depth of balanced brackets matters, an incrementing counter answers emptiness, depth and which pairs are outermost without storing anything.',
+    terms: ['counter', 'increment', 'depth', 'nesting level', 'no stack'],
+    weight: 2,
+  },
+  'dsa-last-digit-divisibility': {
+    slug: 'dsa-last-digit-divisibility',
+    name: 'Divisibility of a decimal string lives in its tail',
+    detail: 'Every higher place value is a multiple of ten, so parity and divisibility by two, five and ten are decided by the last digit alone and never need the number.',
+    terms: ['place value', 'last digit', 'never needs conversion', 'prefix', 'modulo ten'],
+    weight: 2,
+  },
+  'dsa-two-way-mapping': {
+    slug: 'dsa-two-way-mapping',
+    name: 'A one-to-one correspondence needs both maps',
+    detail: 'One direction proves the pairing is a function; only the reverse direction proves it is injective, so a bijection check has to carry both.',
+    terms: ['injective', 'both directions', 'reverse map', 'one to one', 'correspondence'],
+    weight: 3,
+  },
+  'dsa-doubled-text-window': {
+    slug: 'dsa-doubled-text-window',
+    name: 'Doubling the text contains every rotation',
+    detail: 'Concatenating a string with itself lays all cyclic shifts out as contiguous substrings, so rotation becomes one containment test at the cost of the length.',
+    terms: ['concatenate with itself', 'cyclic shift', 'substring containment', 'same length', 'wrap around'],
+    weight: 2,
+  },
+  'dsa-frequency-ordering': {
+    slug: 'dsa-frequency-ordering',
+    name: 'Ordering by count needs a stated tie-break',
+    detail: 'A frequency sort is only deterministic once equal counts have a documented second key, because the comparator input is equal and the language makes no promise.',
+    terms: ['sort by count', 'tie break', 'stable', 'descending frequency', 'second key'],
+    weight: 2,
+  },
+  'dsa-subtractive-notation': {
+    slug: 'dsa-subtractive-notation',
+    name: 'A smaller symbol before a larger one subtracts',
+    detail: 'Roman numerals are read by comparing each symbol with the next: the subtractive pairs are local, so one lookahead replaces a table of exceptions.',
+    terms: ['lookahead', 'smaller before larger', 'subtractive pair', 'numeral', 'add otherwise'],
+    weight: 2,
+  },
+  'dsa-greedy-numeral-table': {
+    slug: 'dsa-greedy-numeral-table',
+    name: 'A lookup table turns the numeral out',
+    detail: 'Including the subtractive values in the table lets one greedy pass over descending values emit the whole symbol string, with no special cases in the writer.',
+    terms: ['descending values', 'greedy subtract', 'lookup table', 'repeat the symbol', 'no if cascade'],
+    weight: 2,
+  },
+  'dsa-saturating-parse': {
+    slug: 'dsa-saturating-parse',
+    name: 'A parser clamps at the range it cannot represent',
+    detail: 'Digits accumulate past the representable integer window long before the string ends, so the honest answer is the boundary rather than the nearest double.',
+    terms: ['clamp', 'saturate', 'out of range', 'accumulate', 'stop reading'],
+    weight: 3,
+  },
+  'dsa-at-most-difference': {
+    slug: 'dsa-at-most-difference',
+    name: 'Exactly k is at most k minus at most k minus one',
+    detail: 'A window that counts up to a bound is easy; the exact count falls out of subtracting the two bounds, which replaces a second window with a second call.',
+    terms: ['at most', 'difference of counts', 'exactly k', 'two calls', 'inclusion exclusion'],
+    weight: 3,
+  },
+  'dsa-centre-expansion': {
+    slug: 'dsa-centre-expansion',
+    name: 'Every substring has a centre to grow from',
+    detail: 'Palindromes are determined by their middle, and there are twice the length minus one of them once even lengths are given their own centre.',
+    terms: ['grow outward', 'odd and even centre', 'middle', 'two pointers apart', 'best so far'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -640,6 +710,8 @@ const COMPLEXITY = 'complexity-analysis';
 const SORTING = 'sorting-algorithms';
 const SEARCH = 'binary-search';
 const SPACE = 'search-space';
+const STRINGS = 'string-techniques';
+const NUMERIC = 'numeric-strings';
 
 export const DSA_PROBLEMS: DsaProblem[] = [
   {
@@ -5911,6 +5983,351 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return lo;\n' +
       '}',
     modify: 'Return the kth smallest for any k rather than the median — which single number becomes an argument?',
+  },
+  {
+    step: 5,
+    name: 'Remove Outermost Parentheses',
+    difficulty: 'Easy',
+    topicSlug: STRINGS,
+    stem: 'Strip the enclosing pair from each primitive group and say what the counter has to be before you emit.',
+    brief: 'Input: a balanced string of parentheses. Output: the same string with the outermost pair of every primitive group removed.',
+    concepts: ['dsa-parenthesis-depth', 'dsa-single-pass-tracking', 'dsa-boundary-conditions'],
+    shortAnswer: 'Keep one depth counter and emit a bracket only while the counter says it is not the group boundary.',
+    idealAnswer:
+      'A primitive group opens at depth zero and closes back to it, so the outermost brackets are exactly the ones seen ' +
+      'while the counter is about to leave or return from zero. Comparing the depth before an open and after a close ' +
+      'against one marks every other bracket for emission, which is a single pass with one integer and one output ' +
+      'builder. A stack would answer the same question at the same cost in time and forgo the point of the row: nothing ' +
+      'here needs to be remembered beyond the count.',
+    walkthrough:
+      'The asymmetry is in the order of the increment and the test. An opening bracket raises the depth first, so a ' +
+      'depth above one after that means it is enclosed by something; a closing bracket lowers it last, so a depth above ' +
+      'one before that means the same. Writing both tests on the same side of the update is the mistake the row is ' +
+      'built to expose, because it is correct on a single group and drops or duplicates the boundary of every later ' +
+      'one.',
+    commonMistake: 'Splitting on adjacent pairs, or testing the depth the same way for both brackets.',
+    whyWrong:
+      'A textual split cannot see nesting: it removes the wrong pair from a group that is itself inside another and ' +
+      'leaves the outermost bracket of the last group in place. One symmetric test reads the open and the close from ' +
+      'opposite sides of their update, so the output gains a bracket at every group boundary it should have deleted.',
+    followUps: ['Which side of the counter update does each bracket test, and why do they differ?', 'What does the same counter report about the input being balanced?', 'Give the version that removes only the outermost pair of the whole string.'],
+    solution:
+      'function removeOutermostParens(text) {\n' +
+      '  let out = "";\n' +
+      '  let depth = 0;\n' +
+      '  for (const char of text) {\n' +
+      '    if (char === "(") {\n' +
+      '      depth += 1;\n' +
+      '      if (depth > 1) out += char;\n' +
+      '    } else if (char === ")") {\n' +
+      '      if (depth > 1) out += char;\n' +
+      '      depth -= 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}',
+    modify: 'Report the number of primitive groups in the input — which line of the counter do you keep?',
+  },
+  {
+    step: 5,
+    name: 'Reverse Words in a String',
+    difficulty: 'Medium',
+    topicSlug: STRINGS,
+    stem: 'Reverse the word order while collapsing runs of spaces, and do it without a regular expression.',
+    brief: 'Input: a string with words separated by arbitrary runs of spaces, possibly padded. Output: the words in reverse order joined by exactly one space.',
+    concepts: ['dsa-reversal-trick', 'dsa-two-pointer', 'dsa-write-index'],
+    shortAnswer: 'Skip spaces, take a word, then reverse the collected words in place and join with a single separator.',
+    idealAnswer:
+      'Two cursors over the text do the tokenising: one skips runs of spaces, the other walks to the next space, and the ' +
+      'slice between them is a word — which is also how padding and repeated separators disappear without a filter ' +
+      'step. Reversing the word list is the ordinary mirror walk, and the join then writes exactly one space because ' +
+      'the words were never stored with their separators. The whole thing is linear in the text and costs the words it ' +
+      'produces, which is the minimum for a string answer.',
+    walkthrough:
+      'Splitting on a space and filtering empty strings is the shape most people reach for, and it is correct here; the ' +
+      'row is worth doing anyway because the cursor version is what a stream or a character buffer forces on you, and ' +
+      'because it makes the two jobs explicit — tokenise, then reorder — instead of hiding both in a pipeline. The ' +
+      'boundary worth naming is a string of only spaces, which yields no words and therefore an empty answer rather ' +
+      'than a single space.',
+    commonMistake: 'Reversing the characters of the whole string and then fixing the words, or trimming before splitting.',
+    whyWrong:
+      'The two-pass reversal is the right move for an in-place array of characters and a complication for a JavaScript ' +
+      'string, where every rewrite copies: it costs more than the mirror walk it was meant to replace. Trimming handles ' +
+      'the padding but not the interior runs, so the answer comes back with double spaces in the middle of an otherwise ' +
+      'correct line.',
+    followUps: ['What do the two cursors each guarantee about the slice between them?', 'Which input makes a split-and-filter version need an extra pass?', 'Give the version that reverses one word at a time and keeps the order.'],
+    solution:
+      'function reverseWords(text) {\n' +
+      '  const words = [];\n' +
+      '  let index = 0;\n' +
+      '  while (index < text.length) {\n' +
+      '    while (index < text.length && text[index] === " ") index += 1;\n' +
+      '    if (index >= text.length) break;\n' +
+      '    let end = index;\n' +
+      '    while (end < text.length && text[end] !== " ") end += 1;\n' +
+      '    words.push(text.slice(index, end));\n' +
+      '    index = end;\n' +
+      '  }\n' +
+      '  let lo = 0;\n' +
+      '  let hi = words.length - 1;\n' +
+      '  while (lo < hi) {\n' +
+      '    const swap = words[lo];\n' +
+      '    words[lo] = words[hi];\n' +
+      '    words[hi] = swap;\n' +
+      '    lo += 1;\n' +
+      '    hi -= 1;\n' +
+      '  }\n' +
+      '  return words.join(" ");\n' +
+      '}',
+    modify: 'Keep the word order and reverse the characters inside each word instead — which loop moves where?',
+  },
+  {
+    step: 5,
+    name: 'Largest Odd Number in String',
+    difficulty: 'Easy',
+    topicSlug: NUMERIC,
+    stem: 'Find the largest odd prefix of a decimal string without turning it into a number.',
+    brief: 'Input: a string of decimal digits with no leading zeros, up to one hundred thousand characters long. Output: the longest prefix that is an odd number, or the empty string.',
+    concepts: ['dsa-last-digit-divisibility', 'dsa-single-pass-tracking', 'dsa-character-codes'],
+    shortAnswer: 'Scan from the right for the first odd digit and cut there: a decimal number is odd exactly when its last digit is.',
+    idealAnswer:
+      'Every place value above the units is a multiple of ten and therefore even, so the parity of the whole number is ' +
+      'the parity of its last digit — which means a prefix is odd exactly when it ends on an odd digit. The longest such ' +
+      'prefix is the one ending at the rightmost odd digit, so one backward scan and a slice answer it in linear time ' +
+      'and constant extra space. Converting the string to a number is not available at all here: the input is far ' +
+      'longer than the exact integer window.',
+    walkthrough:
+      'The reason to write this against the string rather than the number is the same as for the digit-extraction rows, ' +
+      'only sharper: at one hundred thousand digits there is no numeric representation to fall back on, and a double ' +
+      'would have stopped being exact around the sixteenth digit anyway. The comparison by character code is the other ' +
+      'half of staying in the string, and it is also what makes the answer a slice rather than a rebuilt number.',
+    commonMistake: 'Parsing with Number or BigInt before testing parity, or scanning forward for the first odd digit.',
+    whyWrong:
+      'The parse is the cost the row is asking you to avoid, and on the stated length it does not even succeed: Number ' +
+      'silently loses low digits and BigInt is a different question. A forward scan finds the shortest odd prefix, not ' +
+      'the largest, and since every longer prefix through the same digit is larger, it returns the wrong answer on ' +
+      'almost every input.',
+    followUps: ['Why does the same argument settle divisibility by five and by ten?', 'What changes if the input may carry leading zeros?', 'Give the answer for the largest even prefix in one line of the same loop.'],
+    solution:
+      'function largestOddNumber(numeric) {\n' +
+      '  for (let i = numeric.length - 1; i >= 0; i -= 1) {\n' +
+      '    const digit = numeric.charCodeAt(i) - 48;\n' +
+      '    if (digit % 2 === 1) return numeric.slice(0, i + 1);\n' +
+      '  }\n' +
+      '  return "";\n' +
+      '}',
+    modify: 'Return the longest prefix divisible by three — the place-value argument changes, so what does the scan carry?',
+  },
+  {
+    step: 5,
+    name: 'Longest Common Prefix',
+    difficulty: 'Easy',
+    topicSlug: STRINGS,
+    stem: 'Compare columns rather than pairs of strings, and stop at the first column that disagrees.',
+    brief: 'Input: an array of strings. Output: the longest prefix shared by all of them, or the empty string.',
+    concepts: ['dsa-coordinate-loops', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer: 'Walk the columns of the first string and check that character against every other word; the first mismatch ends it.',
+    idealAnswer:
+      'A shared prefix is one that every string agrees to, so a column at a time is the natural order: take the first ' +
+      'string as the reference and, for each position, ask the rest whether they hold the same character at the same ' +
+      'index. The loop stops when a string runs out or a column disagrees, which bounds the work by the shortest string ' +
+      'times the count of them — better than sorting, which pays a full comparison order to learn the same thing, and ' +
+      'better than pairwise reduction, which re-reads prefixes it has already agreed on.',
+    walkthrough:
+      'The two exits are different failures and both belong inside the inner test: a word shorter than the column cannot ' +
+      'agree, and a word of equal length can still disagree. Reading the row-count bound from the first string rather ' +
+      'than the shortest is the other decision, and it is free because the mismatch test catches the overhang — sorting ' +
+      'by length first only saves comparisons on inputs that are already mostly equal.',
+    commonMistake: 'Sorting the array and comparing the first and last entries, or building a running prefix by intersecting.',
+    whyWrong:
+      'Sorting happens to be correct because the extremes of a lexicographic order bound the whole range, but it costs ' +
+      'the ordering and hides the reason it works, so it is unmodifyable when the ask becomes a prefix of a subset. The ' +
+      'running-intersection form copies the prefix on every step, which turns a linear answer into a quadratic one in ' +
+      'the length of the shared text.',
+    followUps: ['Why is comparing only the sorted extremes still correct?', 'Which two conditions belong in the inner test?', 'Give the version that reports the common suffix instead.'],
+    solution:
+      'function longestCommonPrefix(words) {\n' +
+      '  if (words.length === 0) return "";\n' +
+      '  const reference = words[0];\n' +
+      '  let end = 0;\n' +
+      '  while (end < reference.length) {\n' +
+      '    const char = reference[end];\n' +
+      '    let agreed = true;\n' +
+      '    for (let i = 1; i < words.length; i += 1) {\n' +
+      '      if (end >= words[i].length || words[i][end] !== char) {\n' +
+      '        agreed = false;\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (!agreed) break;\n' +
+      '    end += 1;\n' +
+      '  }\n' +
+      '  return reference.slice(0, end);\n' +
+      '}',
+    modify: 'Return the longest common prefix of any two words in the array instead — which structure does that need?',
+  },
+  {
+    step: 5,
+    name: 'Isomorphic String',
+    difficulty: 'Easy',
+    topicSlug: STRINGS,
+    stem: 'Decide whether two strings share a shape, and show why one dictionary is not enough.',
+    brief: 'Input: two strings of equal length. Output: whether a one-to-one relabelling of characters turns the first into the second.',
+    concepts: ['dsa-two-way-mapping', 'dsa-hash-frequency', 'dsa-boundary-conditions'],
+    shortAnswer: 'Map each direction separately: a pair is legal only when neither map already holds a different partner.',
+    idealAnswer:
+      'The relation has to be a function from source characters to target characters and also a function the other way, ' +
+      'which is what one-to-one means, so two maps are the honest representation. At each position the pair is ' +
+      'accepted when both maps are silent about it — and then both are written — or when both already name each other; ' +
+      'the rejection is a half-set pair. A single dictionary enforces only one direction and reports bad pairs as ' +
+      'good.',
+    walkthrough:
+      'The case a single map misses is a many-to-one pairing: two distinct source characters landing on the same target ' +
+      'character never contradicts the forward map, so it has to be caught from the reverse side. Writing the check as ' +
+      'a contradiction rather than as a confirmation is the other half — asking whether either map disagrees with the ' +
+      'current pair keeps the two directions symmetric and makes the empty-string case fall out instead of needing a ' +
+      'guard.',
+    commonMistake: 'Keeping only a source-to-target dictionary, or comparing first-occurrence positions of each character.',
+    whyWrong:
+      'The one-map form accepts a target character shared by two sources, which is exactly the pattern the row asks to ' +
+      'reject, and it fails on inputs built to be small. The positional encoding is genuinely equivalent and worth ' +
+      'knowing, but it answers a weaker question unless both strings are encoded at once, and people who write it from ' +
+      'memory usually encode only one.',
+    followUps: ['Which input defeats the single-dictionary version?', 'Why does a contradiction test need no case for the first pair?', 'Give the positional encoding and say what it has to compare.'],
+    solution:
+      'function isIsomorphic(source, target) {\n' +
+      '  if (source.length !== target.length) return false;\n' +
+      '  const forward = new Map();\n' +
+      '  const backward = new Map();\n' +
+      '  for (let i = 0; i < source.length; i += 1) {\n' +
+      '    const a = source[i];\n' +
+      '    const b = target[i];\n' +
+      '    const knownA = forward.get(a);\n' +
+      '    const knownB = backward.get(b);\n' +
+      '    if (knownA === undefined && knownB === undefined) {\n' +
+      '      forward.set(a, b);\n' +
+      '      backward.set(b, a);\n' +
+      '    } else if (knownA !== b || knownB !== a) {\n' +
+      '      return false;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}',
+    modify: 'Return the relabelling itself as a list of pairs, or report that none exists.',
+  },
+  {
+    step: 5,
+    name: 'Check whether one string is a rotation of another',
+    difficulty: 'Easy',
+    topicSlug: STRINGS,
+    stem: 'Turn a cyclic shift into one containment test, and pay for the copy only once.',
+    brief: 'Input: two strings. Output: whether one is a rotation of the other, i.e. some split point moves its head to its tail.',
+    concepts: ['dsa-doubled-text-window', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer: 'Equal lengths and the doubled first string containing the second is exactly the rotation relation.',
+    idealAnswer:
+      'Every rotation of a string is a contiguous window of the string written twice, and every window of that length in ' +
+      'the doubled text is a rotation, so the two questions coincide once the lengths match — which is the condition ' +
+      'that keeps the containment from finding a shorter string inside a longer one. Writing it as one containment call ' +
+      'is the whole trick; the cost is the doubled copy plus a search, and the alternative of testing every split point ' +
+      'costs the length again on top.',
+    walkthrough:
+      'The length guard is not defensive bookkeeping, it is part of the equivalence: without it a substring of the ' +
+      'doubled text that is merely contained would pass. The empty pair is the case that makes people distrust the ' +
+      'guard, and under the usual definition it is a rotation of itself, which the same code answers correctly without ' +
+      'a special case.',
+    commonMistake: 'Rotating one step at a time and comparing, or dropping the length check.',
+    whyWrong:
+      'The step-by-step loop is correct and quadratic in the length, and it is the answer the row exists to replace with ' +
+      'a single test. Without the length guard the containment is a substring question, so a prefix of the doubled text ' +
+      'reports a rotation that cannot exist between strings of different sizes.',
+    followUps: ['Which two directions of the equivalence does the length guard protect?', 'What does the same trick answer about conjugate strings?', 'Cost the doubled copy against the per-split comparison on a long input.'],
+    solution:
+      'function isRotation(source, candidate) {\n' +
+      '  if (source.length !== candidate.length) return false;\n' +
+      '  return (source + source).includes(candidate);\n' +
+      '}',
+    modify: 'Report the number of positions that rotate one string into the other — how many windows does the doubled text hold?',
+  },
+  {
+    step: 5,
+    name: 'Check if two Strings are anagrams of each other',
+    difficulty: 'Easy',
+    topicSlug: STRINGS,
+    stem: 'Prove equal multisets with one fixed array, and say why the two halves can share a loop.',
+    brief: 'Input: two lowercase strings. Output: whether one is a rearrangement of the other.',
+    concepts: ['dsa-hash-frequency', 'dsa-character-codes', 'dsa-single-pass-tracking'],
+    shortAnswer: 'Increment on one string and decrement on the other in the same pass, then require every counter back at zero.',
+    idealAnswer:
+      'The alphabet is fixed, so the frequency table is an array of twenty-six counters indexed by character code ' +
+      'rather than a dictionary, and the two passes can be one loop because the strings have the same length once the ' +
+      'guard passes. Adding from the first and subtracting from the second leaves every counter at zero exactly when the ' +
+      'multisets agree, which is the whole test — the length check comes first because unequal lengths cannot sum to ' +
+      'zero in both directions.',
+    walkthrough:
+      'Pairing the increment and the decrement in one loop is not just shorter: it means the table holds the difference ' +
+      'at every step rather than two separate histograms, which is the same trick that turns a duplicate search into a ' +
+      'single scan. Indexing by code minus the offset of the first letter is what makes the array legal, and it is worth ' +
+      'stating as an assumption — outside lowercase Latin the table needs a real map or a wider range.',
+    commonMistake: 'Sorting both strings and comparing them, or using two maps and comparing their sizes.',
+    whyWrong:
+      'Sorting costs a comparison order on each string to answer a question that a fixed table answers in linear time, ' +
+      'and it is the answer the row is checking whether you can beat. Comparing map sizes is simply wrong: two different ' +
+      'distributions can have the same number of distinct keys, so the test accepts inputs the multiset check rejects.',
+    followUps: ['Why does the length check let both strings share one loop?', 'What breaks the fixed-array version, and what replaces it?', 'Give the single-loop version that returns as soon as a counter goes negative.'],
+    solution:
+      'function isAnagram(source, target) {\n' +
+      '  if (source.length !== target.length) return false;\n' +
+      '  const counts = new Array(26).fill(0);\n' +
+      '  for (let i = 0; i < source.length; i += 1) {\n' +
+      '    counts[source.charCodeAt(i) - 97] += 1;\n' +
+      '    counts[target.charCodeAt(i) - 97] -= 1;\n' +
+      '  }\n' +
+      '  for (const count of counts) {\n' +
+      '    if (count !== 0) return false;\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}',
+    modify: 'Report which characters differ in count instead of a boolean — what does the table have to keep?',
+  },
+  {
+    step: 5,
+    name: 'Reverse Every Word in a String',
+    difficulty: 'Easy',
+    topicSlug: STRINGS,
+    stem: 'Reverse inside each word and leave the spacing untouched, including the runs.',
+    brief: 'Input: a string of words separated by single spaces. Output: the same layout with the characters of every word reversed.',
+    concepts: ['dsa-reversal-trick', 'dsa-write-index', 'dsa-boundary-conditions'],
+    shortAnswer: 'Find each word boundary and copy its characters out backwards, leaving the separators in place.',
+    idealAnswer:
+      'The layout is fixed and only the runs between spaces change, so the pass reads a word, writes it reversed, and ' +
+      'writes the separator it stopped on — which keeps the original spacing without a second tokenising step. A mirror ' +
+      'walk over each word would do the same work but needs the word stored separately first, and the backward copy from ' +
+      'the source costs nothing extra since a new string is being built anyway.',
+    walkthrough:
+      'This row is the pair of the word-order reversal, and the point of doing both is that the same cursor machinery ' +
+      'answers either question with the loops in different places: here the outer walk finds the boundaries and the ' +
+      'inner walk runs backward, there the outer walk collects and the inner walk mirrors. Keeping the separators in the ' +
+      'output rather than reconstructing them with a join is what makes the version tolerate runs of spaces.',
+    commonMistake: 'Splitting on spaces and joining reversed words with one space, or reversing the whole string and then the words.',
+    whyWrong:
+      'The split-and-join erases the difference between a single space and a run of them, so an input padded inside ' +
+      'comes back reformatted rather than reversed in place. The double reversal is the character-array trick again and ' +
+      'pays for a rewrite of the entire string before paying for the word rewrites.',
+    followUps: ['Which loop owns the boundaries and which owns the reversal?', 'Give the version that also reverses the word order in one pass.', 'What does the same code do with tabs, and what should it do?'],
+    solution:
+      'function reverseEachWord(text) {\n' +
+      '  let out = "";\n' +
+      '  let start = 0;\n' +
+      '  for (let i = 0; i <= text.length; i += 1) {\n' +
+      '    if (i === text.length || text[i] === " ") {\n' +
+      '      for (let j = i - 1; j >= start; j -= 1) out += text[j];\n' +
+      '      if (i < text.length) out += " ";\n' +
+      '      start = i + 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}',
+    modify: 'Reverse only the words longer than one character — which test moves where?',
   },
 ];
 

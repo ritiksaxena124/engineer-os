@@ -71,6 +71,8 @@ export const PHASES_00_09: PhaseSpec[] = [
       t('sorting-algorithms', 'Comparison Sorting', 'selection, bubble, insertion, merge, quick: what each pass guarantees and what it costs.', 'javascript', ['array-techniques', 'recursion']),
       t('binary-search', 'Binary Search and Ordered Boundaries', 'halving a window, the index the loop exits on, and searching a matrix without flattening it.', 'javascript', ['array-techniques'], ['sorting-algorithms']),
       t('search-space', 'Searching the Answer, Not the Index', 'monotone predicates over a value range: the smallest feasible rate, capacity or distance.', 'javascript', ['binary-search']),
+      t('string-techniques', 'String Algorithms', 'characters as arrays: two pointers over text, frequency maps, nesting counters and windows that never reorder what they read.', 'javascript', ['array-techniques', 'hash-tables'], ['language-mechanics']),
+      t('numeric-strings', 'Numerals and Parsing', 'roman and decimal in both directions, place value, and the overflow a parser has to refuse rather than absorb.', 'javascript', ['string-techniques'], ['dsa-maths-foundations']),
       t('graph-traversal', 'Graph Traversal and Shortest Paths', 'BFS/DFS, topological sort, Dijkstra, dependency resolution.', 'system-design', ['hash-tables'], ['recursion']),
       t('tries-autocomplete', 'Tries and Prefix Search', 'autocomplete, routing tables, tokenization costs.', 'system-design', ['hash-tables'], ['memory-hierarchy']),
       t('dp-greedy', 'Dynamic Programming and Greedy', 'overlapping subproblems, state definition, when greedy is provably right.', 'system-design', ['recursion'], ['complexity-analysis']),

@@ -225,6 +225,22 @@ const EXPECTS: Record<string, string> = {
     'peakInMatrix([[1, 4], [3, 2]]).join() === "1,0" && peakInMatrix([[10, 20, 15], [21, 30, 14], [7, 16, 32]]).join() === "1,1" && peakInMatrix([[1]]).join() === "0,0" && peakInMatrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).join() === "2,2" && peakInMatrix([[5, 3, 1]]).join() === "0,0" && peakInMatrix([[5], [3], [1]]).join() === "0,0"',
   'Matrix Median':
     'matrixMedian([[1, 3, 5], [2, 6, 9], [10, 14, 23]]) === 6 && matrixMedian([[1, 2, 3], [4, 5, 6], [7, 8, 9]]) === 5 && matrixMedian([[1]]) === 1 && matrixMedian([[1, 2, 3, 4], [5, 6, 7, 8]]) === 5 && matrixMedian([[2, 2, 2], [2, 2, 2]]) === 2',
+  'Remove Outermost Parentheses':
+    'removeOutermostParens("(()())()") === "()()" && removeOutermostParens("()") === "" && removeOutermostParens("()(())") === "()" && removeOutermostParens("") === "" && removeOutermostParens("((()))") === "(())" && removeOutermostParens("()()()") === ""',
+  'Reverse Words in a String':
+    'reverseWords("the sky is blue") === "blue is sky the" && reverseWords("  hello world  ") === "world hello" && reverseWords("a good   example") === "example good a" && reverseWords("   ") === "" && reverseWords("single") === "single"',
+  'Largest Odd Number in String':
+    'largestOddNumber("4206") === "" && largestOddNumber("52918") === "5291" && largestOddNumber("35427") === "35427" && largestOddNumber("") === "" && largestOddNumber("1") === "1" && largestOddNumber("22222222") === ""',
+  'Longest Common Prefix':
+    'longestCommonPrefix(["flower", "flow", "flight"]) === "fl" && longestCommonPrefix(["dog", "racecar", "car"]) === "" && longestCommonPrefix(["a"]) === "a" && longestCommonPrefix([]) === "" && longestCommonPrefix(["abc", "abc", "abcd"]) === "abc" && longestCommonPrefix(["", "abc"]) === ""',
+  'Isomorphic String':
+    'isIsomorphic("egg", "add") && !isIsomorphic("foo", "bar") && isIsomorphic("paper", "title") && !isIsomorphic("a", "ab") && isIsomorphic("", "") && !isIsomorphic("badc", "baba")',
+  'Check whether one string is a rotation of another':
+    'isRotation("abcde", "cdeab") && !isRotation("abcde", "abced") && isRotation("", "") && !isRotation("a", "") && isRotation("aba", "baa") && !isRotation("aa", "a")',
+  'Check if two Strings are anagrams of each other':
+    'isAnagram("anagram", "nagaram") && isAnagram("", "") && !isAnagram("rat", "car") && !isAnagram("a", "ab") && isAnagram("listen", "silent") && !isAnagram("aab", "abb")',
+  'Reverse Every Word in a String':
+    'reverseEachWord("Hello World") === "olleH dlroW" && reverseEachWord("I am a student") === "I ma a tneduts" && reverseEachWord(" ") === " " && reverseEachWord("") === "" && reverseEachWord("ab") === "ba"',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */
@@ -263,7 +279,7 @@ describe('dsa content', () => {
   test('every DSA topic is in the phase the sheet belongs to', () => {
     const dsa = new Set(ALL_TOPICS.filter((topic) => topic.phaseKey === 'p03').map((topic) => topic.slug));
     for (const problem of DSA_PROBLEMS) {
-      if (problem.step <= 4) expect(dsa.has(problem.topicSlug), `${problem.name} sits outside p03`).toBe(true);
+      if (problem.step <= 5) expect(dsa.has(problem.topicSlug), `${problem.name} sits outside p03`).toBe(true);
     }
   });
 
