@@ -155,6 +155,34 @@ const EXPECTS: Record<string, string> = {
     'rotateRings([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).map((r) => r.join()).join("|") === "7,4,1|8,5,2|9,6,3" && rotateRings([[1, 2], [3, 4]]).map((r) => r.join()).join("|") === "3,1|4,2" && rotateRings([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]).map((r) => r.join()).join("|") === "13,9,5,1|14,10,6,2|15,11,7,3|16,12,8,4" && rotateRings([[7]]).join() === "7"',
   'Find missing and repeating numbers':
     'repeatingMissingOnce([3, 1, 2, 5, 3]).join() === "3,4" && repeatingMissingOnce([1, 2, 2]).join() === "2,3" && repeatingMissingOnce([4, 4, 2, 3]).join() === "4,1" && repeatingMissingOnce([1, 1]).join() === "1,2"',
+  'Binary Search to find X in sorted array':
+    'binarySearch([-1, 0, 3, 5, 9, 12], 9) === 4 && binarySearch([-1, 0, 3, 5, 9, 12], 2) === -1 && binarySearch([1], 1) === 0 && binarySearch([], 1) === -1 && binarySearch([5, 7], 7) === 1 && binarySearch([1, 3], 2) === -1',
+  'Implement Lower Bound':
+    'lowerBound([1, 2, 2, 3], 2) === 1 && lowerBound([1, 2, 3], 4) === 3 && lowerBound([1, 2, 3], 0) === 0 && lowerBound([], 5) === 0 && lowerBound([2, 2, 2], 2) === 0',
+  'Implement Upper Bound':
+    'upperBound([1, 2, 2, 3], 2) === 3 && upperBound([1, 2, 3], 3) === 3 && upperBound([2, 2, 2], 2) === 3 && upperBound([1], 0) === 0 && upperBound([], 1) === 0',
+  'Search Insert Position':
+    'searchInsert([1, 3, 5, 6], 5) === 2 && searchInsert([1, 3, 5, 6], 2) === 1 && searchInsert([1, 3, 5, 6], 7) === 4 && searchInsert([1, 3, 5, 6], 0) === 0 && searchInsert([], 1) === 0',
+  'Check if Input array is sorted':
+    'isNonDecreasing([1, 2, 2, 3]) && !isNonDecreasing([3, 1, 2]) && isNonDecreasing([]) && boundaryIndex([1, 2, 3], 2) === 1 && boundaryIndex([3, 1, 2], 2) === 2',
+  'Find First and Last Position of Element in Sorted Array':
+    'searchRange([5, 7, 7, 8, 8, 10], 8).join() === "3,4" && searchRange([5, 7, 7, 8, 8, 10], 6).join() === "-1,-1" && searchRange([], 1).join() === "-1,-1" && searchRange([1], 1).join() === "0,0" && searchRange([2, 2, 2], 2).join() === "0,2"',
+  'Count Occurrences in Sorted Array':
+    'countOccurrences([1, 1, 2, 2, 2, 3], 2) === 3 && countOccurrences([1, 2, 3], 4) === 0 && countOccurrences([1, 2, 3], 0) === 0 && countOccurrences([], 5) === 0 && countOccurrences([7, 7, 7], 7) === 3',
+  'Search in Rotated Sorted Array I':
+    'searchRotated([4, 5, 6, 7, 0, 1, 2], 0) === 4 && searchRotated([4, 5, 6, 7, 0, 1, 2], 3) === -1 && searchRotated([1], 0) === -1 && searchRotated([1], 1) === 0 && searchRotated([3, 1], 1) === 1 && searchRotated([5, 1, 3], 5) === 0',
+  'Search in Rotated Sorted Array II':
+    'searchRotatedWithDuplicates([5, 1, 3, 1], 3) && searchRotatedWithDuplicates([1, 0, 1, 1, 1], 0) && !searchRotatedWithDuplicates([2, 2, 2, 2], 3) && searchRotatedWithDuplicates([1, 1, 1, 3, 1], 3) && !searchRotatedWithDuplicates([], 1) && searchRotatedWithDuplicates([1], 1)',
+  'Search in Rotated Sorted Array with Duplicates':
+    'searchRotatedByPivot([4, 5, 6, 7, 0, 1, 2], 0) === 4 && searchRotatedByPivot([4, 5, 6, 7, 0, 1, 2], 3) === -1 && searchRotatedByPivot([3, 1], 1) === 1 && searchRotatedByPivot([3, 1], 3) === 0 && searchRotatedByPivot([], 1) === -1 && searchRotatedByPivot([1], 1) === 0 && searchRotatedByPivot([2, 2, 2, 2], 2) === 1',
+  'Find Minimum in Rotated Sorted Array':
+    'findMinimum([3, 4, 5, 1, 2]) === 1 && findMinimum([4, 5, 6, 7, 0, 1, 2]) === 0 && findMinimum([1, 2, 3]) === 1 && findMinimum([1]) === 1 && findMinimum([2, 1]) === 1',
+  'Find how many times array has been rotated':
+    'rotationCount([3, 4, 5, 1, 2]) === 3 && rotationCount([1, 2, 3, 4, 5]) === 0 && rotationCount([2, 1]) === 1 && rotationCount([7]) === 0 && rotationCount([5, 6, 7, 1, 2, 3, 4]) === 3',
+  'Single Element in a Sorted Array':
+    'singleNonPair([1, 1, 2, 3, 3]) === 2 && singleNonPair([3, 3, 7, 7, 10, 11, 11]) === 10 && singleNonPair([1, 2, 2, 3, 3]) === 1 && singleNonPair([1, 1, 2, 2, 3, 3, 4]) === 4 && singleNonPair([7]) === 7 && singleNonPair([1, 1, 2, 2, 3]) === 3',
+  'Find Peak Element':
+    'findPeak([1, 2, 3, 1]) === 2 && findPeak([1, 2, 1, 3, 5, 6, 4]) === 5 && findPeak([1]) === 0 && findPeak([3, 1]) === 0 && findPeak([1, 2]) === 1 && findPeak([5, 4, 3, 2, 1]) === 0',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */
@@ -193,7 +221,7 @@ describe('dsa content', () => {
   test('every DSA topic is in the phase the sheet belongs to', () => {
     const dsa = new Set(ALL_TOPICS.filter((topic) => topic.phaseKey === 'p03').map((topic) => topic.slug));
     for (const problem of DSA_PROBLEMS) {
-      if (problem.step <= 3) expect(dsa.has(problem.topicSlug), `${problem.name} sits outside p03`).toBe(true);
+      if (problem.step <= 4) expect(dsa.has(problem.topicSlug), `${problem.name} sits outside p03`).toBe(true);
     }
   });
 

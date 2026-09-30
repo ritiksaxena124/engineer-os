@@ -469,6 +469,69 @@ export const DSA_CONCEPTS = {
     terms: ['negate in place', 'index from value', 'seen marker', 'absolute value', 'mutating the input'],
     weight: 2,
   },
+  'dsa-binary-search-window': {
+    slug: 'dsa-binary-search-window',
+    name: 'The window is a claim, and halving has to keep it true',
+    detail: 'Inclusive or exclusive bounds decide the loop condition and both updates together; mixing the two contracts is what breaks binary search.',
+    terms: ['halve the window', 'lo and hi', 'invariant', 'discard a half', 'midpoint'],
+    weight: 3,
+  },
+  'dsa-search-exit-index': {
+    slug: 'dsa-search-exit-index',
+    name: 'What the loop exits on is the answer',
+    detail: 'A boundary search reports the position the window closes on, which is a gap as often as it is an element, so the return reads lo rather than a matched value.',
+    terms: ['exit index', 'insertion point', 'loop ends', 'where it would go', 'the gap'],
+    weight: 3,
+  },
+  'dsa-lower-bound': {
+    slug: 'dsa-lower-bound',
+    name: 'Lower bound is the first index that is not smaller',
+    detail: 'The predicate flips from false to true along a sorted array, so the leftmost qualifying index is found by letting hi retreat to mid.',
+    terms: ['lower bound', 'first index', 'not less than', 'at least the target', 'leftmost'],
+    weight: 3,
+  },
+  'dsa-upper-bound': {
+    slug: 'dsa-upper-bound',
+    name: 'Upper bound is the first index strictly greater',
+    detail: 'One comparison later than lower bound, and the returned index doubles as the count of everything at most the target.',
+    terms: ['upper bound', 'strictly greater', 'first greater', 'past the run', 'count of at most'],
+    weight: 3,
+  },
+  'dsa-rotated-half-sorted': {
+    slug: 'dsa-rotated-half-sorted',
+    name: 'One half of a rotated array is always in order',
+    detail: 'The midpoint splits the array into a sorted run and a wrapped run, so the half test is which side is ordered and whether the target falls inside it.',
+    terms: ['sorted half', 'pivot', 'which half', 'rotated', 'range check'],
+    weight: 3,
+  },
+  'dsa-duplicate-ambiguity': {
+    slug: 'dsa-duplicate-ambiguity',
+    name: 'Equal endpoints decide nothing',
+    detail: 'When an endpoint matches the midpoint the ordering test is silent, and the only sound move is to drop that endpoint one place.',
+    terms: ['duplicates', 'cannot decide', 'shrink by one', 'ambiguous', 'worst case linear'],
+    weight: 3,
+  },
+  'dsa-pivot-as-minimum': {
+    slug: 'dsa-pivot-as-minimum',
+    name: 'The minimum is the pivot, and its index is the rotation',
+    detail: 'A rotated array is two sorted runs and the smallest element starts the second, so the same halving reports both the value and how far the array was turned.',
+    terms: ['pivot', 'smallest element', 'start of the second run', 'rotation count', 'index of the minimum'],
+    weight: 2,
+  },
+  'dsa-peak-gradient': {
+    slug: 'dsa-peak-gradient',
+    name: 'Rising toward a neighbour guarantees a peak that way',
+    detail: 'Follow the larger neighbour and the first element that stops rising is a peak, because the outside of the array is treated as lower than anything.',
+    terms: ['peak', 'larger neighbour', 'rising', 'ascent', 'ends count as lower'],
+    weight: 2,
+  },
+  'dsa-neighbour-by-xor': {
+    slug: 'dsa-neighbour-by-xor',
+    name: 'One XOR gives the partner of a pair',
+    detail: 'Flipping the lowest bit turns an even index into its odd partner and back, so a single expression replaces the branch on parity.',
+    terms: ['xor with one', 'partner index', 'flip the last bit', 'pair neighbour', 'no parity branch'],
+    weight: 2,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -477,6 +540,8 @@ const MECHANICS = 'language-mechanics';
 const PATTERNS = 'pattern-printing';
 const COMPLEXITY = 'complexity-analysis';
 const SORTING = 'sorting-algorithms';
+const SEARCH = 'binary-search';
+const SPACE = 'search-space';
 
 export const DSA_PROBLEMS: DsaProblem[] = [
   {
@@ -4128,6 +4193,591 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return [repeating, missing];\n' +
       '}',
     modify: 'Do it so the array is left exactly as it was found — which pass has to undo the marks?',
+  },
+  {
+    step: 4,
+    name: 'Binary Search to find X in sorted array',
+    difficulty: 'Easy',
+    topicSlug: SEARCH,
+    stem: 'Find a target in a sorted array in logarithmic time and say which half you discard and why.',
+    brief: 'Input: a sorted array of integers and a target. Output: the index of the target, or -1 when it is absent.',
+    concepts: ['dsa-binary-search-window', 'dsa-search-exit-index', 'dsa-boundary-conditions'],
+    shortAnswer: 'Compare the midpoint with the target and throw away the half that cannot contain it: logarithmic halvings.',
+    idealAnswer:
+      'Ordering is what lets the midpoint value decide which side the target can lie on, so every step halves the ' +
+      'window: O(log n) comparisons and O(1) space, written as a loop rather than a recursion frame per level. The ' +
+      'window has to be a stated claim — usually inclusive at both ends — and the loop condition, the two updates and ' +
+      'the return value all have to agree with that one claim, which is the whole difficulty of binary search.',
+    walkthrough:
+      'An off-by-one here is not a typo but a broken contract: with an inclusive hi the condition is lo at most hi and ' +
+      'both updates exclude the tested midpoint, while an exclusive hi wants a strict condition and hi moving to mid. ' +
+      'Mixing the two either loops forever or exits without testing the last candidate. The correctness argument is ' +
+      'that the target was never in the discarded half, and that holds only because the array is sorted — the ' +
+      'precondition this function never checks.',
+    commonMistake: 'Moving lo to mid instead of mid plus one, or writing the loop with a half-inclusive, half-exclusive window.',
+    whyWrong:
+      'Failing to exclude the tested midpoint stops the window shrinking once it is two wide, which hangs rather than ' +
+      'returns. A mixed contract can exit without ever looking at the last element and report absent for a value that ' +
+      'is present — the silent kind, and the reason a reviewer asks you to state the window out loud before the code.',
+    followUps: ['Write the exclusive-hi version and keep its contract consistent.', 'Why does integer halving terminate rather than oscillate?', 'What does this return on an unsorted array, and who is to blame?'],
+    solution:
+      'function binarySearch(nums, target) {\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length - 1;\n' +
+      '  while (lo <= hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (nums[mid] === target) return mid;\n' +
+      '    if (nums[mid] < target) lo = mid + 1;\n' +
+      '    else hi = mid - 1;\n' +
+      '  }\n' +
+      '  return -1;\n' +
+      '}',
+    modify: 'Rewrite it with hi exclusive and a strict loop condition, then re-run the two-edge inputs.',
+  },
+  {
+    step: 4,
+    name: 'Implement Lower Bound',
+    difficulty: 'Easy',
+    topicSlug: SEARCH,
+    stem: 'Return the first index whose value is not smaller than the target, and say what an all-smaller array gives.',
+    brief: 'Input: a sorted array and a value. Output: the leftmost index holding a value at least the target, or the length when every element is smaller.',
+    concepts: ['dsa-lower-bound', 'dsa-search-exit-index', 'dsa-boundary-conditions'],
+    shortAnswer: 'Keep every candidate inside the window: a midpoint that qualifies could be the answer, so hi retreats to mid.',
+    idealAnswer:
+      'The predicate "value at least the target" is false along the array and then true, so the question is where that ' +
+      'flips. Halving with hi equal to mid when the midpoint qualifies and lo equal to mid plus one when it does not ' +
+      'keeps the answer inside the window at every step, and the loop ends with both pointers on it. Returning the ' +
+      'length when nothing qualifies is why the result is an index into a gap, not necessarily an element.',
+    walkthrough:
+      'This is a search for a boundary rather than for a value, which is exactly why it answers questions about absent ' +
+      'targets: the index it returns is where the target would have to be inserted. Membership, counting a run, and ' +
+      'finding the first element above a threshold are all arithmetic on the same primitive, so one loop serves several ' +
+      'interview questions and each of them inherits its correctness.',
+    commonMistake: 'Returning mid the moment the value equals the target, or moving hi to mid minus one when the midpoint qualifies.',
+    whyWrong:
+      'Returning on equality gives some occurrence rather than the first, which only looks right because test arrays ' +
+      'tend to hold distinct values. Retreating past a qualifying midpoint throws away the only index that could be the ' +
+      'answer, so a target above everything exits one short and points at a value that is not at least the target.',
+    followUps: ['Which three separate questions does this one loop answer?', 'Why does hi start at the length instead of the length minus one?', 'Give the mirror version: the last index whose value is not greater.'],
+    solution:
+      'function lowerBound(nums, target) {\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length;\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (nums[mid] < target) lo = mid + 1;\n' +
+      '    else hi = mid;\n' +
+      '  }\n' +
+      '  return lo;\n' +
+      '}',
+    modify: 'Use it to report the largest value not exceeding the target, without writing a second loop.',
+  },
+  {
+    step: 4,
+    name: 'Implement Upper Bound',
+    difficulty: 'Easy',
+    topicSlug: SEARCH,
+    stem: 'Return the first index whose value is strictly greater than the target, and use it to count everything at most the target.',
+    brief: 'Input: a sorted array and a value. Output: the leftmost index of an element greater than the target, or the length when none is.',
+    concepts: ['dsa-upper-bound', 'dsa-lower-bound', 'dsa-search-exit-index'],
+    shortAnswer: 'The same halving as lower bound with the predicate one step further: only a strictly greater value moves hi.',
+    idealAnswer:
+      'The flip point is now "value greater than the target", so the equal case stays on the false side and the window ' +
+      'advances past a run of equals. The index it exits on is the count of everything at most the target, which is why ' +
+      'the pair is worth writing: the number of occurrences of a value is upper bound minus lower bound over the same ' +
+      'array, and both ends come free.',
+    walkthrough:
+      'With duplicates the two bounds differ and the difference is the run length, which is why they are taught as a ' +
+      'pair and implemented as one loop with a flag. Strictness is the whole content of the exercise: getting it wrong ' +
+      'makes upper bound identical to lower bound, and the two still look like working binary searches when inspected ' +
+      'one at a time.',
+    commonMistake: 'Reusing the non-strict comparison from lower bound, or adjusting the index inside the loop to point at the last equal value.',
+    whyWrong:
+      'An identical predicate makes the two bounds return the same index, so every occurrence count comes back zero or ' +
+      'one regardless of how many repeats there are. Nudging the result inside the search breaks the window invariant ' +
+      'for the halving that follows it — correct on two-element samples, wrong on a run of three.',
+    followUps: ['Count the values inside a closed range using only these two bounds.', 'Which bound answers "is the target present" and with what extra check?', 'What does upper bound return on an array of equal values?'],
+    solution:
+      'function upperBound(nums, target) {\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length;\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (nums[mid] <= target) lo = mid + 1;\n' +
+      '    else hi = mid;\n' +
+      '  }\n' +
+      '  return lo;\n' +
+      '}',
+    modify: 'Write one boundary function taking a flag and derive both bounds from it.',
+  },
+  {
+    step: 4,
+    name: 'Search Insert Position',
+    difficulty: 'Easy',
+    topicSlug: SEARCH,
+    stem: 'Give the index a target would occupy when it is absent, and show that one loop also answers membership.',
+    brief: 'Input: a sorted array of distinct integers and a target. Output: the index of the target if present, otherwise the index where inserting keeps the array sorted.',
+    concepts: ['dsa-lower-bound', 'dsa-search-exit-index', 'dsa-boundary-conditions'],
+    shortAnswer: 'It is lower bound with no special case: the exit index is the answer when present and the gap when absent.',
+    idealAnswer:
+      'The insertion point is the first index whose value is not smaller than the target, which is precisely what the ' +
+      'boundary halving exits on, so presence is a single read of that index rather than a second search. O(log n) time ' +
+      'and O(1) space. The two edges are the interesting inputs — before everything and after everything — and the same ' +
+      'window gives zero and the length for them.',
+    walkthrough:
+      'Writing this as its own algorithm is how two subtly different binary searches end up in one codebase, one of them ' +
+      'wrong on duplicates or on an edge. Keeping it as the boundary form means the membership question, the counting ' +
+      'question and the insertion question all read the same loop exit and only the reporting differs, so a fix to the ' +
+      'window reaches all three.',
+    commonMistake: 'Running two searches — one for the value and one for the gap — or returning one past the exit index for an absent target.',
+    whyWrong:
+      'A second search is a second window to keep in sync, and it is the copy that goes stale when the ordering rule ' +
+      'changes. Returning lo plus one places the insertion after an equal value, corrupting the very precondition the ' +
+      'search depended on for the caller that reads the array next.',
+    followUps: ['Why is no separate presence check needed to return the index?', 'What is returned when the target exceeds every element?', 'On an array with duplicates, which side of the run does the index land on?'],
+    solution:
+      'function searchInsert(nums, target) {\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length;\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (nums[mid] < target) lo = mid + 1;\n' +
+      '    else hi = mid;\n' +
+      '  }\n' +
+      '  return lo;\n' +
+      '}',
+    modify: 'Insert the value into the array with splice and say what the operation really costs.',
+  },
+  {
+    step: 4,
+    name: 'Check if Input array is sorted',
+    difficulty: 'Easy',
+    topicSlug: SEARCH,
+    stem: 'Binary search assumes order: write the check that costs one pass and say what the search reports when nobody ran it.',
+    brief: 'Input: an array of integers and a target. Output: whether the array is non-decreasing, plus the index a boundary search gives for the target.',
+    concepts: ['dsa-lower-bound', 'dsa-boundary-conditions', 'dsa-branch-exhaustiveness'],
+    shortAnswer: 'Sortedness is one pass over adjacent pairs; a search exit is only meaningful if that pass was run first.',
+    idealAnswer:
+      'Every adjacent pair has to be in order, so the check is linear time and constant space, and it is either assumed ' +
+      'by the contract or verified where the data arrives. Binary search cannot detect a violated assumption: it ' +
+      'returns the index its own comparisons landed on, which is a plausible wrong answer, so a service accepting ' +
+      'untrusted order either runs the check or sorts before searching.',
+    walkthrough:
+      'The failure is data-dependent, which is what makes it expensive: an unsorted array still terminates, and the ' +
+      'index it reports can even hold the target by accident. That is the argument for putting sortedness in input ' +
+      'validation rather than in documentation — either the producer guarantees the order, or a caller pays one linear ' +
+      'pass to find out that it did not.',
+    commonMistake: 'Treating a search result as evidence that the input was sorted, or checking order by comparing every pair of elements.',
+    whyWrong:
+      'A search has no way to report a broken precondition, so a wrong index arrives as a success and surfaces far away ' +
+      'from the cause. Quadratic checking is the opposite mistake: it makes an O(n) precondition expensive enough that ' +
+      'teams skip it, which is how the first one survives review.',
+    followUps: ['Which unsorted array makes the search point at the target anyway?', 'When is paying the linear check worse than sorting first?', 'Where in a request path should this check live?'],
+    solution:
+      'function isNonDecreasing(nums) {\n' +
+      '  for (let i = 1; i < nums.length; i += 1) {\n' +
+      '    if (nums[i] < nums[i - 1]) return false;\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function boundaryIndex(nums, target) {\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length;\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (nums[mid] < target) lo = mid + 1;\n' +
+      '    else hi = mid;\n' +
+      '  }\n' +
+      '  return lo;\n' +
+      '}',
+    modify: 'Make boundaryIndex refuse to answer unless the check passes, and pick an error style for it.',
+  },
+  {
+    step: 4,
+    name: 'Find First and Last Position of Element in Sorted Array',
+    difficulty: 'Medium',
+    topicSlug: SEARCH,
+    stem: 'Return the first and last index of a target in a sorted array with duplicates, and say why two searches beat a scan.',
+    brief: 'Input: a sorted array of integers, duplicates allowed, and a target. Output: the two end indices of the run, or -1 and -1 when the target is absent.',
+    concepts: ['dsa-lower-bound', 'dsa-upper-bound', 'dsa-search-exit-index'],
+    shortAnswer: 'Lower bound gives the first index and upper bound minus one the last, with one comparison deciding whether the run exists.',
+    idealAnswer:
+      'Each bound halves on its own, so the answer is two logarithmic searches with no dependence on how long the run ' +
+      'is. The empty case needs to be explicit: lower bound returns the insertion gap for an absent value, so the ' +
+      'element there has to equal the target before any last index is reported. Scanning outwards from one found index ' +
+      'is linear on an all-equal array, which is precisely the input that makes the difference measurable.',
+    walkthrough:
+      'The two predicates differ by one comparison, which is why they are better written as one function taking a flag ' +
+      'than as two copies — copies drift, and the drift only shows on duplicates. Reporting the pair as two negative ' +
+      'ones is a contract decision rather than arithmetic: every index in the array is a legal bound, so no real answer ' +
+      'can be confused with the absent marker.',
+    commonMistake: 'Expanding outwards from a found index, or reporting the lower bound as the last index when the target is absent.',
+    whyWrong:
+      'Outward expansion is linear per query on the repeated input the question is about, so the two searches lose their ' +
+      'entire point while still passing a sample built from short runs. Skipping the presence check turns an absent ' +
+      'target into a fabricated run: the pair is the gap where the value would have been, and the caller reads elements ' +
+      'that are not the target.',
+    followUps: ['Write it as one function taking a boolean instead of two bounds.', 'Which single bound plus a run length gives the same pair?', 'What does the pair tell a caller that a count does not?'],
+    solution:
+      'function searchRange(nums, target) {\n' +
+      '  const edge = (wantLast) => {\n' +
+      '    let lo = 0;\n' +
+      '    let hi = nums.length;\n' +
+      '    while (lo < hi) {\n' +
+      '      const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '      const before = wantLast ? nums[mid] <= target : nums[mid] < target;\n' +
+      '      if (before) lo = mid + 1;\n' +
+      '      else hi = mid;\n' +
+      '    }\n' +
+      '    return lo;\n' +
+      '  };\n' +
+      '  const first = edge(false);\n' +
+      '  if (first === nums.length || nums[first] !== target) return [-1, -1];\n' +
+      '  return [first, edge(true) - 1];\n' +
+      '}',
+    modify: 'Answer the same question with two calls to countOccurrences and one bound — which loop is now dead?',
+  },
+  {
+    step: 4,
+    name: 'Count Occurrences in Sorted Array',
+    difficulty: 'Easy',
+    topicSlug: SEARCH,
+    stem: 'Count how many times a value appears in a sorted array without scanning, and name the two lookups the count needs.',
+    brief: 'Input: a sorted array of integers and a value. Output: how many positions hold that value.',
+    concepts: ['dsa-upper-bound', 'dsa-lower-bound', 'dsa-complexity-counting'],
+    shortAnswer: 'The count is upper bound minus lower bound: two halvings and no third loop.',
+    idealAnswer:
+      'Everything at most the target sits before the upper bound and everything strictly below it before the lower ' +
+      'bound, so the difference is exactly the run. Both are boundary searches: O(log n) time, O(1) space, and an ' +
+      'absent value gives a difference of zero with no special case, because the two bounds land on the same gap.',
+    walkthrough:
+      'The zero case is where the understanding shows: no membership test is needed, since the bounds agree when the ' +
+      'value is missing, so an extra check is dead code at best and a second place for the logic to diverge at worst. ' +
+      'The same pair of predicates answers the first-and-last question, and writing the answer as a subtraction keeps ' +
+      'it correct when the run is longer than the search.',
+    commonMistake: 'Counting with a linear filter, or finding one index and expanding around it.',
+    whyWrong:
+      'A filter is linear per query, which is what the sorted input existed to avoid — on a hot path the array length ' +
+      'becomes the latency. Expanding around a found index is the same linear cost wearing a logarithmic costume, and ' +
+      'only a test with long runs ever catches it.',
+    followUps: ['Which comparison decides absence in this version?', 'Count the values inside a closed range with the same two primitives.', 'What has to change if the array is not sorted?'],
+    solution:
+      'function countOccurrences(nums, target) {\n' +
+      '  const bound = (strict) => {\n' +
+      '    let lo = 0;\n' +
+      '    let hi = nums.length;\n' +
+      '    while (lo < hi) {\n' +
+      '      const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '      if (strict ? nums[mid] <= target : nums[mid] < target) lo = mid + 1;\n' +
+      '      else hi = mid;\n' +
+      '    }\n' +
+      '    return lo;\n' +
+      '  };\n' +
+      '  return bound(true) - bound(false);\n' +
+      '}',
+    modify: 'Report the number of distinct values in the sorted array in one pass — is a bound needed at all?',
+  },
+  {
+    step: 4,
+    name: 'Search in Rotated Sorted Array I',
+    difficulty: 'Medium',
+    topicSlug: SEARCH,
+    stem: 'Find a target in a rotated sorted array in logarithmic time and say how you know which half is ordered.',
+    brief: 'Input: an array of distinct integers sorted then rotated at an unknown point, and a target. Output: the index of the target, or -1.',
+    concepts: ['dsa-rotated-half-sorted', 'dsa-binary-search-window', 'dsa-boundary-conditions'],
+    shortAnswer: 'One half is always in order, so classify it first and then ask whether the target lies inside that range.',
+    idealAnswer:
+      'Comparing the endpoints of the window with the midpoint tells you whether the left half is ordered. If it is, the ' +
+      'target is either inside that interval — keep the left half — or it cannot be, so go right; the mirrored test ' +
+      'handles the other case. The cost stays one comparison per halving: O(log n) time and O(1) space, and the ' +
+      'distinctness of the values is what makes the classification decidable.',
+    walkthrough:
+      'The mistake this row exists to catch is comparing the midpoint with the target before deciding anything about the ' +
+      'halves — on a wrapped array that comparison says nothing about which side to keep, because the target can be ' +
+      'smaller than the midpoint and still live to its right. Classify a half as sorted, then bound-check the target ' +
+      'into it: that ordering is the entire algorithm, and it is the assumption the duplicates version quietly loses.',
+    commonMistake: 'Choosing the side by comparing the midpoint with the target, or scanning for the pivot linearly first.',
+    whyWrong:
+      'A midpoint comparison alone picks the wrong half on any array whose rotation puts the target behind the pivot, ' +
+      'and it does so while returning plausible indices for sorted samples. The linear pivot scan is correct but spends ' +
+      'the whole logarithmic bound before the search starts, which reads as never having found the invariant.',
+    followUps: ['Which comparison in your loop would stop deciding anything if duplicates were allowed?', 'Rewrite it as find-the-pivot then a plain search with an offset.', 'What does the function do on an array that was never rotated?'],
+    solution:
+      'function searchRotated(nums, target) {\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length - 1;\n' +
+      '  while (lo <= hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (nums[mid] === target) return mid;\n' +
+      '    if (nums[lo] <= nums[mid]) {\n' +
+      '      if (target >= nums[lo] && target < nums[mid]) hi = mid - 1;\n' +
+      '      else lo = mid + 1;\n' +
+      '    } else {\n' +
+      '      if (target > nums[mid] && target <= nums[hi]) lo = mid + 1;\n' +
+      '      else hi = mid - 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return -1;\n' +
+      '}',
+    modify: 'Rotate the array back into order using the pivot index you now have, and say what that costs.',
+  },
+  {
+    step: 4,
+    name: 'Search in Rotated Sorted Array II',
+    difficulty: 'Medium',
+    topicSlug: SEARCH,
+    stem: 'Duplicates make the half test undecidable: write the search that survives them and give its real worst case.',
+    brief: 'Input: a rotated sorted array that may contain repeats, and a target. Output: whether the target is present.',
+    concepts: ['dsa-duplicate-ambiguity', 'dsa-rotated-half-sorted', 'dsa-complexity-counting'],
+    shortAnswer: 'When an endpoint equals the midpoint the window says nothing, so drop that endpoint by one and decide again.',
+    idealAnswer:
+      'The half test needs a strict comparison, and equality reveals nothing about where the pivot is. Dropping one edge ' +
+      'is sound rather than lucky: the endpoint that matches the midpoint cannot be the only copy of the target, because ' +
+      'then the midpoint would have matched and returned already. Each such step discards a single element, so the cost ' +
+      'is logarithmic on distinct values and linear on an all-equal array, and the honest answer names both.',
+    walkthrough:
+      'That same argument is the proof that the bound cannot be repaired — an input of equal values forces a linear ' +
+      'number of one-place shrinks before the window closes, because no comparison inside it can localise the pivot. So ' +
+      'the design answer for duplicate-heavy data is to deduplicate when the index is built rather than pay the worst ' +
+      'case per query, which is the part of this row a reviewer actually asks about.',
+    commonMistake: 'Claiming the duplicate version stays logarithmic, or jumping a whole run of equal values at once.',
+    whyWrong:
+      'Skipping a run assumes you know where the pivot is not, and the pivot is the only thing the ordering argument ' +
+      'rests on, so the search can discard the half holding the target. Naming the bound logarithmic instead hides a ' +
+      'linear case inside a latency budget, which is precisely what a performance review is there to catch.',
+    followUps: ['Prove that dropping the matching endpoint cannot lose the only copy of the target.', 'Give the input that forces the linear case.', 'Which preprocessing restores the logarithmic bound, and what does it cost once?'],
+    solution:
+      'function searchRotatedWithDuplicates(nums, target) {\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length - 1;\n' +
+      '  while (lo <= hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (nums[mid] === target) return true;\n' +
+      '    if (nums[lo] === nums[mid]) {\n' +
+      '      lo += 1;\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    if (nums[hi] === nums[mid]) {\n' +
+      '      hi -= 1;\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    if (nums[lo] < nums[mid]) {\n' +
+      '      if (target >= nums[lo] && target < nums[mid]) hi = mid - 1;\n' +
+      '      else lo = mid + 1;\n' +
+      '    } else if (target > nums[mid] && target <= nums[hi]) lo = mid + 1;\n' +
+      '    else hi = mid - 1;\n' +
+      '  }\n' +
+      '  return false;\n' +
+      '}',
+    modify: 'Make it return an index instead of a boolean — what extra state has to survive the shrink steps?',
+  },
+  {
+    step: 4,
+    name: 'Search in Rotated Sorted Array with Duplicates',
+    difficulty: 'Medium',
+    topicSlug: SEARCH,
+    stem: 'Instead of shrinking on ambiguity, find the pivot and search an offset window — give both costs.',
+    brief: 'Input: a rotated sorted array that may contain repeats, and a target. Output: the index of the target in the rotated array, or -1.',
+    concepts: ['dsa-pivot-as-minimum', 'dsa-binary-search-window', 'dsa-duplicate-ambiguity'],
+    shortAnswer: 'Two searches: locate the pivot, then binary search the virtual unrotated array through an offset index.',
+    idealAnswer:
+      'The pivot is the minimum, so the boundary halving on the right endpoint finds it, and reading index (lo + k) mod n ' +
+      'turns the rotated array into a sorted one without moving a byte. The second search is then ordinary binary search ' +
+      'over that virtual window. Two logarithmic passes instead of one, O(log n) space-free work, and the ambiguity ' +
+      'handling that duplicates need lives in the pivot search alone.',
+    walkthrough:
+      'The trade against the single-pass version is worth stating in numbers: the direct search keeps one comparison per ' +
+      'level but degrades to linear when the values repeat, while the pivot-first version degrades in exactly the same ' +
+      'place — the pivot search itself — and pays an extra logarithmic pass otherwise. Neither escapes duplicates, which ' +
+      'is the real lesson: the modulo hides rotation, not ambiguity.',
+    commonMistake: 'Moduloing the midpoint into the window without carrying the offset, or deduplicating to fix the bound.',
+    whyWrong:
+      'An offset applied only at the read and not to the bounds makes the two searches disagree about which elements are ' +
+      'in play, so the function returns an index from the wrong rotation of the array. Deduplicating into a copy is a ' +
+      'linear pass plus a new allocation, which is the same cost the shrink version pays, only moved somewhere the ' +
+      'reviewer cannot see it.',
+    followUps: ['Which of the two searches is the one that degrades on repeats, and why?', 'Return the original index from the virtual search without a modulo in the loop.', 'Would you ship this or the single-pass version, and on what data?'],
+    solution:
+      'function searchRotatedByPivot(nums, target) {\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length - 1;\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (nums[mid] < nums[hi]) hi = mid;\n' +
+      '    else if (nums[mid] > nums[hi]) lo = mid + 1;\n' +
+      '    else hi -= 1;\n' +
+      '  }\n' +
+      '  const start = lo;\n' +
+      '  const n = nums.length;\n' +
+      '  if (n === 0) return -1;\n' +
+      '  let low = 0;\n' +
+      '  let high = n - 1;\n' +
+      '  while (low <= high) {\n' +
+      '    const mid = low + Math.floor((high - low) / 2);\n' +
+      '    const value = nums[(start + mid) % n];\n' +
+      '    if (value === target) return (start + mid) % n;\n' +
+      '    if (value < target) low = mid + 1;\n' +
+      '    else high = mid - 1;\n' +
+      '  }\n' +
+      '  return -1;\n' +
+      '}',
+    modify: 'Use the pivot index to read the array in unrotated order and return the median in constant space.',
+  },
+  {
+    step: 4,
+    name: 'Find Minimum in Rotated Sorted Array',
+    difficulty: 'Medium',
+    topicSlug: SEARCH,
+    stem: 'Find the smallest element of a rotated sorted array and say which endpoint the comparison has to use.',
+    brief: 'Input: an array of distinct integers sorted then rotated, never empty. Output: the minimum element.',
+    concepts: ['dsa-pivot-as-minimum', 'dsa-binary-search-window', 'dsa-boundary-conditions'],
+    shortAnswer: 'Compare the midpoint with the right end: an ordered right half puts the answer at mid or to its left.',
+    idealAnswer:
+      'A rotated array is two sorted runs and the minimum begins the second, so the question is which side is ordered. ' +
+      'If the midpoint is at most the right endpoint, everything from mid to hi is in order and the answer is mid or ' +
+      'left of it, so hi moves to mid; otherwise the pivot is strictly right of mid and lo moves past it. The pointers ' +
+      'meet on the pivot: O(log n) time, O(1) space.',
+    walkthrough:
+      'Comparing with the right endpoint is what makes the branches symmetric. Comparing with the left needs a third ' +
+      'test for whether the array is rotated at all, because a plain sorted array has an ordered left half and looks ' +
+      'exactly like the wrapped case. The loop condition is strict so the two pointers close on one index, which is why ' +
+      'the return is a value read from lo rather than a candidate tracked beside it.',
+    commonMistake: 'Comparing the midpoint with the left endpoint, or moving hi to mid minus one after ruling out the right half.',
+    whyWrong:
+      'A left-endpoint comparison cannot tell a fully sorted array from one whose left half is the wrapped run, so the ' +
+      'unrotated input returns the wrong element unless it is special-cased. Retreating past a surviving candidate ' +
+      'removes the answer from the window, and the loop then reports a value larger than the minimum with no error at ' +
+      'all.',
+    followUps: ['Why does the right-endpoint version need no unrotated case?', 'What changes when the array may contain duplicates?', 'Return the index of the minimum instead — is that the rotation count?'],
+    solution:
+      'function findMinimum(nums) {\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length - 1;\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (nums[mid] <= nums[hi]) hi = mid;\n' +
+      '    else lo = mid + 1;\n' +
+      '  }\n' +
+      '  return nums[lo];\n' +
+      '}',
+    modify: 'Allow duplicates and keep the answer correct — which comparison stops being enough?',
+  },
+  {
+    step: 4,
+    name: 'Find how many times array has been rotated',
+    difficulty: 'Medium',
+    topicSlug: SEARCH,
+    stem: 'Report how far a sorted array was rotated and name the convention your answer depends on.',
+    brief: 'Input: an array of distinct integers sorted ascending then rotated right by an unknown amount, so three turns of one two three four five give three four five one two. Output: that number of turns.',
+    concepts: ['dsa-pivot-as-minimum', 'dsa-search-exit-index', 'dsa-boundary-conditions'],
+    shortAnswer: 'The count is the index of the minimum, because a right rotation moves that element exactly that far.',
+    idealAnswer:
+      'Rotating right by k puts the last k elements in front, so the smallest element — first in the original — lands at ' +
+      'index k, which makes the answer a pivot search rather than a count of operations. The same halving that finds the ' +
+      'minimum returns its index instead: O(log n) time, O(1) space, and an array that was never rotated answers zero, ' +
+      'which is a result rather than a special case.',
+    walkthrough:
+      'Two conventions exist and only one is checkable in an interview, so the senior answer states which is meant before ' +
+      'writing code: a left rotation by k leaves the pivot at n minus k, the same number read the other way. What the ' +
+      'index actually buys is access without ordering — offset every read by the pivot and the array behaves as sorted, ' +
+      'which is the trick that makes a rotated buffer usable as a ring.',
+    commonMistake: 'Counting the places where adjacent values decrease, or returning one past the pivot index.',
+    whyWrong:
+      'A rotation of a sorted array has at most one decrease, so counting decreases answers whether anything was rotated ' +
+      'and never how far. Reporting the pivot plus one is the off-by-one that passes a sample where the answer happens ' +
+      'to equal the length, and then is wrong on every other input.',
+    followUps: ['Give the answer for the left-rotation convention from the same index.', 'Which single comparison tells you the count is zero without searching?', 'What does the count let you do to the array without materialising it?'],
+    solution:
+      'function rotationCount(nums) {\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length - 1;\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (nums[mid] <= nums[hi]) hi = mid;\n' +
+      '    else lo = mid + 1;\n' +
+      '  }\n' +
+      '  return lo;\n' +
+      '}',
+    modify: 'Read the element that would sit at any index of the unrotated array, using the count and no copy.',
+  },
+  {
+    step: 4,
+    name: 'Single Element in a Sorted Array',
+    difficulty: 'Medium',
+    topicSlug: SEARCH,
+    stem: 'Find the unpaired value with the neighbour computed by an exclusive or, and say what that expression replaces.',
+    brief: 'Input: a sorted array where every value appears twice except one, which appears once. Output: the unpaired value.',
+    concepts: ['dsa-neighbour-by-xor', 'dsa-pair-parity-search', 'dsa-binary-search-window'],
+    shortAnswer: 'XORing an index with one gives its pair partner, so compare mid with that and keep the half where the layout breaks.',
+    idealAnswer:
+      'Up to the single value pairs sit in even-odd slots, so an even index has its partner one right and an odd index ' +
+      'one left — which is precisely what flipping the lowest bit does. A matching partner means the break is further ' +
+      'right, so the window starts after the pair; a mismatch keeps the midpoint inside. The result is O(log n) time, ' +
+      'O(1) space and no branch on the parity of the midpoint.',
+    walkthrough:
+      'One expression serving both parities is what removes the second comparison, and with it the chance that the two ' +
+      'branches drift apart during a change. The cost is that the reader has to know the trick, which is an argument for ' +
+      'naming the helper for what it means rather than what it does — and for the version without it, when the same code ' +
+      'will be maintained by people who have not.',
+    commonMistake: 'Applying the partner trick to an array that is not sorted, or comparing mid with mid plus one unconditionally.',
+    whyWrong:
+      'The partner relation is positional, not about values, so on an unsorted array a matching pair proves nothing about ' +
+      'where the odd element sits. An unconditional forward neighbour comparison asks a different question for odd ' +
+      'midpoints, and the search then narrows toward a half that is fully paired while still terminating cleanly.',
+    followUps: ['Which invariant does the partner comparison actually test?', 'Give the parity-branch version and compare the two on one input.', 'What breaks if one value appears three times?'],
+    solution:
+      'function singleNonPair(nums) {\n' +
+      '  const partner = (index) => index ^ 1;\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length - 1;\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (nums[mid] === nums[partner(mid)]) lo = mid + 1;\n' +
+      '    else hi = mid;\n' +
+      '  }\n' +
+      '  return nums[lo];\n' +
+      '}',
+    modify: 'Report the index of the unpaired value too — does the partner rule still decide the half?',
+  },
+  {
+    step: 4,
+    name: 'Find Peak Element',
+    difficulty: 'Medium',
+    topicSlug: SEARCH,
+    stem: 'Find an index whose value exceeds both neighbours in logarithmic time and justify the boundary convention.',
+    brief: 'Input: an array of integers where adjacent values differ. Output: the index of any peak, with both ends treated as if the neighbour outside were smaller than everything.',
+    concepts: ['dsa-peak-gradient', 'dsa-binary-search-window', 'dsa-boundary-conditions'],
+    shortAnswer: 'Climb toward the larger neighbour: a rising run inside a bounded array has to end at a peak.',
+    idealAnswer:
+      'If the midpoint rises to the right, the right half contains a peak — follow the ascent until an element stops ' +
+      'rising and that is one, because the far end is bounded by the convention. If it rises left, the identical ' +
+      'argument holds on the left half. So the neighbour comparison is enough to halve: O(log n) time, O(1) space, and ' +
+      'the answer is a peak, not the largest element.',
+    walkthrough:
+      'The existence argument is the reply to the obvious challenge: a strictly increasing array has a peak only because ' +
+      'the outside counts as lower, which is why the convention is stated before the algorithm rather than assumed by it. ' +
+      'Being clear about what the function does not promise matters as much — it cannot report the global maximum, and ' +
+      'the unequal-neighbours condition is what stops the ascent from stalling on a plateau.',
+    commonMistake: 'Scanning for the largest value, or comparing both neighbours without a rule for which side to keep.',
+    whyWrong:
+      'A linear scan answers a different question and forfeits the logarithmic bound the row is graded on. Comparing ' +
+      'without a side rule leaves the window with no way to shrink: when the midpoint is not a peak exactly one ' +
+      'neighbour is larger, and that is the only half with a guaranteed peak, so keeping both is a recursion over the ' +
+      'whole array wearing a binary search name.',
+    followUps: ['Why does an increasing array still have a peak under this convention?', 'What would have to change to return the global maximum?', 'Which condition stops working if adjacent values may be equal?'],
+    solution:
+      'function findPeak(nums) {\n' +
+      '  let lo = 0;\n' +
+      '  let hi = nums.length - 1;\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (nums[mid] < nums[mid + 1]) lo = mid + 1;\n' +
+      '    else hi = mid;\n' +
+      '  }\n' +
+      '  return lo;\n' +
+      '}',
+    modify: 'Return the largest peak instead of any peak — what does that cost, and can halving still do it?',
   },
 ];
 

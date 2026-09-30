@@ -69,6 +69,8 @@ export const PHASES_00_09: PhaseSpec[] = [
       t('heaps-priority-queues', 'Heaps and Priority Queues', 'scheduling, top-K, timers, delayed jobs.', 'system-design', ['trees-and-indexes'], ['event-loop']),
       t('recursion', 'Recursion', 'stack frames, base cases, tail calls that never came, iterative rewrites.', 'javascript', ['closures-scope', 'how-programs-run']),
       t('sorting-algorithms', 'Comparison Sorting', 'selection, bubble, insertion, merge, quick: what each pass guarantees and what it costs.', 'javascript', ['array-techniques', 'recursion']),
+      t('binary-search', 'Binary Search and Ordered Boundaries', 'halving a window, the index the loop exits on, and searching a matrix without flattening it.', 'javascript', ['array-techniques'], ['sorting-algorithms']),
+      t('search-space', 'Searching the Answer, Not the Index', 'monotone predicates over a value range: the smallest feasible rate, capacity or distance.', 'javascript', ['binary-search']),
       t('graph-traversal', 'Graph Traversal and Shortest Paths', 'BFS/DFS, topological sort, Dijkstra, dependency resolution.', 'system-design', ['hash-tables'], ['recursion']),
       t('tries-autocomplete', 'Tries and Prefix Search', 'autocomplete, routing tables, tokenization costs.', 'system-design', ['hash-tables'], ['memory-hierarchy']),
       t('dp-greedy', 'Dynamic Programming and Greedy', 'overlapping subproblems, state definition, when greedy is provably right.', 'system-design', ['recursion'], ['complexity-analysis']),
