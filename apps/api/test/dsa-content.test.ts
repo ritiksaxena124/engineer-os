@@ -215,6 +215,16 @@ const EXPECTS: Record<string, string> = {
     'medianByMergeWalk([1, 3], [2]) === 2 && medianByMergeWalk([1, 2], [3, 4]) === 2.5 && medianByMergeWalk([], [1]) === 1 && medianByMergeWalk([2], []) === 2 && medianByMergeWalk([-5, 3, 6, 12, 15], [-12, -10, -6, -3, 4, 10]) === 3 && medianByMergeWalk([1, 2, 3], [4, 5, 6, 7]) === 4',
   'Kth Element of two sorted arrays':
     'kthInTwo([2, 3, 6, 7, 9], [1, 4, 8, 10], 5) === 6 && kthInTwo([1, 2, 3], [4, 5, 6], 1) === 1 && kthInTwo([1, 2, 3], [4, 5, 6], 6) === 6 && kthInTwo([1, 3, 5], [2, 4, 6], 4) === 4 && kthInTwo([], [1], 1) === 1 && kthInTwo([7], [1, 2, 3], 2) === 2 && kthInTwo([1, 1, 1], [1, 1], 4) === 1',
+  "Find the row with maximum number of 1's":
+    'rowWithMostOnes([[0, 1, 1, 1], [0, 0, 1, 1], [1, 1, 1, 1]]) === 2 && rowWithMostOnes([[1, 1], [1, 1]]) === 0 && rowWithMostOnes([[0, 0], [0, 1]]) === 1 && rowWithMostOnes([[0, 0, 0]]) === -1 && rowWithMostOnes([]) === -1 && rowWithMostOnes([[0, 1], [1, 1], [1, 1]]) === 1',
+  'Search in a 2D Matrix':
+    'searchMatrix([[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]], 3) && !searchMatrix([[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]], 13) && searchMatrix([[1]], 1) && !searchMatrix([[1]], 0) && !searchMatrix([], 1) && searchMatrix([[1], [3], [5]], 5) && searchMatrix([[1, 1]], 1)',
+  'Search in a Row and Column-wise Sorted Matrix':
+    'searchSaddle([[-1, 2, 3, 6], [10, 20, 30, 40], [30, 40, 60, 70], [70, 80, 90, 110]], 60) && !searchSaddle([[-1, 2, 3, 6], [10, 20, 30, 40], [30, 40, 60, 70], [70, 80, 90, 110]], 55) && searchSaddle([[1, 4], [2, 5]], 5) && !searchSaddle([], 1) && !searchSaddle([[1, 2], [3, 4]], 0) && searchSaddle([[5]], 5)',
+  'Find Peak Element (2D Matrix)':
+    'peakInMatrix([[1, 4], [3, 2]]).join() === "1,0" && peakInMatrix([[10, 20, 15], [21, 30, 14], [7, 16, 32]]).join() === "1,1" && peakInMatrix([[1]]).join() === "0,0" && peakInMatrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).join() === "2,2" && peakInMatrix([[5, 3, 1]]).join() === "0,0" && peakInMatrix([[5], [3], [1]]).join() === "0,0"',
+  'Matrix Median':
+    'matrixMedian([[1, 3, 5], [2, 6, 9], [10, 14, 23]]) === 6 && matrixMedian([[1, 2, 3], [4, 5, 6], [7, 8, 9]]) === 5 && matrixMedian([[1]]) === 1 && matrixMedian([[1, 2, 3, 4], [5, 6, 7, 8]]) === 5 && matrixMedian([[2, 2, 2], [2, 2, 2]]) === 2',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */

@@ -602,6 +602,34 @@ export const DSA_CONCEPTS = {
     terms: ['probe', 'drop half', 'kth smallest', 'rank', 'discard'],
     weight: 2,
   },
+  'dsa-flattened-index-mapping': {
+    slug: 'dsa-flattened-index-mapping',
+    name: 'A matrix index is a quotient and a remainder',
+    detail: 'Row-major cells are the integers in order, so one search over the flat range reads cells with division and modulus instead of building a flattened array.',
+    terms: ['row equals mid over cols', 'mid modulo cols', 'row major', 'virtual flatten', 'one dimensional window'],
+    weight: 2,
+  },
+  'dsa-saddle-descent': {
+    slug: 'dsa-saddle-descent',
+    name: 'A corner where every direction disagrees is a decision',
+    detail: 'Start where a row maximum and a column minimum meet: each comparison eliminates a whole row or a whole column, so the walk costs the two dimensions added.',
+    terms: ['top right', 'staircase', 'discard a row', 'discard a column', 'two dimensions added'],
+    weight: 3,
+  },
+  'dsa-column-extreme-climb': {
+    slug: 'dsa-column-extreme-climb',
+    name: 'A column maximum points the way to a peak',
+    detail: 'Binary search the columns, compare the tallest cell in the middle column with its horizontal neighbour, and follow the larger side; the descent cannot walk off a peak.',
+    terms: ['column maximum', 'horizontal neighbour', 'halve the columns', 'ascent', 'ridge'],
+    weight: 3,
+  },
+  'dsa-count-at-most': {
+    slug: 'dsa-count-at-most',
+    name: 'A rank is answerable by counting instead of sorting',
+    detail: 'How many elements are at most a value can be summed across sorted runs without ordering anything, which turns an order statistic into a search over the value range.',
+    terms: ['count less than or equal', 'rank', 'value range', 'per row upper bound', 'without merging'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -5641,6 +5669,248 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  }\n' +
       '}',
     modify: 'Return the kth largest instead, without reversing either array — which probes move?',
+  },
+  {
+    step: 4,
+    name: "Find the row with maximum number of 1's",
+    difficulty: 'Medium',
+    topicSlug: SEARCH,
+    stem: 'Report the topmost row holding the most 1s, and read each row without counting its zeros.',
+    brief: 'Input: a matrix of 0s and 1s whose rows are sorted ascending. Output: the index of the row with the greatest number of 1s, or -1 when there are none.',
+    concepts: ['dsa-lower-bound', 'dsa-first-occurrence', 'dsa-complexity-counting'],
+    shortAnswer: 'One binary search per row for the first 1 turns its length minus that index into the count; keep the strict best.',
+    idealAnswer:
+      'A sorted binary row is fully described by the position of its first 1, so the count is the length minus that ' +
+      'index and costs a logarithm instead of the row. Walking the rows and keeping the running best gives the linear ' +
+      'number of searches times the logarithm of the width. Ties want a strict comparison, because the ask is the ' +
+      'topmost row, and an all-zero row is the same arithmetic returning zero rather than a special case.',
+    walkthrough:
+      'The lower bound is the whole technique, and writing it as a count-up loop is what the row is testing: the shape ' +
+      'stays O(rows times columns) and looks as though it were optimised. A strict better-than keeps the earliest row ' +
+      'when two tie, which is the convention the sheet expects and the one that silently flips if the comparison ' +
+      'becomes non-strict. The empty matrix falls out of the same code as -1 because no row ever beats a count of zero.',
+    commonMistake: 'Counting 1s by scanning each row, or using a greater-than-or-equal test for the best row.',
+    whyWrong:
+      'The scan forfeits the only property the input offers, and on a wide matrix it is the difference between a row ' +
+      'costing its logarithm and its length. A non-strict comparison answers with the last row among ties, which is a ' +
+      'wrong index on the first matrix where two rows match — the commonest shape a test fixture happens to have.',
+    followUps: ['What does the found index mean on a row of all zeros, and on a row of all ones?', 'Which comparison decides the tie, and what would the caller expect instead?', 'Can you beat rows times log columns when every row has the same length?'],
+    solution:
+      'function rowWithMostOnes(matrix) {\n' +
+      '  let best = -1;\n' +
+      '  let bestCount = 0;\n' +
+      '  for (let row = 0; row < matrix.length; row += 1) {\n' +
+      '    const cells = matrix[row];\n' +
+      '    let lo = 0;\n' +
+      '    let hi = cells.length;\n' +
+      '    while (lo < hi) {\n' +
+      '      const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '      if (cells[mid] === 1) hi = mid;\n' +
+      '      else lo = mid + 1;\n' +
+      '    }\n' +
+      '    const ones = cells.length - lo;\n' +
+      '    if (ones > bestCount) {\n' +
+      '      bestCount = ones;\n' +
+      '      best = row;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Return every row tied for the most 1s — does the strict comparison still cost anything?',
+  },
+  {
+    step: 4,
+    name: 'Search in a 2D Matrix',
+    difficulty: 'Medium',
+    topicSlug: SEARCH,
+    stem: 'Search a row-major matrix as one sorted sequence without copying it into memory.',
+    brief: 'Input: a matrix whose rows are sorted and whose first element exceeds the previous row last element, plus a target. Output: whether the target occurs.',
+    concepts: ['dsa-flattened-index-mapping', 'dsa-binary-search-window', 'dsa-boundary-conditions'],
+    shortAnswer: 'Halve the flat cell range and read each midpoint as row mid over columns, column mid modulo columns.',
+    idealAnswer:
+      'The stated ordering makes the cells one sorted sequence laid out in rows, so the window is the range of cell ' +
+      'numbers rather than an index into any array, and a midpoint becomes a pair of subscripts by division and ' +
+      'modulus. That is the whole trick: no flattening pass, no extra memory, and a logarithm in rows times columns. ' +
+      'The arithmetic depends on a rectangular matrix, which is the assumption worth stating before the code is read.',
+    walkthrough:
+      'Two search shapes are in play across this band and they are not interchangeable. Flattening with one index is ' +
+      'right only when the rows join into a single increasing sequence; the staircase row below is right when they do ' +
+      'not, and it costs the sum of the dimensions instead of their product under a logarithm. Getting the subscript ' +
+      'order backwards — dividing by the row count, say — is invisible on a square matrix and wrong on every other one, ' +
+      'so it is worth testing on a tall example.',
+    commonMistake: 'Materialising a flattened array first, or dividing the midpoint by the number of rows.',
+    whyWrong:
+      'The copy costs the size of the matrix in time and space to save nothing the search did not already have, and it ' +
+      'is the answer the row exists to avoid. Division by the row count gives subscripts outside the matrix on any ' +
+      'non-square input, and on a square one it walks the transpose, so a miss is reported as a hit only when the ' +
+      'target happens to sit symmetrically.',
+    followUps: ['Which property of the rows licenses a single window?', 'What does the mapping become for a column-major layout?', 'Why can the staircase search not be used on this input, and vice versa?'],
+    solution:
+      'function searchMatrix(matrix, target) {\n' +
+      '  if (matrix.length === 0 || matrix[0].length === 0) return false;\n' +
+      '  const cols = matrix[0].length;\n' +
+      '  let lo = 0;\n' +
+      '  let hi = matrix.length * cols - 1;\n' +
+      '  while (lo <= hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    const value = matrix[Math.floor(mid / cols)][mid % cols];\n' +
+      '    if (value === target) return true;\n' +
+      '    if (value < target) lo = mid + 1;\n' +
+      '    else hi = mid - 1;\n' +
+      '  }\n' +
+      '  return false;\n' +
+      '}',
+    modify: 'Return the cell coordinates instead of a boolean — which two lines change, and what do they answer when the target is absent?',
+  },
+  {
+    step: 4,
+    name: 'Search in a Row and Column-wise Sorted Matrix',
+    difficulty: 'Medium',
+    topicSlug: SEARCH,
+    stem: 'Search a matrix that is sorted along rows and columns but not across them, and account for the work you delete per step.',
+    brief: 'Input: a matrix increasing left to right and top to bottom, not necessarily row-major sorted. Output: whether a target occurs.',
+    concepts: ['dsa-saddle-descent', 'dsa-boundary-shrink', 'dsa-complexity-counting'],
+    shortAnswer: 'Walk from the top-right corner: a cell too big eliminates its column, a cell too small eliminates its row.',
+    idealAnswer:
+      'The top-right cell is the largest in its row and the smallest in its column, so it decides something: if it ' +
+      'exceeds the target then everything below it in that column does too and the column goes, and if it falls short ' +
+      'then everything left of it in that row does too and the row goes. Each step deletes a whole line and the walk ' +
+      'only ever moves down or left, so it terminates in at most the rows plus the columns steps with no recursion and ' +
+      'no extra memory.',
+    walkthrough:
+      'A corner where the two directions disagree is the only starting point that works, and that is why the top-right ' +
+      'or its mirror at the bottom-left is chosen: from the top-left a cell larger than the target says nothing, ' +
+      'because its neighbours are larger still and the smaller ones are behind it. The row-major search above cannot be ' +
+      'used here because a row boundary is not an ordering boundary in this input — the flattening form is the one that ' +
+      'silently returns a false negative.',
+    commonMistake: 'Flattening and halving as though the rows joined into one sequence, or starting from the top-left corner.',
+    whyWrong:
+      'A staircase matrix can have a later row starting below an earlier row ending, so the single window skips over ' +
+      'the target and reports absence with total confidence. From the top-left every comparison is between two larger ' +
+      'neighbours and neither direction can be eliminated, which turns the walk into a branching search over the whole ' +
+      'matrix.',
+    followUps: ['Why must the start be a corner rather than an edge midpoint?', 'Which two cells are symmetric choices and why?', 'Give the input where the walk takes its full rows-plus-columns steps.'],
+    solution:
+      'function searchSaddle(matrix, target) {\n' +
+      '  if (matrix.length === 0 || matrix[0].length === 0) return false;\n' +
+      '  let row = 0;\n' +
+      '  let col = matrix[0].length - 1;\n' +
+      '  while (row < matrix.length && col >= 0) {\n' +
+      '    const value = matrix[row][col];\n' +
+      '    if (value === target) return true;\n' +
+      '    if (value > target) col -= 1;\n' +
+      '    else row += 1;\n' +
+      '  }\n' +
+      '  return false;\n' +
+      '}',
+    modify: 'Count the occurrences of the target instead of reporting presence — which move becomes ambiguous, and how do you resolve it?',
+  },
+  {
+    step: 4,
+    name: 'Find Peak Element (2D Matrix)',
+    difficulty: 'Medium',
+    topicSlug: SEARCH,
+    stem: 'Return coordinates of any 2D peak by halving columns, and say why the greedy ascent is the fallback.',
+    brief: 'Input: a matrix with distinct adjacent values, whose outside is conceptually negative infinity. Output: the row and column of a cell greater than its four neighbours.',
+    concepts: ['dsa-column-extreme-climb', 'dsa-peak-gradient', 'dsa-search-exit-index'],
+    shortAnswer: 'Halve the columns, take the tallest cell in the middle one, and step toward whichever horizontal neighbour is larger.',
+    idealAnswer:
+      'Fixing the tallest cell of a column removes the vertical direction from the argument: whatever the row of that ' +
+      'cell is, it already beats both of its vertical neighbours. So the only comparison that can be declined is ' +
+      'horizontal, and the half holding the larger neighbour must contain a peak — a walk uphill from inside that half ' +
+      'can neither leave it nor run off the edge. Halving columns therefore keeps the invariant that an answer is in ' +
+      'the window, at the height of the matrix per step.',
+    walkthrough:
+      'The reason a peak exists at all is that an ascent from any cell strictly increases the value and cannot continue ' +
+      'forever, which is also why the greedy climb up and down works and costs the product instead. What makes the ' +
+      'column version correct is that the maximum of the final column beats every cell in it, so it only has to be ' +
+      'checked sideways — and the step that ended the loop already settled the remaining open side, which is why no ' +
+      'third comparison is needed. The distinctness of adjacent values is what keeps the answer unique enough to not ' +
+      'matter.',
+    commonMistake: 'Climbing to the first local maximum found by scanning, or comparing the middle cell of a column rather than its maximum.',
+    whyWrong:
+      'A scan finds a correct answer and forfeits the search entirely, which is the row. Choosing the middle cell of a ' +
+      'column leaves the vertical direction undecided, so the half you keep may have an edge cell taller than anything ' +
+      'inside it and the descent can leave the window — the case where the code returns a cell that is not a peak.',
+    followUps: ['Why does the column maximum make the vertical comparisons free?', 'Which side of the final column still needs checking, and why only one?', 'Give a matrix where the greedy climb stops far from the tallest peak.'],
+    solution:
+      'function peakInMatrix(matrix) {\n' +
+      '  const tallestIn = (col) => {\n' +
+      '    let bestRow = 0;\n' +
+      '    for (let row = 1; row < matrix.length; row += 1) {\n' +
+      '      if (matrix[row][col] > matrix[bestRow][col]) bestRow = row;\n' +
+      '    }\n' +
+      '    return bestRow;\n' +
+      '  };\n' +
+      '  let lo = 0;\n' +
+      '  let hi = matrix[0].length - 1;\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    const row = tallestIn(mid);\n' +
+      '    if (matrix[row][mid] < matrix[row][mid + 1]) lo = mid + 1;\n' +
+      '    else hi = mid;\n' +
+      '  }\n' +
+      '  return [tallestIn(lo), lo];\n' +
+      '}',
+    modify: 'Drop the distinctness assumption: what does the comparison do when the neighbour ties the column maximum?',
+  },
+  {
+    step: 4,
+    name: 'Matrix Median',
+    difficulty: 'Hard',
+    topicSlug: SEARCH,
+    stem: 'Find the median of a matrix of sorted rows by counting, and explain why no merge appears.',
+    brief: 'Input: a matrix with rows sorted ascending. Output: the element whose rank is the floor of half the cell count plus one.',
+    concepts: ['dsa-count-at-most', 'dsa-answer-range-search', 'dsa-upper-bound'],
+    shortAnswer: 'Halve the value range and count how many cells are at most the midpoint with one upper bound per row.',
+    idealAnswer:
+      'The median is the smallest value with at least the middle rank of cells at or below it, and that predicate is ' +
+      'monotone in the value, so the window is the range between the matrix minima and maxima rather than any index. A ' +
+      'sorted row contributes its upper bound count in a logarithm, making the check cost the rows times that ' +
+      'logarithm and the whole search the width of the value range in halvings on top — no merge, and nothing built in ' +
+      'proportion to the cell count beyond the input itself.',
+    walkthrough:
+      'Counting replaces ordering: the question is how many cells a candidate beats, not where they sit, and a rank ' +
+      'question over sorted runs always answers that way. The bounds of the window are read from the rows rather than ' +
+      'invented, which is the same discipline as the rate problems — and the rank is stated as at-least rather than ' +
+      'exactly-equal, because a value repeated across the matrix makes an equality target unsatisfiable and the search ' +
+      'would run off the range.',
+    commonMistake: 'Merging all rows to take the middle, or searching for the value whose count equals the rank.',
+    whyWrong:
+      'The merge costs the cell count in time and again in space, and the row order is exactly the structure that makes ' +
+      'counting cheap. An equality predicate is skipped entirely by any repeated value, so the window closes past the ' +
+      'answer and the search returns a boundary that is not even a cell of the matrix.',
+    followUps: ['Why is the predicate at-least rather than equal?', 'What are the two legal bounds of the value window, and where do they come from?', 'Cost this against the heap form that returns the k smallest.'],
+    solution:
+      'function matrixMedian(matrix) {\n' +
+      '  let lo = Infinity;\n' +
+      '  let hi = -Infinity;\n' +
+      '  for (const cells of matrix) {\n' +
+      '    if (cells[0] < lo) lo = cells[0];\n' +
+      '    if (cells[cells.length - 1] > hi) hi = cells[cells.length - 1];\n' +
+      '  }\n' +
+      '  const total = matrix.length * matrix[0].length;\n' +
+      '  const target = Math.floor(total / 2) + 1;\n' +
+      '  const atMost = (value, cells) => {\n' +
+      '    let left = 0;\n' +
+      '    let right = cells.length;\n' +
+      '    while (left < right) {\n' +
+      '      const mid = left + Math.floor((right - left) / 2);\n' +
+      '      if (cells[mid] <= value) left = mid + 1;\n' +
+      '      else right = mid;\n' +
+      '    }\n' +
+      '    return left;\n' +
+      '  };\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    let count = 0;\n' +
+      '    for (const cells of matrix) count += atMost(mid, cells);\n' +
+      '    if (count >= target) hi = mid;\n' +
+      '    else lo = mid + 1;\n' +
+      '  }\n' +
+      '  return lo;\n' +
+      '}',
+    modify: 'Return the kth smallest for any k rather than the median — which single number becomes an argument?',
   },
 ];
 
