@@ -199,6 +199,22 @@ const EXPECTS: Record<string, string> = {
     'kthMissing([2, 3, 4, 7, 11], 5) === 9 && kthMissing([1, 2, 3, 4], 2) === 6 && kthMissing([2], 1) === 1 && kthMissing([], 5) === 5 && kthMissing([5], 1) === 1 && kthMissing([1, 2], 3) === 5',
   'Find Kth missing positive number':
     'kthMissingLinear([2, 3, 4, 7, 11], 5) === 9 && kthMissingLinear([1, 2, 3, 4], 2) === 6 && kthMissingLinear([2], 1) === 1 && kthMissingLinear([], 5) === 5 && kthMissingLinear([1, 2], 3) === 5',
+  'Aggressive Cows':
+    'aggressiveCows([1, 2, 4, 8, 9], 3) === 3 && aggressiveCows([1, 2, 3, 4, 5], 2) === 4 && aggressiveCows([4, 2, 1, 9, 6], 3) === 3 && aggressiveCows([6, 10, 2, 4, 8, 12], 3) === 4 && aggressiveCows([1, 5], 2) === 4 && aggressiveCows([3], 1) === 0 && aggressiveCows([1, 2], 3) === 0',
+  'Book Allocation Problem':
+    'allocateBooks([12, 34, 67, 90], 2) === 113 && allocateBooks([25, 10, 35, 16, 72], 3) === 72 && allocateBooks([10, 20], 3) === -1 && allocateBooks([100], 1) === 100 && allocateBooks([10, 20, 30], 3) === 30',
+  'Split Array - Largest Sum':
+    'splitArray([7, 2, 5, 10, 8], 2) === 18 && splitArray([1, 2, 3, 4, 5], 3) === 6 && splitArray([1, 2, 3, 4, 5], 2) === 9 && splitArray([2, 1, 5, 6, 2, 3], 2) === 11 && splitArray([5], 1) === 5',
+  "Painter's Partition Problem":
+    'painterMinutes([10, 20, 30, 40], 2) === 60 && painterMinutes([5, 5, 5, 5], 3) === 10 && painterMinutes([1, 2, 3, 4, 5], 3) === 6 && painterMinutes([7, 2, 5, 10, 8], 2) === 18 && painterMinutes([4, -1, 4], 2) === 4',
+  'Minimize Max Distance to Gas Station':
+    'Math.abs(minMaxDistance([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 1) - 1) < 1e-6 && Math.abs(minMaxDistance([3, 6, 14, 1, 18, 5, 12, 10], 9) - 4 / 3) < 1e-6 && Math.abs(minMaxDistance([1, 10], 8) - 1) < 1e-6 && Math.abs(minMaxDistance([1, 10], 9) - 0.9) < 1e-6 && Math.abs(minMaxDistance([1, 2, 3, 4, 5, 6], 0) - 1) < 1e-6',
+  'Median of 2 Sorted Arrays of Different Sizes':
+    'medianOfTwo([1, 3], [2]) === 2 && medianOfTwo([1, 2], [3, 4]) === 2.5 && medianOfTwo([], [1]) === 1 && medianOfTwo([2], []) === 2 && medianOfTwo([-5, 3, 6, 12, 15], [-12, -10, -6, -3, 4, 10]) === 3 && medianOfTwo([1, 2, 3], [4, 5, 6, 7]) === 4 && medianOfTwo([1, 1, 1], [1, 1]) === 1',
+  'Median of two sorted arrays of different sizes':
+    'medianByMergeWalk([1, 3], [2]) === 2 && medianByMergeWalk([1, 2], [3, 4]) === 2.5 && medianByMergeWalk([], [1]) === 1 && medianByMergeWalk([2], []) === 2 && medianByMergeWalk([-5, 3, 6, 12, 15], [-12, -10, -6, -3, 4, 10]) === 3 && medianByMergeWalk([1, 2, 3], [4, 5, 6, 7]) === 4',
+  'Kth Element of two sorted arrays':
+    'kthInTwo([2, 3, 6, 7, 9], [1, 4, 8, 10], 5) === 6 && kthInTwo([1, 2, 3], [4, 5, 6], 1) === 1 && kthInTwo([1, 2, 3], [4, 5, 6], 6) === 6 && kthInTwo([1, 3, 5], [2, 4, 6], 4) === 4 && kthInTwo([], [1], 1) === 1 && kthInTwo([7], [1, 2, 3], 2) === 2 && kthInTwo([1, 1, 1], [1, 1], 4) === 1',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */

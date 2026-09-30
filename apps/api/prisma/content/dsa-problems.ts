@@ -567,6 +567,41 @@ export const DSA_CONCEPTS = {
     terms: ['missing count', 'value minus index', 'deficit', 'gap before', 'falls behind'],
     weight: 2,
   },
+  'dsa-partition-count': {
+    slug: 'dsa-partition-count',
+    name: 'A cap fixes how few groups the sequence needs',
+    detail: 'Fill each group greedily until the next item would overflow it: for an ordered sequence of non-negative values that count is the minimum the cap allows, so it doubles as the feasibility predicate.',
+    terms: ['greedy fill', 'overflow', 'number of groups', 'contiguous partition', 'at most the cap'],
+    weight: 3,
+  },
+  'dsa-maximise-minimum': {
+    slug: 'dsa-maximise-minimum',
+    name: 'Maximising a minimum reads the predicate from the other end',
+    detail: 'Spacing, bandwidth and load questions are monotone too, but the answer is the largest feasible value, so the window closes from the opposite side.',
+    terms: ['largest feasible', 'maximise the minimum', 'opposite direction', 'keep the last true', 'place greedily'],
+    weight: 3,
+  },
+  'dsa-real-valued-bisection': {
+    slug: 'dsa-real-valued-bisection',
+    name: 'A real answer is bisected to a tolerance, not to an index',
+    detail: 'Nothing is discrete to stop on, so the loop runs a fixed number of halvings and the invariant is a window narrow enough to round.',
+    terms: ['fixed iterations', 'tolerance', 'precision', 'window width', 'floating point'],
+    weight: 3,
+  },
+  'dsa-split-invariant': {
+    slug: 'dsa-split-invariant',
+    name: 'A median is a split, not a scan',
+    detail: 'Cutting two sorted arrays so the left halves together hold the lower middle and every left element is at most every right element; the split of one array decides the other.',
+    terms: ['partition', 'left max', 'right min', 'equal halves', 'one search decides both'],
+    weight: 3,
+  },
+  'dsa-k-elimination': {
+    slug: 'dsa-k-elimination',
+    name: 'Discard a settled prefix of one sequence per step',
+    detail: 'Probe half the remaining rank in each array; the smaller probe proves its whole prefix cannot contain the answer, so it leaves the window.',
+    terms: ['probe', 'drop half', 'kth smallest', 'rank', 'discard'],
+    weight: 2,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -5168,6 +5203,444 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return previous + k;\n' +
       '}',
     modify: 'Stream the values from a cursor instead of an array and keep the answer correct at the end of the stream.',
+  },
+  {
+    step: 4,
+    name: 'Aggressive Cows',
+    difficulty: 'Hard',
+    topicSlug: SPACE,
+    stem: 'Place the cows so the closest pair is as far apart as possible, and say which way the predicate points.',
+    brief: 'Input: stall positions on a line and a cow count. Output: the largest minimum distance achievable when every cow occupies its own stall.',
+    concepts: ['dsa-maximise-minimum', 'dsa-feasibility-scan', 'dsa-answer-range-search'],
+    shortAnswer: 'Halve the spacing: a distance is feasible when a greedy left-to-right placement fits every cow, and feasibility only dies as it grows.',
+    idealAnswer:
+      'Sorting first turns the stalls into positions, and then the question is about a number rather than an index: the ' +
+      'window runs from one spacing to the whole spread, because nothing wider than the endpoints is reachable. A ' +
+      'spacing is feasible if walking the stalls and taking a cow whenever the gap since the last one clears the spacing ' +
+      'seats them all. That predicate is monotone in the direction that matters — if a spacing works, every smaller one ' +
+      'works — so the answer is the last feasible one, found in O(n log of the spread) after the sort.',
+    walkthrough:
+      'The row is the mirror image of the minimise-the-maximum family, and the place learners break it is the direction ' +
+      'of the window. Here the true answers form a prefix of the range, so a feasible midpoint is recorded as the best ' +
+      'so far and the search moves right; the capacity problems had their true answers as a suffix, so they moved left. ' +
+      'The greedy placement is correct because taking the leftmost legal stall never costs anything: any solution that ' +
+      'skips it can be shifted left without reducing any gap, so the count the scan returns is the most cows that ' +
+      'spacing admits.',
+    commonMistake: 'Searching the stall indices instead of the distance, or moving the window left on a feasible midpoint.',
+    whyWrong:
+      'An index window answers a different question — there is no position in the array holding the spacing — and the ' +
+      'search then has nothing to compare against. Closing the window on success is the direction mistake that survives ' +
+      'a hand check on a symmetric example and fails everything else: it converges on the smallest feasible spacing, ' +
+      'which is one whenever the stalls are integers.',
+    followUps: ['Why is the full spread a legal upper bound?', 'Which way do the true answers run, and how would you show it to someone who disagrees?', 'What changes if the stalls are already sorted, and what does that cost the row?'],
+    solution:
+      'function aggressiveCows(stalls, cows) {\n' +
+      '  const a = [...stalls].sort((x, y) => x - y);\n' +
+      '  const fits = (gap) => {\n' +
+      '    let placed = 1;\n' +
+      '    let last = a[0];\n' +
+      '    for (let i = 1; i < a.length; i += 1) {\n' +
+      '      if (a[i] - last >= gap) {\n' +
+      '        placed += 1;\n' +
+      '        last = a[i];\n' +
+      '      }\n' +
+      '    }\n' +
+      '    return placed >= cows;\n' +
+      '  };\n' +
+      '  let lo = 1;\n' +
+      '  let hi = a[a.length - 1] - a[0];\n' +
+      '  let best = 0;\n' +
+      '  while (lo <= hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (fits(mid)) {\n' +
+      '      best = mid;\n' +
+      '      lo = mid + 1;\n' +
+      '    } else {\n' +
+      '      hi = mid - 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Return the placement itself, not the spacing — how much of the scan has to survive into the answer?',
+  },
+  {
+    step: 4,
+    name: 'Book Allocation Problem',
+    difficulty: 'Hard',
+    topicSlug: SPACE,
+    stem: 'Find the smallest page load a student can be held to, and check feasibility without rescanning the books.',
+    brief: 'Input: page counts of books in shelf order and a student count. Output: the least maximum any one student can be given over a contiguous allocation, or -1 when there are more students than books.',
+    concepts: ['dsa-partition-count', 'dsa-prefix-sum', 'dsa-upper-bound'],
+    shortAnswer: 'Halve the page cap and count the students it needs by jumping each one to their last affordable book with a binary search over the prefix sums.',
+    idealAnswer:
+      'The cap cannot be below the largest single book and cannot need more than the whole shelf, so those two numbers ' +
+      'bracket the answer. For a cap, the fewest students is found by repeatedly taking the furthest book the current '
+      + 'student can hold, which is a search over the running totals rather than a scan: prefix sums make the jump ' +
+      'logarithmic, so the count costs the number of students times that logarithm instead of the shelf length. The ' +
+      'predicate is monotone because a larger cap can never force an extra hand-over, and the impossible case is the ' +
+      'arithmetic check up front — fewer books than students leaves someone empty-handed.',
+    walkthrough:
+      'This is the same objective as the shipping and eating rows, chosen to be solved a second way: once the prefix ' +
+      'sums exist, the feasibility check is no longer obliged to read every book, which is the difference between an ' +
+      'answer that scales when the shelf is fixed and the cap is queried a thousand times and one that does not. The ' +
+      'jump search has to be written as a search for the last affordable position, not the first unaffordable one, and ' +
+      'that is where the boundary work is. Its lower bound is the student must always take at least one book, which ' +
+      'holds precisely because the window starts at the largest single value.',
+    commonMistake: 'Counting students by scanning the shelf inside every midpoint, or letting the jump land on the current book.',
+    whyWrong:
+      'The scan is correct but throws away the only reason to write this variant, and turns a per-query cost of the ' +
+      'students into one of the shelf. A jump that can land where it started makes the outer loop never finish: that ' +
+      'is what the lower bound at the largest book is guarding, and reading the search without the guard hides it.',
+    followUps: ['Which two bounds does the cap live between, and what breaks outside them?', 'Why does a jump always move strictly forward?', 'Give the input where the prefix-sum form beats the scan by the largest factor.'],
+    solution:
+      'function allocateBooks(pages, students) {\n' +
+      '  if (students > pages.length) return -1;\n' +
+      '  const prefix = [0];\n' +
+      '  for (const page of pages) prefix.push(prefix[prefix.length - 1] + page);\n' +
+      '  const last = pages.length;\n' +
+      '  const needed = (cap) => {\n' +
+      '    let index = 0;\n' +
+      '    let count = 0;\n' +
+      '    while (index < last) {\n' +
+      '      let lo = index + 1;\n' +
+      '      let hi = last;\n' +
+      '      while (lo < hi) {\n' +
+      '        const mid = lo + Math.ceil((hi - lo) / 2);\n' +
+      '        if (prefix[mid] - prefix[index] <= cap) lo = mid;\n' +
+      '        else hi = mid - 1;\n' +
+      '      }\n' +
+      '      index = lo;\n' +
+      '      count += 1;\n' +
+      '      if (count > students) return count;\n' +
+      '    }\n' +
+      '    return count;\n' +
+      '  };\n' +
+      '  let lo = Math.max(...pages);\n' +
+      '  let hi = prefix[last];\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (needed(mid) <= students) hi = mid;\n' +
+      '    else lo = mid + 1;\n' +
+      '  }\n' +
+      '  return lo;\n' +
+      '}',
+    modify: 'Report the split points as book indices — which pass do you rerun once, and over what?',
+  },
+  {
+    step: 4,
+    name: 'Split Array - Largest Sum',
+    difficulty: 'Hard',
+    topicSlug: SPACE,
+    stem: 'Prove that filling each part to its cap is the fewest parts that cap allows.',
+    brief: 'Input: an array of non-negative integers and a part count. Output: the smallest possible largest part sum when the array is cut into that many contiguous parts.',
+    concepts: ['dsa-partition-count', 'dsa-answer-range-search', 'dsa-minimize-maximum'],
+    shortAnswer: 'Halve the cap, count the parts a greedy fill needs, and take the first cap the count fits inside.',
+    idealAnswer:
+      'A cap below the largest element cannot be satisfied and the total needs only one part, so the answer lives ' +
+      'between them. For a fixed cap the greedy scan that keeps loading until the next element would overflow produces ' +
+      'the fewest parts that cap permits, because the order is fixed and no legal cut can start a part earlier than the ' +
+      'greedy one without leaving more for its successor. The needed count never rises as the cap grows, so the first ' +
+      'cap admitting the part limit is the answer, at linear work per halving.',
+    walkthrough:
+      'The exchange argument is the graded part of this row, not the loop. Suppose an optimal loading closes a part ' +
+      'before the greedy one does; moving that boundary rightward cannot increase either side beyond the cap, so the ' +
+      'greedy boundary is at least as good and the count it reports is minimal. Once that is settled the outer search ' +
+      'is routine, which is why the row is worth doing exactly once: it is the shape underneath the books, the painters ' +
+      'and the shipping machines, and each of those only renames the parts.',
+    commonMistake: 'Searching for the cut positions directly, or starting the cap at the average part sum.',
+    whyWrong:
+      'Cut positions are not monotone in a way a window can exploit, so the search has no predicate to halve on and ' +
+      'collapses into enumerating combinations. The average is not a lower bound on the maximum — a single element can ' +
+      'tower over it — and starting there returns caps that cannot hold the array at all.',
+    followUps: ['State the exchange step in one sentence. Which property of the input does it need?', 'What does the answer become when the part count equals the length?', 'Where would the argument fail if negative values were allowed?'],
+    solution:
+      'function splitArray(nums, parts) {\n' +
+      '  const needed = (cap) => {\n' +
+      '    let count = 1;\n' +
+      '    let load = 0;\n' +
+      '    for (const value of nums) {\n' +
+      '      if (load + value > cap) {\n' +
+      '        count += 1;\n' +
+      '        load = 0;\n' +
+      '      }\n' +
+      '      load += value;\n' +
+      '    }\n' +
+      '    return count;\n' +
+      '  };\n' +
+      '  let lo = Math.max(...nums);\n' +
+      '  let hi = nums.reduce((total, value) => total + value, 0);\n' +
+      '  while (lo < hi) {\n' +
+      '    const mid = lo + Math.floor((hi - lo) / 2);\n' +
+      '    if (needed(mid) <= parts) hi = mid;\n' +
+      '    else lo = mid + 1;\n' +
+      '  }\n' +
+      '  return lo;\n' +
+      '}',
+    modify: 'Return one optimal set of cut indices and show the greedy scan that produced them.',
+  },
+  {
+    step: 4,
+    name: "Painter's Partition Problem",
+    difficulty: 'Hard',
+    topicSlug: SPACE,
+    stem: 'Solve the partition objective by search over cut points, and name the input the monotone predicate cannot handle.',
+    brief: 'Input: board lengths and a painter count, each painter taking a contiguous run and at least one board. Output: the minimum makespan, i.e. the largest total any painter carries.',
+    concepts: ['dsa-divide-and-conquer', 'dsa-partition-count', 'dsa-memoization'],
+    shortAnswer: 'Enumerate where the first painter stops and recurse on the rest, keeping the best worst-case; the memo turns the exponential tree into painters times cut points.',
+    idealAnswer:
+      'The first painter can stop anywhere from the first board to the position leaving one board per remaining painter, ' +
+      'and for each stop the makespan is the larger of their load and the optimal makespan of the rest. That is a ' +
+      'recurrence over a start position and a painter count with painters times length states and length transitions, ' +
+      'so the memo form costs the product of those — comfortably more than the search on the cap, which is the right ' +
+      'answer here. It is worth writing because it stays correct when the values stop being non-negative, and the ' +
+      'greedy count that licenses the search is exactly the part that fails then.',
+    walkthrough:
+      'Two answers to one objective, and the difference is what each assumes. The search assumes that a bigger cap can ' +
+      'never need more painters, which is true while a running load only grows; a negative board breaks the monotone ' +
+      'fill, so the search returns a confident number that no assignment realises. The recurrence assumes nothing about ' +
+      'sign, only that the last decision is where to cut, and pays for that generality with a factor of the length. ' +
+      'Naming the assumption is the point of the row: it is the same distinction as between a prefix-sum trick that ' +
+      'needs positivity and a segment tree that does not.',
+    commonMistake: 'Cutting only between whole painters, or trusting the greedy search on boards that can be negative.',
+    whyWrong:
+      'Fixing whole painters at a time is a different, wrong problem: painters are indistinguishable but their runs are ' +
+      'not, so the cut position is the state. Reusing the cap search on signed values keeps a predicate that no longer ' +
+      'holds, and the failure is silent because the loop still terminates and still prints a number.',
+    followUps: ['What is the state, and what is the transition?', 'Which assumption of the greedy fill does a negative board break?', 'Cost the memo form against the search and say when you would still choose the search.'],
+    solution:
+      'function painterMinutes(boards, painters) {\n' +
+      '  const n = boards.length;\n' +
+      '  const suffix = new Array(n + 1).fill(0);\n' +
+      '  for (let i = n - 1; i >= 0; i -= 1) suffix[i] = suffix[i + 1] + boards[i];\n' +
+      '  const memo = new Map();\n' +
+      '  const solve = (start, people) => {\n' +
+      '    if (people === 1) return suffix[start];\n' +
+      '    if (n - start <= people) {\n' +
+      '      let alone = boards[start];\n' +
+      '      for (let i = start; i < n; i += 1) alone = Math.max(alone, boards[i]);\n' +
+      '      return alone;\n' +
+      '    }\n' +
+      '    const key = start + ":" + people;\n' +
+      '    if (memo.has(key)) return memo.get(key);\n' +
+      '    let best = Infinity;\n' +
+      '    let load = 0;\n' +
+      '    for (let i = start; i <= n - people; i += 1) {\n' +
+      '      load += boards[i];\n' +
+      '      const rest = solve(i + 1, people - 1);\n' +
+      '      best = Math.min(best, Math.max(load, rest));\n' +
+      '    }\n' +
+      '    memo.set(key, best);\n' +
+      '    return best;\n' +
+      '  };\n' +
+      '  return solve(0, painters);\n' +
+      '}',
+    modify: 'Add a fourth painter without changing the boards: does the makespan drop, and by how much at most?',
+  },
+  {
+    step: 4,
+    name: 'Minimize Max Distance to Gas Station',
+    difficulty: 'Hard',
+    topicSlug: SPACE,
+    stem: 'Bisect a real distance to a tolerance and count the stations each gap demands.',
+    brief: 'Input: station positions on a highway and a budget of new stations. Output: the smallest achievable largest distance between neighbours, as a real number.',
+    concepts: ['dsa-real-valued-bisection', 'dsa-answer-range-search', 'dsa-minimize-maximum'],
+    shortAnswer: 'Halve the distance until the window is negligible; a distance is feasible when the stations every gap demands sum to at most the budget.',
+    idealAnswer:
+      'A gap of length L split into pieces of at most d costs the ceiling of L over d minus one new stations, which is ' +
+      'the whole feasibility check and is monotone: a wider allowed distance never asks for more stations. The answer is ' +
+      'a real number, so there is no index to exit on — the window runs from zero to the largest existing gap and the ' +
+      'loop is given a fixed iteration budget sized so that the remaining width cannot change the rounded output.',
+    walkthrough:
+      'Nothing here is an integer, and that changes two habits at once. The stopping rule is arithmetic rather than a ' +
+      'comparison of lo and hi, because the loop would otherwise run until the doubles stopped being distinguishable; ' +
+      'sixty halvings of a range of one hundred million is well inside the exact window and cheaper than reasoning ' +
+      'about an epsilon. And the returned value is the upper edge of the final window, never the midpoint, because the ' +
+      'upper edge is the side known to be feasible.',
+    commonMistake: 'Looping while the window is wider than a tolerance, or charging a fractional station per gap.',
+    whyWrong:
+      'A tolerance test on the window is fine in principle and fiddly in practice: the bound has to be smaller than the ' +
+      'precision the caller reads, and getting it wrong is a silent truncation of the answer. Rounding the demand down ' +
+      'instead of taking the ceiling calls gaps feasible that the budget cannot actually cover, so the search reports a ' +
+      'distance too small to build.',
+    followUps: ['Why is the largest existing gap the whole upper bound?', 'Which edge of the final window do you return, and why that one?', 'Give the heap-based alternative and cost it against this search.'],
+    solution:
+      'function minMaxDistance(stations, budget) {\n' +
+      '  const a = [...stations].sort((x, y) => x - y);\n' +
+      '  const gaps = [];\n' +
+      '  let hi = 0;\n' +
+      '  for (let i = 1; i < a.length; i += 1) {\n' +
+      '    const gap = a[i] - a[i - 1];\n' +
+      '    gaps.push(gap);\n' +
+      '    if (gap > hi) hi = gap;\n' +
+      '  }\n' +
+      '  const demanded = (distance) => {\n' +
+      '    let count = 0;\n' +
+      '    for (const gap of gaps) count += Math.ceil(gap / distance) - 1;\n' +
+      '    return count;\n' +
+      '  };\n' +
+      '  let lo = 0;\n' +
+      '  for (let step = 0; step < 60; step += 1) {\n' +
+      '    const mid = (lo + hi) / 2;\n' +
+      '    if (demanded(mid) <= budget) hi = mid;\n' +
+      '    else lo = mid;\n' +
+      '  }\n' +
+      '  return hi;\n' +
+      '}',
+    modify: 'Return the positions of the new stations for the chosen distance — which part of the check becomes a generator?',
+  },
+  {
+    step: 4,
+    name: 'Median of 2 Sorted Arrays of Different Sizes',
+    difficulty: 'Hard',
+    topicSlug: SPACE,
+    stem: 'Cut the shorter array so the two left halves are the lower median, and search only one of them.',
+    brief: 'Input: two sorted arrays of different lengths. Output: the median of the union, in logarithmic time in the shorter array.',
+    concepts: ['dsa-split-invariant', 'dsa-answer-range-search', 'dsa-boundary-conditions'],
+    shortAnswer: 'Binary search the split point of the shorter array; the other split follows, and the split is right when the left maxima do not exceed the right minima.',
+    idealAnswer:
+      'A median is a partition of the merged sequence into a lower half and an upper half of matching size, so it is ' +
+      'enough to choose how many elements the first array contributes to the lower half — the second then contributes ' +
+      'the remainder, which is why only one array is searched. Searching the shorter one keeps the window logarithmic ' +
+      'in min of the two lengths, and it is what lets the partner index stay inside bounds. The test on a candidate ' +
+      'split is two comparisons between the boundary elements, with infinities standing in for the ends of a half that ' +
+      'a split leaves empty.',
+    walkthrough:
+      'The halves are correct as soon as every element on the left is at most every element on the right, and since each ' +
+      'array is sorted that reduces to the two cross comparisons — which is why the row has an answer at all rather ' +
+      'than needing a merge. Reading the split as a count instead of an index is the step people cannot justify: an ' +
+      'empty left half is legal and has no last element, hence the sentinels, and the parity of the total decides ' +
+      'whether the second-largest left element is also needed.',
+    commonMistake: 'Searching the longer array, or treating the split as an element index rather than a count.',
+    whyWrong:
+      'Searching the longer array costs a logarithm in the wrong operand and, worse, can ask the shorter one for a ' +
+      'partner index outside its bounds, which is the crash rather than a slow answer. An index-shaped split cannot ' +
+      'represent contributing nothing, and the case where the answer lies entirely in one array is exactly the one that ' +
+      'then reads off the end.',
+    followUps: ['Why does one comparison per side prove the whole partition?', 'What do the sentinels stand for, and which two splits need them?', 'Adapt the same search to the kth smallest element: what changes in the target half-size?'],
+    solution:
+      'function medianOfTwo(a, b) {\n' +
+      '  if (a.length > b.length) return medianOfTwo(b, a);\n' +
+      '  const n = a.length;\n' +
+      '  const m = b.length;\n' +
+      '  const half = Math.floor((n + m + 1) / 2);\n' +
+      '  let lo = 0;\n' +
+      '  let hi = n;\n' +
+      '  while (lo <= hi) {\n' +
+      '    const i = lo + Math.floor((hi - lo) / 2);\n' +
+      '    const j = half - i;\n' +
+      '    const leftA = i === 0 ? -Infinity : a[i - 1];\n' +
+      '    const rightA = i === n ? Infinity : a[i];\n' +
+      '    const leftB = j === 0 ? -Infinity : b[j - 1];\n' +
+      '    const rightB = j === m ? Infinity : b[j];\n' +
+      '    if (leftA <= rightB && leftB <= rightA) {\n' +
+      '      if ((n + m) % 2 === 1) return Math.max(leftA, leftB);\n' +
+      '      return (Math.max(leftA, leftB) + Math.min(rightA, rightB)) / 2;\n' +
+      '    }\n' +
+      '    if (leftA > rightB) hi = i - 1;\n' +
+      '    else lo = i + 1;\n' +
+      '  }\n' +
+      '  return NaN;\n' +
+      '}',
+    modify: 'Return the kth smallest instead of the median — which single line carries the change?',
+  },
+  {
+    step: 4,
+    name: 'Median of two sorted arrays of different sizes',
+    difficulty: 'Hard',
+    topicSlug: SPACE,
+    stem: 'Get the same median by walking the merge, and say what the search form was buying.',
+    brief: 'Input: two sorted arrays, at least one non-empty. Output: their median, computed by a single linear walk without building the merged array.',
+    concepts: ['dsa-sorted-merge', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer: 'Advance the merge only as far as the middle, keeping the previous element so an even total can average the pair.',
+    idealAnswer:
+      'The median sits at one or two positions in the merged order, so walking the merge to that depth answers the ' +
+      'question in linear time and constant space, with no array ever built. The carrying detail is that an even total ' +
+      'needs the element before the middle as well, which is why the loop runs to the middle index inclusive and holds ' +
+      'both values. Exhausting one array is not a special case in this shape: the comparison falls through to whichever ' +
+      'array still has elements, so the shorter one never needs a sentinel.',
+    walkthrough:
+      'The pair of rows exists because the two answers trade different things. The partition search costs a logarithm ' +
+      'in the shorter array and demands the split reasoning; the walk costs the sum of the lengths and is correct in a ' +
+      'dozen lines that a reviewer can read once. On two arrays of a few thousand elements the walk is the better ' +
+      'engineering answer, and on two arrays of a hundred million it is not, which is the whole of the argument. The ' +
+      'walk also generalises to inputs that arrive as iterators, where random access — and with it the search — is not ' +
+      'available at all.',
+    commonMistake: 'Materialising the merged array to index the middle, or stopping one step early on an even total.',
+    whyWrong:
+      'Building the merge costs the total length in memory to answer a question about two elements, forfeiting the only ' +
+      'advantage this form has over the naive sort. Stopping at the middle index alone leaves the previous element ' +
+      'unset and reports the upper middle as the median, which is off by half a step on exactly the inputs where the ' +
+      'total is even.',
+    followUps: ['What does the walk cost that the search does not?', 'Which input shapes make the linear form the right engineering call?', 'Extend it to the lower and upper medians separately: how much of the loop changes?'],
+    solution:
+      'function medianByMergeWalk(a, b) {\n' +
+      '  const total = a.length + b.length;\n' +
+      '  const target = Math.floor(total / 2);\n' +
+      '  let i = 0;\n' +
+      '  let j = 0;\n' +
+      '  let previous = 0;\n' +
+      '  let current = 0;\n' +
+      '  for (let step = 0; step <= target; step += 1) {\n' +
+      '    previous = current;\n' +
+      '    if (i < a.length && (j >= b.length || a[i] <= b[j])) {\n' +
+      '      current = a[i];\n' +
+      '      i += 1;\n' +
+      '    } else {\n' +
+      '      current = b[j];\n' +
+      '      j += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return total % 2 === 1 ? current : (previous + current) / 2;\n' +
+      '}',
+    modify: 'Make it answer the kth smallest for many k values in one pass — what do you keep between queries?',
+  },
+  {
+    step: 4,
+    name: 'Kth Element of two sorted arrays',
+    difficulty: 'Medium',
+    topicSlug: SPACE,
+    stem: 'Find the kth smallest across two sorted arrays by discarding half the remaining rank at a time.',
+    brief: 'Input: two sorted arrays and a k between one and their combined length. Output: the kth smallest element of the union, counted with multiplicity.',
+    concepts: ['dsa-k-elimination', 'dsa-answer-range-search', 'dsa-boundary-conditions'],
+    shortAnswer: 'Probe half of k in each array and discard the smaller probe side: its whole prefix is too small to be the answer.',
+    idealAnswer:
+      'Compare the elements sitting half the remaining rank into each array. Everything up to and including the smaller ' +
+      'of the two probes is beaten by at least that many elements on the other side, so it cannot reach the kth place ' +
+      'and leaves the window along with the same count of rank. Each step halves what is left of k, so the walk costs a ' +
+      'logarithm, and an exhausted array is answered directly rather than by padding it with sentinels.',
+    walkthrough:
+      'The elimination is the general shape behind finding the kth of several sorted sequences, which is why it is ' +
+      'worth separating from the median split: the split argument needs the total half-size and this one only needs ' +
+      'that the discarded prefix is short. Clamping the probe to the end of a short array is the boundary that decides ' +
+      'whether the code is correct — probing past the end has to be read as an element larger than anything available, ' +
+      'which sends the step to the other array, and both probes cannot be out of range at once because the remaining ' +
+      'elements still have to cover the rank being asked for.',
+    commonMistake: 'Discarding from both arrays each step, or comparing only the heads of the two arrays.',
+    whyWrong:
+      'Removing from both halves the rank twice as fast as the elements justify, so the answer is overshot by the ' +
+      'difference and the bug grows with k. A head-to-head comparison is the merge one element at a time: correct, and ' +
+      'charged at the rank rather than its logarithm, which is the cost the row exists to avoid.',
+    followUps: ['Why can both probes never be out of range?', 'What is the invariant linking left and the unexplored tails?', 'Give the version for m sorted arrays and cost it.'],
+    solution:
+      'function kthInTwo(a, b, k) {\n' +
+      '  let i = 0;\n' +
+      '  let j = 0;\n' +
+      '  let left = k;\n' +
+      '  for (;;) {\n' +
+      '    if (i >= a.length) return b[j + left - 1];\n' +
+      '    if (j >= b.length) return a[i + left - 1];\n' +
+      '    if (left === 1) return Math.min(a[i], b[j]);\n' +
+      '    const half = Math.floor(left / 2);\n' +
+      '    const aProbe = i + half - 1;\n' +
+      '    const bProbe = j + half - 1;\n' +
+      '    const aVal = aProbe < a.length ? a[aProbe] : Infinity;\n' +
+      '    const bVal = bProbe < b.length ? b[bProbe] : Infinity;\n' +
+      '    if (aVal <= bVal) i += half;\n' +
+      '    else j += half;\n' +
+      '    left -= half;\n' +
+      '  }\n' +
+      '}',
+    modify: 'Return the kth largest instead, without reversing either array — which probes move?',
   },
 ];
 
