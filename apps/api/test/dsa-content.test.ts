@@ -257,6 +257,24 @@ const EXPECTS: Record<string, string> = {
     'longestPalindrome("babad") === "bab" && longestPalindrome("cbbd") === "bb" && longestPalindrome("a") === "a" && longestPalindrome("") === "" && longestPalindrome("racecar") === "racecar" && longestPalindrome("abba") === "abba" && longestPalindrome("aacabdkacaa") === "aca"',
   'Sum of Beauty of all Substrings':
     'beautySum("aabcb") === 5 && beautySum("aabb") === 2 && beautySum("abcd") === 0 && beautySum("aaa") === 0 && beautySum("aa") === 0 && beautySum("") === 0',
+  'Introduction to LinkedList, Learn about struct/class':
+    '(() => { const a = new Node(1); const b = new Node(2); a.next = b; return a.value === 1 && b.next === null && toArray(a).join() === "1,2" && fromArray([]) === null && nodeAt(fromArray([4, 5, 6]), 1).value === 5 && nodeAt(fromArray([4, 5, 6]), 3) === null; })()',
+  'Inserting a node in LinkedList':
+    'toArray(insertAt(null, 0, 7)).join() === "7" && toArray(insertAt(fromArray([1, 2, 3]), 0, 0)).join() === "0,1,2,3" && toArray(insertAt(fromArray([1, 2, 3]), 1, 9)).join() === "1,9,2,3" && toArray(insertAt(fromArray([1, 2, 3]), 3, 4)).join() === "1,2,3,4" && toArray(insertAt(fromArray([1, 2, 3]), 99, 4)).join() === "1,2,3,4" && toArray(insertAt(fromArray([1, 2, 3]), 0, 0)).length === 4',
+  'Deleting a node in LinkedList':
+    '(() => { const kept = toArray(deleteAt(fromArray([1, 2, 3]), 0)).join() === "2,3" && toArray(deleteAt(fromArray([1, 2, 3]), 1)).join() === "1,3" && toArray(deleteAt(fromArray([1, 2, 3]), 2)).join() === "1,2" && toArray(deleteAt(fromArray([1, 2, 3]), 7)).join() === "1,2,3" && toArray(deleteAt(null, 0)).join() === ""; const l = fromArray([1, 2, 3]); const copied = deleteGiven(nodeAt(l, 1)); const after = toArray(l).join(); const tail = deleteGiven(nodeAt(l, 1)); return kept && copied && after === "1,3" && !tail && toArray(l).join() === "1,3"; })()',
+  'Find the length of the linkedlist':
+    'lengthOf(fromArray([1, 2, 3, 4])) === 4 && lengthOf(null) === 0 && lengthRec(fromArray([7])) === 1 && lengthRec(null) === 0 && lengthOf(fromArray([1, 2, 3])) === lengthRec(fromArray([1, 2, 3]))',
+  'Search an element in the LL':
+    'indexOfValue(fromArray([4, 5, 1]), 5) === 1 && indexOfValue(fromArray([4, 5, 1]), 9) === -1 && indexOfValue(null, 1) === -1 && indexOfValue(fromArray([1, 2, 1]), 1) === 0 && contains(fromArray([NaN]), NaN) && !contains(fromArray([1, 2]), 3)',
+  'Introduction to Doubly LinkedList':
+    '(() => { const l = fromArrayD([1, 2, 3]); const t = tailOf(l); return toArrayD(l).join() === "1,2,3" && toArrayBack(l).join() === "3,2,1" && t.value === 3 && t.next === null && nodeAtD(l, 0).prev === null && nodeAtD(l, 2).prev === nodeAtD(l, 1) && nodeAtD(l, 1).next.value === 3 && fromArrayD([]) === null && tailOf(null) === null; })()',
+  'Insert a node in DLL':
+    '(() => { const l = fromArrayD([1, 2, 3]); insertAfter(nodeAtD(l, 1), 99); const grafted = toArrayD(l).join() === "1,2,99,3" && toArrayBack(l).join() === "3,99,2,1" && nodeAtD(l, 2).prev.value === 2; return grafted && toArrayD(insertAtD(fromArrayD([1, 2, 3]), 0, 0)).join() === "0,1,2,3" && toArrayD(insertAtD(fromArrayD([1, 2, 3]), 2, 9)).join() === "1,2,9,3" && toArrayD(insertAtD(fromArrayD([1, 2, 3]), 9, 4)).join() === "1,2,3,4" && toArrayD(insertAtD(null, 3, 7)).join() === "7" && insertAtD(fromArrayD([1, 2]), 1, 9).prev === null; })()',
+  'Delete a node in DLL':
+    '(() => { const l = fromArrayD([1, 2, 3, 4]); const afterHead = deleteAtD(l, 0); const headRead = toArrayD(afterHead).join(); const boundary = afterHead.prev === null; const afterTail = deleteAtD(afterHead, 2); return headRead === "2,3,4" && boundary && toArrayD(afterTail).join() === "2,3" && toArrayBack(afterTail).join() === "3,2" && toArrayD(deleteAtD(fromArrayD([1, 2, 3]), 9)).join() === "1,2,3" && deleteAtD(null, 0) === null && l.next === null && l.prev === null; })()',
+  'Reverse a Doubly Linked List':
+    '(() => { const l = fromArrayD([1, 2, 3, 4]); const r = reverseD(l); const once = toArrayD(r).join() === "4,3,2,1" && toArrayBack(r).join() === "1,2,3,4"; const twice = toArrayD(reverseD(r)).join() === "1,2,3,4"; return once && twice && toArrayD(reverseDRec(fromArrayD([1, 2, 3]))).join() === "3,2,1" && reverseD(null) === null && toArrayD(reverseD(fromArrayD([9]))).join() === "9"; })()',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */
@@ -295,7 +313,7 @@ describe('dsa content', () => {
   test('every DSA topic is in the phase the sheet belongs to', () => {
     const dsa = new Set(ALL_TOPICS.filter((topic) => topic.phaseKey === 'p03').map((topic) => topic.slug));
     for (const problem of DSA_PROBLEMS) {
-      if (problem.step <= 5) expect(dsa.has(problem.topicSlug), `${problem.name} sits outside p03`).toBe(true);
+      if (problem.step <= 6) expect(dsa.has(problem.topicSlug), `${problem.name} sits outside p03`).toBe(true);
     }
   });
 

@@ -700,6 +700,62 @@ export const DSA_CONCEPTS = {
     terms: ['grow outward', 'odd and even centre', 'middle', 'two pointers apart', 'best so far'],
     weight: 3,
   },
+  'dsa-node-holds-reference': {
+    slug: 'dsa-node-holds-reference',
+    name: 'A list is a value plus one link, not a range of memory',
+    detail: 'Each node carries its payload and the address of one other node; the nodes sit wherever allocation put them.',
+    terms: ['node', 'next pointer', 'payload', 'address', 'no indices'],
+    weight: 2,
+  },
+  'dsa-linear-position-walk': {
+    slug: 'dsa-linear-position-walk',
+    name: 'Position in a list costs the walk to it',
+    detail: 'Reaching the kth node takes k steps, so head work is constant and positional or tail work is linear unless a tail pointer is kept.',
+    terms: ['walk from the head', 'random access', 'k steps', 'tail pointer', 'linear in position'],
+    weight: 2,
+  },
+  'dsa-null-termination': {
+    slug: 'dsa-null-termination',
+    name: 'The loop condition tests the node, not the value',
+    detail: 'A walk continues while the cursor is non-null; testing cursor.next instead ends one node early and skips the tail.',
+    terms: ['while cursor', 'null terminator', 'tail node', 'loop condition', 'end of list'],
+    weight: 2,
+  },
+  'dsa-sentinel-head': {
+    slug: 'dsa-sentinel-head',
+    name: 'A sentinel node deletes the special case for position zero',
+    detail: 'A dummy node in front of the real head lets insert and delete at the front run the same rewiring code as anywhere else.',
+    terms: ['dummy node', 'sentinel', 'predecessor', 'special case', 'return dummy.next'],
+    weight: 3,
+  },
+  'dsa-link-splice-order': {
+    slug: 'dsa-link-splice-order',
+    name: 'Set the new links before breaking the old one',
+    detail: 'Splicing means several pointer writes; overwriting a link before its target has been read detaches the rest of the list.',
+    terms: ['assignment order', 'overwrite', 'lose the tail', 'read before write', 'two links'],
+    weight: 3,
+  },
+  'dsa-doubly-mirror-links': {
+    slug: 'dsa-doubly-mirror-links',
+    name: 'A doubly linked edit is four writes that mirror each other',
+    detail: 'Every link set one way has to be set the other way too, and a backward pointer means a node can be unlinked without knowing its predecessor.',
+    terms: ['prev', 'four updates', 'both directions', 'backward link', 'unlink in place'],
+    weight: 3,
+  },
+  'dsa-cursor-reassignment': {
+    slug: 'dsa-cursor-reassignment',
+    name: 'A walking pointer consumes the list it walks',
+    detail: 'Reassigning the head variable to walk forward destroys the handle to the list; walk a copy and keep the original.',
+    terms: ['cursor', 'head reference', 'lost list', 'copy the pointer', 'walk forward'],
+    weight: 2,
+  },
+  'dsa-pointer-swap-mirror': {
+    slug: 'dsa-pointer-swap-mirror',
+    name: 'Reversing a doubly list is swapping each node with itself',
+    detail: 'Exchange prev and next on every node and the chain runs backwards on its own; the old tail is the new head.',
+    terms: ['swap prev and next', 'every node', 'old tail becomes head', 'in place', 'no new nodes'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -712,6 +768,7 @@ const SEARCH = 'binary-search';
 const SPACE = 'search-space';
 const STRINGS = 'string-techniques';
 const NUMERIC = 'numeric-strings';
+const LINKED = 'linked-lists';
 
 export const DSA_PROBLEMS: DsaProblem[] = [
   {
@@ -6701,6 +6758,849 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return total;\n' +
       '}',
     modify: 'Define beauty over distinct character counts instead of frequencies — which line changes and which loop survives?',
+  },
+  {
+    step: 6,
+    name: 'Introduction to LinkedList, Learn about struct/class',
+    difficulty: 'Easy',
+    topicSlug: LINKED,
+    stem: 'Build a chain by hand and say what the list variable actually holds.',
+    brief: 'Input: numbers. Output: a chain of nodes you allocated yourself. Say what a node carries besides its value, what the last node carries in that field, and what the head is when there are no numbers at all.',
+    concepts: ['dsa-node-holds-reference', 'dsa-null-termination', 'dsa-cursor-reassignment', 'dsa-value-versus-reference'],
+    shortAnswer:
+      'A node is a value plus one reference to another node. The head is only a handle to the first node, an empty list is that handle being null, and the last node carries null.',
+    idealAnswer:
+      'The list is not a block of memory the values sit in; it is one reference the program holds and a chain of allocations ' +
+      'that point at each other. That has three consequences worth stating out loud: a node has to carry the link as a field, ' +
+      'so the shape of the data is part of the data; the final link is null, which is information rather than an unfilled ' +
+      'field, so every walk has a defined place to stop; and because the nodes were placed by the allocator rather than by ' +
+      'arithmetic, there is no way to compute where the kth one is, only a way to walk there. An empty list is head equal to ' +
+      'null, not a node with nothing in it.',
+    walkthrough:
+      'The builder keeps a tail reference on purpose. Prepending each value instead would still be one write per node, but ' +
+      'appending without a tail means walking the whole chain for every value, which turns a linear build into a quadratic ' +
+      'one — the cheapest example of the cost the structure imposes. The reader walks a copy of the head rather than the ' +
+      'head itself, because reassigning the parameter to move forward is how a learner loses a list mid-function: the ' +
+      'pointer that survives the loop has to be the one the caller still holds.',
+    commonMistake:
+      'Writing the walk as while (cursor.next !== null) so the last node is never visited, or treating an empty list as a node whose value is undefined.',
+    whyWrong:
+      'A condition on the next link stops one node short, so a three-node chain reports two values and every later function that reuses the walk inherits the missing tail. An empty list modelled as a live node gives the code a phantom element to print, to count, and to compare against, and the null checks then have to be written by hand at every call site.',
+    followUps: [
+      'What does the head variable hold after the last node, and why is that not an error?',
+      'If the nodes are scattered in memory, what exactly makes the order of the list?',
+      'Which single field would you add to make the chain walkable backwards?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeAt(head, index) {\n' +
+      '  let cursor = head;\n' +
+      '  let step = 0;\n' +
+      '  while (cursor !== null && step < index) {\n' +
+      '    cursor = cursor.next;\n' +
+      '    step += 1;\n' +
+      '  }\n' +
+      '  return cursor;\n' +
+      '}',
+    modify: 'Build the same chain by inserting every value at the head instead of keeping a tail. What order does the read-back show, and does the build still cost one step per value?',
+  },
+  {
+    step: 6,
+    name: 'Inserting a node in LinkedList',
+    difficulty: 'Easy',
+    topicSlug: LINKED,
+    stem: 'Insert at a position without writing a separate branch for the first node.',
+    brief: 'Input: a chain of numbers, a zero-based position, a value. Output: the head of the chain with the value spliced in, the value going at the end when the position runs past it. State what each write is for and what the cost is at position zero versus position n.',
+    concepts: ['dsa-sentinel-head', 'dsa-link-splice-order', 'dsa-linear-position-walk', 'dsa-node-holds-reference'],
+    shortAnswer:
+      'Stand on the predecessor, point the new node at what the predecessor pointed at, then point the predecessor at the new node. A sentinel in front of the head makes position zero use that same code.',
+    idealAnswer:
+      'Insertion is two reads and two writes, and the order between them is the whole answer: the new node has to take over ' +
+      'the existing link before the predecessor is made to point at it, otherwise the rest of the chain is unreachable the ' +
+      'moment it is dropped. The position is zero-based, so the loop stops on the node before the insertion point rather ' +
+      'than on the node at it, which is the off-by-one that people get wrong at both ends. A throwaway node in front of ' +
+      'the real head removes the special case: with it, prepending is the same three statements as splicing in the middle, ' +
+      'and the function returns what the sentinel points at instead of branching on whether the head moved.',
+    walkthrough:
+      'The walk is bounded by the shorter of the position and the length, which is what makes clamping free: running out of ' +
+      'chain leaves the cursor on the tail, and the same splice appends. Cost is the distance to the predecessor, so a head ' +
+      'insert is constant and a tail insert is linear — a list built one append at a time is quadratic, which is why real ' +
+      'implementations keep a tail pointer as a second handle rather than changing the structure. Note that nothing in this ' +
+      'function reads a value: it works purely on links, which is why the same code inserts nodes holding anything.',
+    commonMistake:
+      'Setting predecessor.next to the new node before the new node has taken the old link, or walking to the node at the position instead of the node before it.',
+    whyWrong:
+      'The first order overwrites the only reference to everything after the insertion point, so the chain silently loses its tail and no error is raised. The second inserts one place late and, at position zero, dereferences the predecessor that does not exist — which is exactly the case the sentinel was added to handle.',
+    followUps: [
+      'Which of the two writes can be swapped and which cannot? Prove it with a three-node chain.',
+      'What does the function cost at position zero, and what changes if a tail handle is kept?',
+      'How would the code read if positions were one-based, and which bound changes?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function insertAt(head, position, value) {\n' +
+      '  const sentinel = new Node(0);\n' +
+      '  sentinel.next = head;\n' +
+      '  let cursor = sentinel;\n' +
+      '  let step = 0;\n' +
+      '  while (step < position && cursor.next !== null) {\n' +
+      '    cursor = cursor.next;\n' +
+      '    step += 1;\n' +
+      '  }\n' +
+      '  const node = new Node(value);\n' +
+      '  node.next = cursor.next;\n' +
+      '  cursor.next = node;\n' +
+      '  return sentinel.next;\n' +
+      '}',
+    modify: 'Insert into a chain that is already sorted so the order survives. Which walk do you now stop early, and what does that change about the worst case?',
+  },
+  {
+    step: 6,
+    name: 'Deleting a node in LinkedList',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Remove by position, then remove when all you hold is the node itself.',
+    brief: 'Input: a chain of numbers and a zero-based position; and, separately, one node with no reference to the head. Output: the head of the chain without that element; out-of-range positions delete nothing. Name the one node the second version cannot delete.',
+    concepts: ['dsa-sentinel-head', 'dsa-link-splice-order', 'dsa-linear-position-walk', 'dsa-value-versus-reference'],
+    shortAnswer:
+      'By position: stand on the predecessor and jump its link over the node. Given only the node: copy the successor into it and unlink the successor, which is impossible for the tail.',
+    idealAnswer:
+      'Deletion is one write — the predecessor points at the node after the victim — but it needs the predecessor, and a ' +
+      'singly linked node has no link backwards. Two answers follow. With a head reference, a sentinel supplies a ' +
+      'predecessor for position zero so the same walk works everywhere, and the return value is what the sentinel ends up ' +
+      'holding. Without one, the trick is to make the victim into its successor: copy that value across, then unlink the ' +
+      'successor, which costs the same single write and never touches the head. The limit is the last node, whose ' +
+      'successor does not exist, so the honest return value is a boolean rather than a silent no-op.',
+    walkthrough:
+      'The position version checks whether the walk ran out of chain before it writes anything, which is what makes an ' +
+      'out-of-range position leave the list untouched instead of deleting the tail. The node version is worth naming for ' +
+      'what it really does: it does not remove the node the caller pointed at, it removes the following node and overwrites ' +
+      'the value in place. Anything holding a reference to either node sees the difference — the victim survives with new ' +
+      'contents, and the identity of the chain after it moves up by one.',
+    commonMistake:
+      'Special-casing the head with a branch instead of a sentinel, or claiming the copy-forward version can delete the final node.',
+    whyWrong:
+      'The branch on the head is where deletion bugs live: it duplicates the unlinking logic and has to be kept in step with it forever. Copying forward from a tail has nothing to copy, so code that pretends otherwise either leaves the node in place or reads properties off null and throws on the one input a reviewer tests first.',
+    followUps: [
+      'Why does the sentinel need no cleanup at the end of the function?',
+      'The node you were handed is still allocated after copy-forward deletion. What changed, exactly?',
+      'Write the version that deletes every node holding a value. How many links does it now track?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeAt(head, index) {\n' +
+      '  let cursor = head;\n' +
+      '  let step = 0;\n' +
+      '  while (cursor !== null && step < index) {\n' +
+      '    cursor = cursor.next;\n' +
+      '    step += 1;\n' +
+      '  }\n' +
+      '  return cursor;\n' +
+      '}\n' +
+      '\n' +
+      'function deleteAt(head, position) {\n' +
+      '  const sentinel = new Node(0);\n' +
+      '  sentinel.next = head;\n' +
+      '  let cursor = sentinel;\n' +
+      '  let step = 0;\n' +
+      '  while (step < position && cursor.next !== null) {\n' +
+      '    cursor = cursor.next;\n' +
+      '    step += 1;\n' +
+      '  }\n' +
+      '  if (cursor.next === null) {\n' +
+      '    return sentinel.next;\n' +
+      '  }\n' +
+      '  cursor.next = cursor.next.next;\n' +
+      '  return sentinel.next;\n' +
+      '}\n' +
+      '\n' +
+      'function deleteGiven(node) {\n' +
+      '  if (node === null || node.next === null) {\n' +
+      '    return false;\n' +
+      '  }\n' +
+      '  node.value = node.next.value;\n' +
+      '  node.next = node.next.next;\n' +
+      '  return true;\n' +
+      '}',
+    modify: 'Delete a range of positions in one pass. Which two references do you have to keep, and why does the head still need no special case?',
+  },
+  {
+    step: 6,
+    name: 'Find the length of the linkedlist',
+    difficulty: 'Easy',
+    topicSlug: LINKED,
+    stem: 'Count the nodes twice, once by walking and once by recursion, and say what each one costs.',
+    brief: 'Input: a chain of numbers, possibly empty. Output: how many nodes it holds. Say where the recursion stops, what the call stack holds while it counts, and what you would change if the count were asked for a thousand times.',
+    concepts: ['dsa-null-termination', 'dsa-recursive-decomposition', 'dsa-call-stack-cost', 'dsa-cursor-reassignment'],
+    shortAnswer:
+      'Walk a cursor to null and count the steps, or define the length as one plus the length of the rest with null having length zero. Both cost one visit per node.',
+    idealAnswer:
+      'The iterative version is the structure read directly: nothing about a chain lets you know how long it is without ' +
+      'visiting every node, so the counter and the cursor advance together and the loop ends because the last link is ' +
+      'null. The recursive version says the same thing as a definition — an empty chain is zero, a node adds one to the ' +
+      'chain after it — and it is correct only because the argument strictly shrinks toward that base case. The cost ' +
+      'difference is real: the loop keeps two locals, the recursion keeps a stack frame per node, and in JavaScript nothing ' +
+      'guarantees those frames are cheap or removed.',
+    walkthrough:
+      'Naming the loop variable is part of the answer: the length of the list is asked by a caller that still needs the ' +
+      'head, so a function that moves the head itself has destroyed the argument. The recursion is worth writing out ' +
+      'because it is the template for every later chain property — depth, palindrome-ness, whether the tail satisfies ' +
+      'something — and the shape is always the same: handle null, otherwise combine this node with the answer for the rest.',
+    commonMistake:
+      'Counting cursor.next instead of cursor so the empty list returns one, or keeping the length as a field that nothing updates.',
+    whyWrong:
+      'An empty chain has no next field to read, so the version that counts links either throws or reports a length the list does not have. A cached count is a second source of truth: every insert, delete and reversal has to remember to adjust it, and the first one that forgets makes the answer wrong in a way no reader of the length function can see.',
+    followUps: [
+      'Which one of your two versions can be made tail-recursive, and does JavaScript run it in constant space?',
+      'A cached count is O(1) to read. List every operation that now has to maintain it.',
+      'How does the same recursion give you the last node instead of the number of nodes?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function lengthOf(head) {\n' +
+      '  let count = 0;\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    count += 1;\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}\n' +
+      '\n' +
+      'function lengthRec(head) {\n' +
+      '  if (head === null) {\n' +
+      '    return 0;\n' +
+      '  }\n' +
+      '  return 1 + lengthRec(head.next);\n' +
+      '}',
+    modify: 'Return the length and the last node from one walk. Why is that cheaper than calling the two functions separately?',
+  },
+  {
+    step: 6,
+    name: 'Search an element in the LL',
+    difficulty: 'Easy',
+    topicSlug: LINKED,
+    stem: 'Find where a value first appears in a chain, and say which comparison you used and why.',
+    brief: 'Input: a chain of numbers and a target. Output: the zero-based position of the first node holding that value, or -1. Cover the empty chain and a value that never appears. Say what your comparison does about NaN.',
+    concepts: ['dsa-null-termination', 'dsa-linear-position-walk', 'dsa-value-versus-reference', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Advance a cursor and a counter together, compare each payload with the target, and return the counter at the match or -1 after null. There is no shortcut: search in a chain is the walk.',
+    idealAnswer:
+      'A chain has no indices to probe, so searching is visiting, and the only design choices are what counts as a match ' +
+      'and where the counter stands when it happens. The index has to be carried alongside the cursor because the node ' +
+      'itself does not know its own position — that asymmetry between array and list is the point of the exercise. ' +
+      'Returning -1 rather than null keeps the answer in the numeric domain the caller can compare against, and the empty ' +
+      'chain is not a special case at all: the loop body never runs and the same -1 falls out.',
+    walkthrough:
+      'Using Object.is instead of === is a deliberate choice worth being able to defend: it reports NaN as found when NaN ' +
+      'is stored, where strict equality would answer that the list does not contain the value it does contain. The trade is ' +
+      'that Object.is separates 0 from negative zero, which strict equality joins. Say which of the two matters for the ' +
+      'data at hand rather than picking by habit.',
+    commonMistake:
+      'Returning the node instead of the position, or comparing with === and reporting that a stored NaN cannot be found.',
+    whyWrong:
+      'A caller that asked where the value is cannot use a node to index anything, and returning it leaks the structure into an answer that was supposed to be a number. The equality choice makes contains and indexOf disagree with each other on exactly one input, which is the kind of inconsistency that turns into a bug report later.',
+    followUps: [
+      'Write the variant that returns every position holding the value. Does the walk change at all?',
+      'What would a chain sorted by value let you skip, and what would it still cost to get there?',
+      'Which comparison do you want if the payloads are objects rather than numbers?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function indexOfValue(head, target) {\n' +
+      '  let cursor = head;\n' +
+      '  let index = 0;\n' +
+      '  while (cursor !== null) {\n' +
+      '    if (Object.is(cursor.value, target)) {\n' +
+      '      return index;\n' +
+      '    }\n' +
+      '    cursor = cursor.next;\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  return -1;\n' +
+      '}\n' +
+      '\n' +
+      'function contains(head, target) {\n' +
+      '  return indexOfValue(head, target) !== -1;\n' +
+      '}',
+    modify: 'Move a found node to the front on the way out. Which extra reference do you now need to keep during the walk?',
+  },
+  {
+    step: 6,
+    name: 'Introduction to Doubly LinkedList',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Add the backward link and prove the chain is consistent in both directions.',
+    brief: 'Input: numbers. Output: a chain whose nodes each hold a value, the node after and the node before. Read it forwards from the head and backwards from the tail, and state which pairs of links have to agree.',
+    concepts: ['dsa-doubly-mirror-links', 'dsa-node-holds-reference', 'dsa-null-termination', 'dsa-linear-position-walk'],
+    shortAnswer:
+      'Every node gains a prev reference that mirrors the next of its predecessor: a.next is b exactly when b.prev is a. The head has prev null and the tail has next null.',
+    idealAnswer:
+      'A backward link buys the thing a singly chain cannot do cheaply: leave from where you already are. Deleting or ' +
+      'inserting around a node you are holding stops needing a walk from the head, which is why the structure exists at ' +
+      'all — an LRU cache is not fast because of prev, it is fast because a node can be unlinked the moment it is touched. ' +
+      'The price is that every edit is now two links that must agree, and a half-applied edit leaves the chain in a state ' +
+      'where walking forwards and walking backwards give different answers. That inconsistency is the failure mode, and it ' +
+      'is invisible until someone reads the list from the wrong end.',
+    walkthrough:
+      'The builder writes each seam twice: the forward link from the node it is leaving and the backward link on the node ' +
+      'it arrives at. Keeping a tail handle makes the build linear for the same reason as before, and the tail is also what '
+      +
+      'the backward read starts from. The checks worth running after any edit are the two boundary links and the mirror ' +
+      'identity in the middle — prev pointing at the same object, not merely a node holding an equal value.',
+    commonMistake:
+      'Setting one direction of a seam and not the other, or assuming the head node has a prev to read.',
+    whyWrong:
+      'A one-way seam produces a chain that reads correctly forwards and stops early or loops backwards, which survives code review and fails in production at the least convenient function. Reading prev on the head gives null, and a walk that then dereferences it throws at position zero — the boundary that is supposed to be the easiest case.',
+    followUps: [
+      'Which operations became cheaper the moment prev existed, and which got more expensive?',
+      'State the invariant between two neighbouring nodes in one sentence a reviewer could check.',
+      'What does the structure cost per node that an array does not pay?',
+    ],
+    solution:
+      'class DNode {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '    this.prev = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArrayD(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new DNode(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '      node.prev = tail;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArrayD(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function tailOf(head) {\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null && cursor.next !== null) {\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return cursor;\n' +
+      '}\n' +
+      '\n' +
+      'function toArrayBack(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = tailOf(head);\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.prev;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeAtD(head, index) {\n' +
+      '  let cursor = head;\n' +
+      '  let step = 0;\n' +
+      '  while (cursor !== null && step < index) {\n' +
+      '    cursor = cursor.next;\n' +
+      '    step += 1;\n' +
+      '  }\n' +
+      '  return cursor;\n' +
+      '}',
+    modify: 'Make the backward read start from a tail handle the list keeps. Which of the walks in this file becomes O(1), and what new invariant does the handle create?',
+  },
+  {
+    step: 6,
+    name: 'Insert a node in DLL',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Splice into a two-way chain and keep all four links honest.',
+    brief: 'Input: a chain of numbers and either a node or a position, plus a value. Output: the chain with the new node between two existing ones, the head returned because it may have moved. Say in which order the writes have to happen.',
+    concepts: ['dsa-doubly-mirror-links', 'dsa-link-splice-order', 'dsa-linear-position-walk', 'dsa-sentinel-head'],
+    shortAnswer:
+      'Attach the new node to both neighbours first, then let each neighbour point back at it: two writes out, two writes in, and the neighbour that does not exist is skipped.',
+    idealAnswer:
+      'A doubly linked insert is four writes with one rule: never drop a reference before something else holds it. Read in ' +
+      'that order the code is mechanical — the new node takes the predecessor and the successor, then the successor gains ' +
+      'a prev and the predecessor gains a next — and each of those four has a mirror partner, which is what makes the ' +
+      'structure self-consistent. The two ends are the only real cases: at the front there is no predecessor, so the ' +
+      'returned head has to be the new node, and at the back there is no successor, so the write that would set its prev ' +
+      'must be guarded rather than attempted.',
+    walkthrough:
+      'Positional insert is the walk-to-predecessor from the singly version plus the second half of the seam, which is why ' +
+      'a position beyond the end still appends correctly: the walk stops on the tail and the missing successor is simply ' +
+      'skipped. Inserting from a node the caller is already holding is the case the structure exists for — no walk at ' +
+      'all, and the reason an LRU cache can reattach a recency entry in constant time.',
+    commonMistake:
+      'Writing cursor.next before the new node has taken the old successor, or setting the new node into the middle without updating the successor on its backward link.',
+    whyWrong:
+      'The first order loses the rest of the chain before it is copied, so the node after the insertion point becomes unreachable. The second leaves a seam that reads correctly forwards and steps over the new node going backwards — a broken prev is invisible to every test that only ever calls toArray.',
+    followUps: [
+      'Which of the four writes can be reordered freely and which two are rigidly ordered?',
+      'Insert a block of k nodes in one operation. What is the smallest number of writes?',
+      'Why does this function return the head while insertAfter returns the new node?',
+    ],
+    solution:
+      'class DNode {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '    this.prev = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArrayD(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new DNode(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '      node.prev = tail;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArrayD(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function tailOf(head) {\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null && cursor.next !== null) {\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return cursor;\n' +
+      '}\n' +
+      '\n' +
+      'function toArrayBack(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = tailOf(head);\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.prev;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeAtD(head, index) {\n' +
+      '  let cursor = head;\n' +
+      '  let step = 0;\n' +
+      '  while (cursor !== null && step < index) {\n' +
+      '    cursor = cursor.next;\n' +
+      '    step += 1;\n' +
+      '  }\n' +
+      '  return cursor;\n' +
+      '}\n' +
+      '\n' +
+      'function insertAfter(node, value) {\n' +
+      '  const fresh = new DNode(value);\n' +
+      '  fresh.prev = node;\n' +
+      '  fresh.next = node.next;\n' +
+      '  if (node.next !== null) {\n' +
+      '    node.next.prev = fresh;\n' +
+      '  }\n' +
+      '  node.next = fresh;\n' +
+      '  return fresh;\n' +
+      '}\n' +
+      '\n' +
+      'function insertAtD(head, position, value) {\n' +
+      '  if (head === null) {\n' +
+      '    return new DNode(value);\n' +
+      '  }\n' +
+      '  if (position <= 0) {\n' +
+      '    const fresh = new DNode(value);\n' +
+      '    fresh.next = head;\n' +
+      '    head.prev = fresh;\n' +
+      '    return fresh;\n' +
+      '  }\n' +
+      '  const predecessor = nodeAtD(head, position - 1) || tailOf(head);\n' +
+      '  insertAfter(predecessor, value);\n' +
+      '  return head;\n' +
+      '}',
+    modify: 'Give the chain a sentinel pair, one node at each end. Which of the guards in this code disappears, and what does that buy when the chain is empty?',
+  },
+  {
+    step: 6,
+    name: 'Delete a node in DLL',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Unlink from a node you are holding, and return a head that may have just moved.',
+    brief: 'Input: a chain of numbers and either a node or a position. Output: the head of the chain without that node, and the node left with no links of its own. Say what happens to the head when the first node goes, and what you have to read before you unlink.',
+    concepts: ['dsa-doubly-mirror-links', 'dsa-link-splice-order', 'dsa-boundary-conditions', 'dsa-linear-position-walk'],
+    shortAnswer:
+      'Let each survivor point past the victim — successor takes the predecessor, predecessor takes the successor — then clear the victim. Capture the new head before writing anything.',
+    idealAnswer:
+      'The prev link is what makes this the easy half of the doubly structure: a node knows its own predecessor, so ' +
+      'deletion needs no walk and no sentinel, only the two mirrored writes and a guard for each end. The order around the ' +
+      'writes is the substance of the answer. The head of the result is the successor of a removed first node, which means ' +
+      'it has to be read while that link still exists; unlinking first clears the very reference the return value depends ' +
+      'on. Clearing the victim afterwards is not decoration — a node still held elsewhere in the program must not stay ' +
+      'wired into a chain it has left.',
+    walkthrough:
+      'The out-of-range position is handled by the walk running out rather than by a second check, so the function returns ' +
+      'the chain unchanged instead of deleting the last node it saw. Note the two guards are independent: a one-node chain ' +
+      'satisfies neither neighbour, and the same code that removes a middle node removes it, which is the sign the writes ' +
+      'were factored in the right place.',
+    commonMistake:
+      'Reading cursor.next to find the new head after the victim has been cleared, or unlinking one side of the seam only.',
+    whyWrong:
+      'A cleared victim returns null from every field, so the head lookup has to happen before the unlink or the caller loses the chain. One-sided unlinking leaves the survivor pointing at a node that is no longer in the list: the forward walk still visits it, the backward walk does not, and the two disagree about what the data is.',
+    followUps: [
+      'Which of the two guards fires for a two-node chain, and for which end?',
+      'Delete a whole span given its two endpoint nodes. How many writes is that?',
+      'What breaks if unlink forgets to clear the victim itself?',
+    ],
+    solution:
+      'class DNode {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '    this.prev = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArrayD(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new DNode(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '      node.prev = tail;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArrayD(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function tailOf(head) {\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null && cursor.next !== null) {\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return cursor;\n' +
+      '}\n' +
+      '\n' +
+      'function toArrayBack(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = tailOf(head);\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.prev;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function unlink(node) {\n' +
+      '  if (node === null) {\n' +
+      '    return;\n' +
+      '  }\n' +
+      '  if (node.prev !== null) {\n' +
+      '    node.prev.next = node.next;\n' +
+      '  }\n' +
+      '  if (node.next !== null) {\n' +
+      '    node.next.prev = node.prev;\n' +
+      '  }\n' +
+      '  node.prev = null;\n' +
+      '  node.next = null;\n' +
+      '}\n' +
+      '\n' +
+      'function deleteAtD(head, position) {\n' +
+      '  let cursor = head;\n' +
+      '  let step = 0;\n' +
+      '  while (cursor !== null && step < position) {\n' +
+      '    cursor = cursor.next;\n' +
+      '    step += 1;\n' +
+      '  }\n' +
+      '  if (cursor === null) {\n' +
+      '    return head;\n' +
+      '  }\n' +
+      '  const replacement = cursor.prev === null ? cursor.next : head;\n' +
+      '  unlink(cursor);\n' +
+      '  return replacement;\n' +
+      '}',
+    modify: 'Keep the chain at a fixed capacity by evicting the tail node whenever it overflows. Why is that nearly free here and linear in a singly chain?',
+  },
+  {
+    step: 6,
+    name: 'Reverse a Doubly Linked List',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Turn the chain around by editing nodes in place, and name the node that becomes the head.',
+    brief: 'Input: a chain of numbers with forward and backward links. Output: the head of the same nodes in the opposite order, with no node allocated. State which reference the return value comes from, and what the invariant is halfway through the loop.',
+    concepts: ['dsa-pointer-swap-mirror', 'dsa-doubly-mirror-links', 'dsa-reversal-trick', 'dsa-recursive-decomposition'],
+    shortAnswer:
+      'Swap prev and next on every node; the walk continues along the field that used to be next, and the last node visited is the new head.',
+    idealAnswer:
+      'A doubly linked node stores its two neighbours symmetrically, so reversing the list is not a restructuring but a ' +
+      'per-node swap: after the swap on a node, the direction the chain runs in has changed for that one seam only. That ' +
+      'makes the loop invariant precise and a little unsettling — halfway through, the visited nodes point backwards along ' +
+      'the original order and the unvisited ones still point forwards, so the chain is two lists that meet at the cursor. ' +
+      'The return value is the last node visited, which is the original tail, and there is no extra work at the ends ' +
+      'because the nulls swap with everything else. No node is allocated, so the cost is the length of the chain in ' +
+      'writes, four per node at most.',
+    walkthrough:
+      'The one detail that decides correctness is which field the walk follows after the swap: prev now holds what next ' +
+      'held, so advancing by prev is what keeps the loop moving forwards through the original order, and a cursor update ' +
+      'written the other way turns the loop around on the first node. The recursive form is the same swap on the way back ' +
+      'up the stack, which is easier to read and harder to justify in space; the tail it returns is computed once and ' +
+      'passed up unchanged.',
+    commonMistake:
+      'Advancing the cursor with the field that was overwritten rather than its mirror, or returning the original head.',
+    whyWrong:
+      'Following the wrong link sends the cursor back into the section it has already reversed, so the loop either stops immediately or revisits nodes it has swapped. Returning the original head gives a chain that reads backwards from a node whose prev is now populated — the caller sees the first element, then nothing, and the rest of the list is unreachable.',
+    followUps: [
+      'State the invariant at an arbitrary iteration as a sentence about two chains meeting.',
+      'Reverse in place recursively. What does the call stack hold that the loop does not?',
+      'Why does reversing twice give the original structure rather than a copy of it?',
+    ],
+    solution:
+      'class DNode {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '    this.prev = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArrayD(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new DNode(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '      node.prev = tail;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArrayD(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function tailOf(head) {\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null && cursor.next !== null) {\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return cursor;\n' +
+      '}\n' +
+      '\n' +
+      'function toArrayBack(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = tailOf(head);\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.prev;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function reverseD(head) {\n' +
+      '  let cursor = head;\n' +
+      '  let last = null;\n' +
+      '  while (cursor !== null) {\n' +
+      '    const before = cursor.prev;\n' +
+      '    cursor.prev = cursor.next;\n' +
+      '    cursor.next = before;\n' +
+      '    last = cursor;\n' +
+      '    cursor = cursor.prev;\n' +
+      '  }\n' +
+      '  return last;\n' +
+      '}\n' +
+      '\n' +
+      'function reverseDRec(head) {\n' +
+      '  if (head === null) {\n' +
+      '    return null;\n' +
+      '  }\n' +
+      '  const tail = head.next === null ? head : reverseDRec(head.next);\n' +
+      '  const before = head.prev;\n' +
+      '  head.prev = head.next;\n' +
+      '  head.next = before;\n' +
+      '  return tail;\n' +
+      '}',
+    modify: 'Reverse only the first k nodes and leave the rest attached. Which two seams do you have to rejoin afterwards?',
   },
 ];
 

@@ -73,6 +73,7 @@ export const PHASES_00_09: PhaseSpec[] = [
       t('search-space', 'Searching the Answer, Not the Index', 'monotone predicates over a value range: the smallest feasible rate, capacity or distance.', 'javascript', ['binary-search']),
       t('string-techniques', 'String Algorithms', 'characters as arrays: two pointers over text, frequency maps, nesting counters and windows that never reorder what they read.', 'javascript', ['array-techniques', 'hash-tables'], ['language-mechanics']),
       t('numeric-strings', 'Numerals and Parsing', 'roman and decimal in both directions, place value, and the overflow a parser has to refuse rather than absorb.', 'javascript', ['string-techniques'], ['dsa-maths-foundations']),
+      t('linked-lists', 'Linked Lists and Pointer Rewiring', 'nodes instead of indices: fast and slow walkers, reversal by re-pointing, and the sentinel that deletes the head special case.', 'javascript', ['array-techniques'], ['recursion']),
       t('graph-traversal', 'Graph Traversal and Shortest Paths', 'BFS/DFS, topological sort, Dijkstra, dependency resolution.', 'system-design', ['hash-tables'], ['recursion']),
       t('tries-autocomplete', 'Tries and Prefix Search', 'autocomplete, routing tables, tokenization costs.', 'system-design', ['hash-tables'], ['memory-hierarchy']),
       t('dp-greedy', 'Dynamic Programming and Greedy', 'overlapping subproblems, state definition, when greedy is provably right.', 'system-design', ['recursion'], ['complexity-analysis']),
