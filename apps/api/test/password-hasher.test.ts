@@ -23,7 +23,9 @@ describe('PasswordHasher', () => {
 
   test('a tampered digest fails', async () => {
     const stored = await hasher.hash('right-password-12345');
-    const flipped = `${stored.slice(0, -2)}ff`;
+    const last = stored.slice(-1);
+    const flipped = `${stored.slice(0, -1)}${last === '0' ? '1' : '0'}`;
+    expect(flipped).not.toBe(stored);
     expect(await hasher.verify('right-password-12345', flipped)).toBeFalse();
   });
 
