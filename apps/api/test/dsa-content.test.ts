@@ -385,6 +385,16 @@ const EXPECTS: Record<string, string> = {
     'xorUpTo(0) === 0 && xorUpTo(1) === 1 && xorUpTo(2) === 3 && xorUpTo(3) === 0 && xorUpTo(4) === 4 && xorUpTo(7) === 0 && xorUpTo(10) === 11 && xorRange(1, 10) === 11 && xorRange(3, 5) === 2 && xorRange(5, 5) === 5 && xorRange(0, 5) === 1 && xorRange(0, 0) === 0 && xorRange(17, 41) === xorRangeByLoop(17, 41) && xorRange(0, 100) === xorRangeByLoop(0, 100)',
   'Find the two numbers appearing odd number of times':
     'twoOddValues([1, 1, 2, 3, 2, 3, 4, 5]).join() === "4,5" && twoOddValues([4, 2, 4, 5, 2, 3, 3, 6]).join() === "5,6" && twoOddValues([0, 1, 0, 1, 2, 3]).join() === "2,3" && twoOddValuesByCount([4, 2, 4, 5, 2, 3, 3, 6]).join() === "5,6" && twoOddValuesByCount([1, 2, 3]).join() === "1,2,3" && twoOddValuesByCount([]).join() === ""',
+  'Print Prime Factors of a Number':
+    'primeFactors(360).join() === "2,2,2,3,3,5" && primeFactors(60).join() === "2,2,3,5" && primeFactors(13).join() === "13" && primeFactors(2).join() === "2" && primeFactors(1).join() === "" && distinctPrimeFactorsOfProduct([10, 21]).join() === "2,3,5,7" && distinctPrimeFactorsOfProduct([2, 3, 5, 15]).join() === "2,3,5" && distinctPrimeFactorsOfProduct([1, 1]).join() === ""',
+  'All Divisors of a Natural Number':
+    'divisors(28).join() === "1,2,4,7,14,28" && divisors(16).join() === "1,2,4,8,16" && divisors(7).join() === "1,7" && divisors(1).join() === "1" && hasExactlyThreeDivisors(4) && hasExactlyThreeDivisors(9) && !hasExactlyThreeDivisors(2) && !hasExactlyThreeDivisors(6) && !hasExactlyThreeDivisors(16) && !hasExactlyThreeDivisors(1)',
+  'Sieve of Eratosthenes':
+    'sievePrimes(30).join() === "2,3,5,7,11,13,17,19,23,29" && sievePrimes(10).join() === "2,3,5,7" && sievePrimes(2).join() === "2" && sievePrimes(1).join() === "" && sievePrimes(0).join() === "" && countPrimesBelow(10) === 4 && countPrimesBelow(30) === 10 && countPrimesBelow(3) === 1 && countPrimesBelow(2) === 0',
+  'Find Prime Factorisation using Sieve':
+    '(() => { const spf = smallestPrimeFactors(1000); return factoriseWithSpf(60, spf).join() === "2,2,3,5" && factoriseWithSpf(360, spf).join() === "2,2,2,3,3,5" && factoriseWithSpf(97, spf).join() === "97" && factoriseWithSpf(1, spf).join() === "" && spf[4] === 2 && spf[9] === 3 && spf[49] === 7 && spf[97] === 97 && spf[1] === 0 && smallestPrimeFactors(1)[1] === 0 && factoriseWithSpf(1001, spf).join() === ""; })()',
+  'Power(n, x)':
+    'power(2, 10) === 1024 && power(2, -2) === 0.25 && power(2, -10) === 0.0009765625 && power(-2, 3) === -8 && power(-2, 4) === 16 && power(3, 0) === 1 && power(0, 0) === 1 && power(0, 5) === 0 && power(0, -1) === Infinity && Math.abs(power(1.1, 3) - 1.331) < 1e-12 && powerRecursive(2, 10) === 1024 && powerRecursive(2, -3) === 0.125 && Math.abs(powerRecursive(1.1, 3) - 1.331) < 1e-12',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */

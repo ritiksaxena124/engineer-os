@@ -1106,6 +1106,48 @@ export const DSA_CONCEPTS = {
     terms: ['lowest set bit as separator', 'partition by a bit', 'two folds one answer each', 'cancellation inside a group', 'no counting map'],
     weight: 3,
   },
+  'dsa-prime-factor-division': {
+    slug: 'dsa-prime-factor-division',
+    name: 'Dividing out the smallest factor repeatedly gives only primes',
+    detail: 'Trial division that keeps dividing by a candidate until it stops dividing leaves no composite behind, because a composite divisor would have had a smaller prime already removed.',
+    terms: ['divide out completely', 'smallest remaining factor is prime', 'repeated while not once', 'remainder above the root', 'factors in ascending order'],
+    weight: 3,
+  },
+  'dsa-divisor-pair-symmetry': {
+    slug: 'dsa-divisor-pair-symmetry',
+    name: 'Divisors come in pairs, one below the root and one above',
+    detail: 'Every divisor d of n has a partner n over d on the other side of the square root, so scanning to the root and recording both halves the work and needs one check for the square counting itself twice.',
+    terms: ['partner divisor', 'scan to the root', 'record both', 'perfect square double count', 'ascending by sorting after'],
+    weight: 3,
+  },
+  'dsa-sieve-cross-off': {
+    slug: 'dsa-sieve-cross-off',
+    name: 'Cross off multiples from p squared, not from 2p',
+    detail: 'A composite below p squared already has a smaller prime factor and has been crossed off, so the first multiple a prime p needs to mark is p times p, which is what makes the sieve run in n log log n.',
+    terms: ['cross off multiples', 'start at p squared', 'smaller factor already marked', 'sift once per prime', 'n log log n'],
+    weight: 3,
+  },
+  'dsa-smallest-prime-factor-table': {
+    slug: 'dsa-smallest-prime-factor-table',
+    name: 'A table of smallest prime factors turns factorisation into a chain of lookups',
+    detail: 'Recording the prime that first crossed off each composite gives one number per row, and dividing it out and repeating walks any value down to 1 in as many steps as it has factors.',
+    terms: ['spf table', 'first marker wins', 'divide and look up', 'factors per query in log n', 'build once, ask many times'],
+    weight: 3,
+  },
+  'dsa-binary-exponentiation': {
+    slug: 'dsa-binary-exponentiation',
+    name: 'Exponentiation by squaring halves the exponent each step',
+    detail: 'A power is the square of the half power, times the base when the exponent is odd, so the work is one step per bit of the exponent rather than one per unit.',
+    terms: ['square the half', 'odd exponent pays one multiply', 'one step per bit', 'log exponent', 'running base squares too'],
+    weight: 3,
+  },
+  'dsa-negative-exponent-reciprocal': {
+    slug: 'dsa-negative-exponent-reciprocal',
+    name: 'A negative exponent is the reciprocal of the positive one',
+    detail: 'Base to the minus k is one over base to the k, which is the only sign handling an integer power needs - and it is undefined at base zero, where the result is infinity rather than an error.',
+    terms: ['reciprocal of the positive', 'zero base', 'infinity not exception', 'sign lives on the exponent', 'float precision after dividing'],
+    weight: 2,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -11599,6 +11641,299 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return odd.sort((a, b) => a - b);\n' +
       '}',
     modify: 'Make twoOddValues refuse an input that does not hold the promise by checking that the fold is nonzero and that the two groups are nonempty. What does it return for an array with only one odd value?',
+  },
+  {
+    step: 8,
+    name: 'Print Prime Factors of a Number',
+    difficulty: 'Medium',
+    topicSlug: MATHS,
+    stem: 'List the prime factors of a number with multiplicity, then count the distinct primes dividing a product without ever computing the product.',
+    brief: 'Input: a positive integer for the first half; an array of positive integers for the second. Output: the factors in ascending order with repeats, and the sorted set of primes dividing the product of the whole array. Say why the product is never formed.',
+    concepts: ['dsa-prime-factor-division', 'dsa-trial-division-sqrt', 'dsa-hash-frequency', 'dsa-double-precision'],
+    shortAnswer:
+      'Divide out 2 completely, then every candidate up to the square root of what is left; whatever remains above 1 is ' +
+      'the last prime. For the product, take the union of the per-element factor sets - prime factors of a product are ' +
+      'exactly the prime factors of its factors.',
+    idealAnswer:
+      'Trial division finds factors in ascending order and each one it finds is prime, because a composite candidate would ' +
+      'have a smaller prime factor that was already divided out - that is why the inner loop divides while it can instead ' +
+      'of testing primality. The bound moves with the remainder rather than with the original number: once the candidate ' +
+      'squared exceeds what is left, the remainder has no factor below it and is prime, which is the single case a factor ' +
+      'list forgets most often. Cost is O(sqrt(n)) worst case, for a prime input. The second half is the production point: ' +
+      'factors of a product are the union of the factors, so an array of a hundred 10^5-wide values has an exact product ' +
+      'far past Number.MAX_SAFE_INTEGER, and multiplying first would give a rounded double whose factors are simply wrong ' +
+      '- factor each element and merge into a set instead.',
+    walkthrough:
+      'The order of the two loops is the whole algorithm: the candidate climbs while the remainder falls, and they meet in ' +
+      'the middle at most once, which is why the same code returns six factors for 360 and one for a large prime. Reading ' +
+      'the merged set rather than the merged list is what makes the distinct count linear in the number of primes found, ' +
+      'and it also handles a repeated prime across elements - 15 and 10 share nothing, 15 and 45 share 3 and 5.',
+    commonMistake:
+      'Breaking out of the inner loop after one division, or multiplying the array first and factoring the product.',
+    whyWrong:
+      'A single division leaves the multiplicity wrong and the same candidate still divides the remainder, so the factor ' +
+      'list is incomplete and its product is smaller than the input. The eager product loses low bits past 2 to the 53, ' +
+      'and a rounded double has factors that are not the factors of the true product - the answer can be off by a whole ' +
+      'prime with no error raised.',
+    followUps: [
+      'Return the factorisation as [prime, exponent] pairs. How many pairs can a value below 10^18 have at most?',
+      'Factor every element of an array of a million values sharing small primes. What table would you build once and reuse?',
+      'Give the factor list of a number whose remainder after the loop is a square of a prime larger than the original root.',
+    ],
+    solution:
+      'function primeFactors(value) {\n' +
+      '  const factors = [];\n' +
+      '  let rest = value;\n' +
+      '  for (let candidate = 2; candidate * candidate <= rest; candidate += 1) {\n' +
+      '    while (rest % candidate === 0) {\n' +
+      '      factors.push(candidate);\n' +
+      '      rest = rest / candidate;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  if (rest > 1) factors.push(rest);\n' +
+      '  return factors;\n' +
+      '}\n' +
+      '\n' +
+      'function distinctPrimeFactorsOfProduct(values) {\n' +
+      '  const seen = new Set();\n' +
+      '  for (const value of values) {\n' +
+      '    for (const factor of primeFactors(value)) seen.add(factor);\n' +
+      '  }\n' +
+      '  return [...seen].sort((a, b) => a - b);\n' +
+      '}',
+    modify: 'Make primeFactors return [prime, exponent] pairs so a caller can rebuild the number from the factorisation. What does the rebuild produce for an input of 1?',
+  },
+  {
+    step: 8,
+    name: 'All Divisors of a Natural Number',
+    difficulty: 'Easy',
+    topicSlug: MATHS,
+    stem: 'List every divisor of n in ascending order in O(sqrt n), and answer whether n has exactly three divisors.',
+    brief: 'Input: a positive integer. Output: all its divisors sorted, and a boolean for the three-divisor case. Name the one divisor the sqrt scan can count twice.',
+    concepts: ['dsa-divisor-pair-symmetry', 'dsa-trial-division-sqrt', 'dsa-prime-factor-division', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'For each d up to the square root that divides n, record d and n divided by d; sort the collected list. Exactly three ' +
+      'divisors happens for 1 and no other number except the squares of primes.',
+    idealAnswer:
+      'Divisors pair up across the square root: d divides n exactly when n/d does, and one of the two is at or below the ' +
+      'root, so a scan to the root with a record of both halves finds all of them in O(sqrt n) instead of O(n). The pair ' +
+      'collapses only when d equals n/d, which is precisely the perfect square, and that is the case the guard exists for ' +
+      '- without it 16 reports 4 twice and its divisor count is wrong. Sorting afterwards costs O(t log t) for t divisors, ' +
+      'which is honest since the scan produces them unordered; the classic alternative is to collect the small half and ' +
+      'walk the large half backwards, which yields ascending order with no sort. The three-divisor test falls straight out ' +
+      'of the structure: 1 and n are always divisors, so a third one exists exactly when some d has d times d equal to n, ' +
+      'meaning n is the square of a prime - and only one is needed, since two distinct square roots are impossible.',
+    walkthrough:
+      'The count and the list are two views of the same pairing, and the perfect-square exception is the only place they ' +
+      'disagree with a naive doubling of the found divisors. 28 shows the ordering problem: the loop finds 1,28,2,14,4,7 ' +
+      'in that sequence, so the ascending answer needs either a sort or a two-part assembly.',
+    commonMistake:
+      'Adding both members of every pair unconditionally, or scanning the full range up to n to keep the list ordered.',
+    whyWrong:
+      'For a perfect square the middle divisor is its own partner, so the unconditional form reports it twice and gives a ' +
+      'count one too high - which is exactly the value a three-divisor check is sensitive to. A full scan is O(n), turning ' +
+      'a million-sized input into a million modulo operations to avoid sorting a list of a few dozen entries.',
+    followUps: [
+      'Produce the divisors already sorted with no sort call. What does the second half of the loop have to do?',
+      'Answer the sum of divisors for many queries on the same range. What does a sieve-shaped table give you?',
+      'Count divisors of n from its factorisation instead of a scan. Which is faster, and by what?',
+    ],
+    solution:
+      'function divisors(value) {\n' +
+      '  const list = [];\n' +
+      '  for (let d = 1; d * d <= value; d += 1) {\n' +
+      '    if (value % d !== 0) continue;\n' +
+      '    list.push(d);\n' +
+      '    if (d !== value / d) list.push(value / d);\n' +
+      '  }\n' +
+      '  return list.sort((a, b) => a - b);\n' +
+      '}\n' +
+      '\n' +
+      'function hasExactlyThreeDivisors(value) {\n' +
+      '  return divisors(value).length === 3;\n' +
+      '}',
+    modify: 'Replace the sort with the two-part assembly that emits divisors in ascending order directly. Which half of the loop has to be stored, and why is it the smaller one?',
+  },
+  {
+    step: 8,
+    name: 'Sieve of Eratosthenes',
+    difficulty: 'Medium',
+    topicSlug: MATHS,
+    stem: 'Generate every prime up to a limit by crossing off multiples, and count the primes strictly below it.',
+    brief: 'Input: an integer limit. Output: the primes up to and including it, ascending; and the count of primes strictly below it. Say where the inner loop starts and why that is the right place.',
+    concepts: ['dsa-sieve-cross-off', 'dsa-trial-division-sqrt', 'dsa-complexity-counting', 'dsa-smallest-prime-factor-table'],
+    shortAnswer:
+      'Walk 2 to limit, keep any unmarked value as a prime, and mark everything from p squared upward as composite. Work ' +
+      'is n log log n with one boolean per row, versus sqrt work per value for trial division.',
+    idealAnswer:
+      'The sieve is elimination rather than testing: a value is prime exactly when no smaller prime crossed it off, so one ' +
+      'pass with a boolean table answers every query in the range at once. Two details carry the whole complexity. The ' +
+      'inner loop starts at p squared because any smaller multiple of p has a factor below p and was already marked by it, ' +
+      'so starting at 2p redoes work that has been done; and the outer loop only needs to reach the square root of the ' +
+      'limit, since every composite in range has a factor at or below that root. The result is n log log n crossings - each ' +
+      'composite is touched once per distinct prime factor - against O(n sqrt n) for testing each value by trial division, ' +
+      'paid for with O(n) booleans. Below a limit of about 10^5 the difference is not visible; for a batch of queries over ' +
+      'the same range the sieve wins outright because each query becomes a lookup.',
+    walkthrough:
+      'Read the table as a claim about the smallest prime factor rather than about composites: a marked row has been ' +
+      'witnessed by some prime, and an unmarked row past the root of the limit is still prime when reached. That is why ' +
+      'the strict-below count is the inclusive list minus one row when the limit itself is prime, and why the empty answer ' +
+      'for limits below 2 is not a special case but the loop simply having nothing to report.',
+    commonMistake:
+      'Starting the crossing loop at 2p, or treating the count of primes below a limit as the length of the list up to and ' +
+      'including it.',
+    whyWrong:
+      'Marking from 2p is still correct but multiplies the writes by a constant factor large enough to turn n log log n ' +
+      'into something close to n log n. And an inclusive list counted as strictly-below over-answers by one exactly when ' +
+      'the limit is prime, so the bug shows up only on some inputs and is missed by the obvious test.',
+    followUps: [
+      'Sieve only up to the square root but answer primes up to 10^12 in blocks. What does that cost per block?',
+      'Store the number of crossings per row instead of a boolean. What does a row crossed exactly once tell you?',
+      'Give the version that uses one bit per row instead of a boolean array. Why does that matter at a limit of 10^8?',
+    ],
+    solution:
+      'function sievePrimes(limit) {\n' +
+      '  const composite = new Array(limit + 1).fill(false);\n' +
+      '  const primes = [];\n' +
+      '  for (let value = 2; value <= limit; value += 1) {\n' +
+      '    if (composite[value]) continue;\n' +
+      '    primes.push(value);\n' +
+      '    for (let multiple = value * value; multiple <= limit; multiple += value) {\n' +
+      '      composite[multiple] = true;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return primes;\n' +
+      '}\n' +
+      '\n' +
+      'function countPrimesBelow(limit) {\n' +
+      '  return sievePrimes(limit - 1).length;\n' +
+      '}',
+    modify: 'Return the smallest prime factor per row instead of a boolean, in the same pass. How does that one change turn the sieve into a factorisation table?',
+  },
+  {
+    step: 8,
+    name: 'Find Prime Factorisation using Sieve',
+    difficulty: 'Medium',
+    topicSlug: MATHS,
+    stem: 'Answer many factorisation queries below a shared limit by building one table of smallest prime factors up front.',
+    brief: 'Input: a limit, then values at or below it. Output: for each value, its prime factors with multiplicity in ascending order. Build the table once and answer a query in as many steps as it has factors.',
+    concepts: ['dsa-smallest-prime-factor-table', 'dsa-sieve-cross-off', 'dsa-prime-factor-division', 'dsa-complexity-counting'],
+    shortAnswer:
+      'During the sieve, record the first prime that crosses off each composite and the value itself for a prime; a query ' +
+      'then divides by the recorded factor and repeats until the remainder is 1.',
+    idealAnswer:
+      'Trial division answers one query in O(sqrt n) and forgets everything it learned. A smallest-prime-factor table makes ' +
+      'the sieve do that learning once for the whole range: the first prime to cross off a composite is its smallest ' +
+      'factor, primes record themselves, and the two facts fall out of the same loop that produces the primes - keeping the ' +
+      'write conditional on the slot being empty is what preserves first-marker-wins. A query then walks a chain: divide ' +
+      'by spf[n], look up spf of the quotient, repeat until 1, which costs O(log n) steps, since each division at least ' +
+      'halves the value once the factor is 2 at worst. The build is O(n log log n) time and O(n) space, so the table only ' +
+      'pays off when the number of queries is large enough for the shared build to dominate - one factorisation is faster ' +
+      'by trial division than by sieve plus lookup.',
+    walkthrough:
+      'The subtle row is a composite never crossed before its own turn: its smallest factor p is at most its square root, ' +
+      'so p crossed it off during p pass, and a prime has no such witness, which is exactly why recording the value itself ' +
+      'when the slot is still empty is correct. Walking the chain produces factors in ascending order for free, because ' +
+      'each division removes the current smallest factor before the next lookup can return a larger one.',
+    commonMistake:
+      'Overwriting a slot with a later prime that also divides the row, or building the table up to the largest query ' +
+      'rather than knowing that bound in advance.',
+    whyWrong:
+      'An unconditional write leaves the largest rather than the smallest factor in some rows, and the chain then skips a ' +
+      'factor and returns a product that does not equal the input. A table built to a fixed limit silently returns an ' +
+      'undefined lookup - dividing by an undefined factor yields NaN and the chain never terminates.',
+    followUps: [
+      'Answer the number of distinct prime factors per query from the same table. What does the chain lose when repeats are skipped?',
+      'Make the table answer factorisations of values above the limit. What extra work does a partially sieved range need?',
+      'Compare the table build against trial division for 10^5 queries below 10^6. Which constant actually dominates?',
+    ],
+    solution:
+      'function smallestPrimeFactors(limit) {\n' +
+      '  const spf = new Array(limit + 1).fill(0);\n' +
+      '  for (let value = 2; value <= limit; value += 1) {\n' +
+      '    if (spf[value] !== 0) continue;\n' +
+      '    spf[value] = value;\n' +
+      '    for (let multiple = value * value; multiple <= limit; multiple += value) {\n' +
+      '      if (spf[multiple] === 0) spf[multiple] = value;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return spf;\n' +
+      '}\n' +
+      '\n' +
+      'function factoriseWithSpf(value, spf) {\n' +
+      '  const factors = [];\n' +
+      '  let rest = value;\n' +
+      '  while (rest > 1) {\n' +
+      '    const factor = spf[rest];\n' +
+      '    if (factor === undefined || factor === 0) break;\n' +
+      '    factors.push(factor);\n' +
+      '    rest = Math.floor(rest / factor);\n' +
+      '  }\n' +
+      '  return factors;\n' +
+      '}',
+    modify: 'Add factorCounts(value, spf) returning a Map from prime to exponent, built from the same chain. What does it cost per query compared with returning the list?',
+  },
+  {
+    step: 8,
+    name: 'Power(n, x)',
+    difficulty: 'Medium',
+    topicSlug: MATHS,
+    stem: 'Raise a number to an integer power - which may be negative - in O(log x) multiplications, and say what the base-zero cases return.',
+    brief: 'Input: a base that may be fractional and an integer exponent that may be negative or zero. Output: the power as a double. Give the iterative squaring form and the recursive one, and name the two cases where the answer is a convention rather than arithmetic.',
+    concepts: ['dsa-binary-exponentiation', 'dsa-negative-exponent-reciprocal', 'dsa-double-precision', 'dsa-recursive-decomposition'],
+    shortAnswer:
+      'Halve the exponent and square the base each step, multiplying the running result whenever the exponent bit is set. ' +
+      'A negative exponent is the reciprocal of the positive power; zero to the zero and zero to a negative power are the ' +
+      'two convention cases.',
+    idealAnswer:
+      'Exponentiation by squaring reads the exponent in binary: base to the n is the product of base to the powers of two ' +
+      'whose bits are set, so the loop runs once per bit - O(log n) multiplications instead of n - and that is the ' +
+      'difference between a usable and an unusable answer for an exponent of a billion. Handling the sign by folding the ' +
+      'negative case into the reciprocal keeps the loop single-purpose, and the two conventions are the part an interviewer ' +
+      'waits for: any base to the zero is 1, including zero to the zero, which is a definition rather than a computation ' +
+      'and is what makes polynomial and combinatorial identities come out right; and zero to a negative exponent divides by ' +
+      'zero, which in JavaScript is Infinity rather than an error - the caller has to decide whether that is an answer. ' +
+      'The floating-point note is that the squaring form and the naive multiply loop are not bit-identical for a ' +
+      'fractional base, since rounding depends on the order of operations.',
+    walkthrough:
+      'The iterative version carries two running values: the result, and the base squared once per step, so the invariant ' +
+      'is original-base to the original-exponent equals result times the current factor to the current rest. The recursive ' +
+      'version states the same thing as one equation about the half power, and needs the parity branch to put the odd ' +
+      'factor back. Neither uses the bit representation of a double exponent, which is why the integer-only constraint ' +
+      'matters: a fractional exponent would need Math.pow and its transcendental error, not this loop.',
+    commonMistake:
+      'Looping x times, or returning 1 for a zero base with a negative exponent because the zero case was handled first.',
+    whyWrong:
+      'The linear loop is O(x) multiplications, which for 2 to the 10^9 is both far too slow and a rounding disaster ' +
+      'accumulated over a billion steps. Short-circuiting on base zero before the sign is examined reports 1 for ' +
+      'division by zero, silently turning an infinite result into a plausible finite one.',
+    followUps: [
+      'Compute the power modulo m. Why must the squaring loop take the modulus at every step rather than at the end?',
+      'Return the exact integer power for a base and exponent whose result exceeds 2 to the 53. What type has to change?',
+      'Count the multiplications the loop performs for an exponent of 1023 versus 1024. Which one is more expensive and why?',
+    ],
+    solution:
+      'function power(base, exponent) {\n' +
+      '  if (exponent < 0) return 1 / power(base, -exponent);\n' +
+      '  let result = 1;\n' +
+      '  let factor = base;\n' +
+      '  let rest = exponent;\n' +
+      '  while (rest > 0) {\n' +
+      '    if ((rest & 1) === 1) result *= factor;\n' +
+      '    factor *= factor;\n' +
+      '    rest >>= 1;\n' +
+      '  }\n' +
+      '  return result;\n' +
+      '}\n' +
+      '\n' +
+      'function powerRecursive(base, exponent) {\n' +
+      '  if (exponent === 0) return 1;\n' +
+      '  if (exponent < 0) return 1 / powerRecursive(base, -exponent);\n' +
+      '  const half = powerRecursive(base, Math.floor(exponent / 2));\n' +
+      '  const squared = half * half;\n' +
+      '  return exponent % 2 === 0 ? squared : squared * base;\n' +
+      '}',
+    modify: 'Add powerMod(base, exponent, modulus) that keeps every intermediate inside the 32-bit range. What breaks if the modulus is close to 2 to the 31?',
   },
 ];
 
