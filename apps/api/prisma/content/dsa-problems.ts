@@ -1534,6 +1534,13 @@ export const DSA_CONCEPTS = {
     terms: ['cost is length times depth', 'two smallest first', 'one piece left', 'merge tree', 'every other pair is worse'],
     weight: 4,
   },
+  'dsa-bucket-by-count-replaces-the-sort': {
+    slug: 'dsa-bucket-by-count-replaces-the-sort',
+    name: 'Buckets indexed by count answer top-k with no comparisons',
+    detail: 'Every count lies between one and the length of the input, so an array of that many slots can hold the keys at each frequency; filling it is linear and reading it from the top slot down emits the k most frequent without comparing anything - when the range of the ordering key is bounded by the input size, counting replaces sorting.',
+    terms: ['count is at most n', 'one slot per frequency', 'read from the top down', 'no comparisons', 'bounded key range beats sorting'],
+    weight: 4,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -17535,6 +17542,454 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return total;\n' +
       '}',
     modify: 'Allow a join of k ropes at a time instead of two. Which line pops differently, and why does the pass need padding when the length minus one is not divisible by k minus one?',
+  },
+  {
+    step: 11,
+    name: 'K Most Frequent Elements',
+    difficulty: 'Medium',
+    topicSlug: HEAPS,
+    stem: 'Return the k values that occur most often in an array.',
+    brief: 'Input: an integer array and k, no larger than the number of distinct values. Output: the k most frequent elements, any order among them. Deliver the bucket-by-count walk, the bounded min heap over the count table, and the sort-the-entries answer.',
+    concepts: ['dsa-bucket-by-count-replaces-the-sort', 'dsa-hash-frequency', 'dsa-heap-of-size-k-keeps-the-top-k', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Count every value first, then pick the k largest counts: drop the values into buckets indexed by their frequency and read ' +
+      'the buckets from the top down, which is linear with no comparisons at all, or walk the count table with a min heap of size ' +
+      'k keyed on the count.',
+    idealAnswer:
+      'The question is about frequencies, not values, so the first phase is unavoidable - a count table turns each value into a ' +
+      'number you can compare, and any answer that sorts the values themselves is answering a different question. What happens in ' +
+      'the second phase is where the three answers part. A count is between one and the length of the input, so an array of ' +
+      'length plus one slots can hold the values at each frequency; filling it is one pass over the count table and reading it ' +
+      'from the highest slot downwards collects the k most frequent without a single comparison, because nothing in slot c can ' +
+      'outrank anything in slot c plus one. That is the counting-sort move - when the range of the key is bounded by the input ' +
+      'size, the sort disappears - and here the bound is free, since a value occurring c times contributes c to the length. The ' +
+      'second answer keeps a min heap of at most k entries keyed on the count, so the root is the weakest of the retained k and ' +
+      'the strongest k survive; that is O(d log k) over d distinct values and it is the one to write when the input is a stream ' +
+      'and the total length is not known, because its memory is k and not the range. The third answer sorts the entries by count ' +
+      'and slices - d log d, the whole table in memory, and the version a reviewer should accept when d is small, since it is ' +
+      'three lines and obviously correct. Note what the comparator reads: the entry is a pair, so sorting the entries without a ' +
+      'comparator compares the string form of the pair and orders by the value field, which is not the question. The problem ' +
+      'promises the answer set is unique and accepts any order inside it, which is exactly what lets the bucket walk emit one ' +
+      'bucket in insertion order and still be right; ask for ties broken on the value and the bucket has to sort, and the linear ' +
+      'pass loses its purity. The edges are k equal to the number of distinct values, which returns the whole key set and is the ' +
+      'case where a heap of size k never evicts, and k equal to one, which is a plain maximum search that neither of the two ' +
+      'clever answers needs.',
+    walkthrough:
+      'The array 1, 1, 1, 2, 2, 3 gives the count table 1:3, 2:2, 3:1. The bucket array has seven slots for a length of six, and ' +
+      'the table drops 1 into slot 3, 2 into slot 2 and 3 into slot 1. Reading down from slot 6 collects nothing until slot 3, ' +
+      'which emits 1, then slot 2 emits 2 and the walk stops at k of two. The heap version pushes the three entries as pairs and ' +
+      'evicts on the third push, where the root is the entry with count one - the value 3 - so what survives is 1 and 2. Sorting ' +
+      'the entries by count descending and slicing two reaches the same pair.',
+    commonMistake:
+      'Sorting the array by value and taking the first k distinct entries, or keying the heap on the value instead of the count.',
+    whyWrong:
+      'Order by value has nothing to do with order by frequency: on 1, 1, 1, 2, 2, 3 the value 3 sorts last by value and last by ' +
+      'frequency, which looks right, and on 5, 5, 4 it is wrong - 4 is the least frequent and the largest of the two that ' +
+      'qualify. A heap keyed on the value rather than the count evicts the largest value, not the rarest one, so it keeps the k ' +
+      'smallest values and reports them as the most frequent. Both mistakes pass a test built from an array where frequency and ' +
+      'value happen to agree, which is why the counterexample has to break the tie on purpose.',
+    followUps: [
+      'Return the k least frequent values instead. Which comparison flips in the heap version, and which end of the bucket array does the walk read from?',
+      'The stream is a billion elements drawn from ten distinct values. Which of the three answers do you take, and what does its memory look like?',
+      'The input is a stream and k is asked at any moment. Which record has to survive the call, and can the bucket array still be indexed by count?',
+      'A second caller wants the frequencies in the answer, ordered. Which of the three versions already has them and which one has to walk the table again?',
+    ],
+    solution:
+      'function counted(nums) {\n' +
+      '  const counts = new Map();\n' +
+      '  for (const value of nums) {\n' +
+      '    const seen = counts.get(value);\n' +
+      '    counts.set(value, seen === undefined ? 1 : seen + 1);\n' +
+      '  }\n' +
+      '  return counts;\n' +
+      '}\n' +
+      '\n' +
+      'function topKFrequentByBuckets(nums, k) {\n' +
+      '  const counts = counted(nums);\n' +
+      '  const buckets = [];\n' +
+      '  for (let index = 0; index <= nums.length; index += 1) buckets.push([]);\n' +
+      '  for (const entry of counts) buckets[entry[1]].push(entry[0]);\n' +
+      '  const out = [];\n' +
+      '  for (let count = nums.length; count > 0 && out.length < k; count -= 1) {\n' +
+      '    for (const value of buckets[count]) {\n' +
+      '      out.push(value);\n' +
+      '      if (out.length === k) break;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function heapPushCount(items, entry) {\n' +
+      '  items.push(entry);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent].count <= items[index].count) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapPopCount(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left].count < items[best].count) best = left;\n' +
+      '      if (right < items.length && items[right].count < items[best].count) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'function topKFrequentByHeap(nums, k) {\n' +
+      '  const keep = [];\n' +
+      '  for (const entry of counted(nums)) {\n' +
+      '    heapPushCount(keep, { value: entry[0], count: entry[1] });\n' +
+      '    if (keep.length > k) heapPopCount(keep);\n' +
+      '  }\n' +
+      '  const out = [];\n' +
+      '  while (keep.length > 0) out.push(heapPopCount(keep).value);\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function topKFrequentBySort(nums, k) {\n' +
+      '  const entries = Array.from(counted(nums));\n' +
+      '  entries.sort((first, second) => second[1] - first[1]);\n' +
+      '  return entries.slice(0, k).map((entry) => entry[0]);\n' +
+      '}\n' +
+      '\n' +
+      'function topKFrequentWithoutComparator(nums, k) {\n' +
+      '  const entries = Array.from(counted(nums));\n' +
+      '  entries.sort();\n' +
+      '  return entries.slice(0, k).map((entry) => entry[0]);\n' +
+      '}',
+    modify: 'Order the answer by descending frequency and, inside one frequency, by ascending value. Which line has to sort now, and does the bucket walk stay linear?',
+  },
+  {
+    step: 11,
+    name: 'Kth Largest Element in a Stream of Numbers',
+    difficulty: 'Easy',
+    topicSlug: HEAPS,
+    stem: 'Support adding numbers to a stream and asking, after every add, for the kth largest number seen so far.',
+    brief: 'Input: k, an initial array, then a sequence of add calls. Output: each add returns the kth largest of everything offered. Deliver the class on a bounded min heap, the heap-of-everything answer, and the sort-everything-on-each-add answer.',
+    concepts: ['dsa-heap-of-size-k-keeps-the-top-k', 'dsa-heap-guarantees-only-the-root', 'dsa-sift-up-sift-down', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Keep a min heap of at most k numbers. Each add pushes the new value and, on overflow, pops the root - the smallest of the ' +
+      'k retained - so the root after the call is the kth largest of the stream. The query itself is a field read.',
+    idealAnswer:
+      'The direction of the heap is the whole answer. A min heap holding the k largest values seen has the kth largest at its ' +
+      'root, because the root is the smallest of what it holds and what it holds is exactly the top k of the stream - so add is ' +
+      'one push, one conditional pop, and a look at index zero, in log k time and k slots. Point the same container the other ' +
+      'way and it stops answering: a max heap of the k largest puts the first largest at the root and buries the kth in the ' +
+      'leaves, which is the general rule that a heap only ever hands you the extreme it is ordered toward. The other dead end is ' +
+      'keeping everything. A heap of all n values costs n slots to answer a question about k of them, and reading the kth largest ' +
+      'out of it means popping k times, which is k log n per query against log k per insert - and the k slots it saves is not a ' +
+      'small saving when the stream is a firehose and k is five. Sorting the whole thing on every add is the third option and the ' +
+      'one a reviewer will accept for tiny inputs, at n log n per call. Feeding the initial array through the same offer path is ' +
+      'worth saying out loud: from the first overflow onwards the structure is bounded, so the seed needs no special handling and ' +
+      'the k largest of the seed are what survive. Two edges belong in the answer. If fewer than k values have arrived there is ' +
+      'no kth largest, and returning the root anyway reports the smallest of everything as if it were the kth - so either guard on ' +
+      'the size or state the guarantee the problem gives, which is that the initial array plus the adds always reach k. And ' +
+      'duplicates are separate entries: two equal values are the first and second largest, which is why nothing has to be ' +
+      'deduplicated. The sifts here compare plain numbers, so the class needs no comparator field at all; feed it records instead ' +
+      'of numbers and every comparison has to name a field, which is where the object comparison trap reopens.',
+    walkthrough:
+      'k is 3 against the seed 4, 5, 8, 2. The seed walks in as 4, then 5, then 8 with no eviction, and 2 pushes the heap to four ' +
+      'entries so the pop takes the root - 2 is the smallest and leaves immediately, which is the shape of every rejected value. ' +
+      'What survives is 4, 5, 8 as an array, and the root 4 is the third largest of 4, 5, 8. add(3) pushes 3, which sifts up to ' +
+      'the root and is evicted on the same call, returning 4. add(5) pushes 5 and evicts 4, so the root becomes 5. add(10) pushes ' +
+      '10, evicts 5, and the root stays 5; add(9) evicts the other 5 to give 8; add(4) is too small to enter and the root remains ' +
+      '8.',
+    commonMistake:
+      'Keeping every value in one heap and popping k times to read the answer, or pointing the bounded heap the wrong way.',
+    whyWrong:
+      'The unbounded heap is correct and pays for it: n slots instead of k, and k log n to answer a question that a root read ' +
+      'answers, repeated on every add - it also destroys the stream property, since popping consumes the structure unless it is ' +
+      'copied back. Pointing the container the other way is worse than slow, it is wrong: the same seed with k of 3 leaves a max ' +
+      'heap holding 5, 4, 2 and reporting 5 at the root, because pop-on-overflow from a max heap evicts the largest entry each ' +
+      'time and the structure becomes a keeper of the k smallest, whose root is the kth smallest. On that seed the two answers ' +
+      'are 4 and 5, and they drift further apart as the stream grows. The failure is silent because every operation succeeds.',
+    followUps: [
+      'Answer the kth smallest from the same stream with one class. Which two comparisons flip and which index of the array becomes the answer?',
+      'The stream is a billion numbers and k is five. What is the peak memory of each of the three answers, and which one survives?',
+      'Add a method that returns the top k in descending order without consuming the heap. What does it cost, and why can it not be done in place on the heap array?',
+      'Values arrive faster than queries. Which half of the add path is amortised across many queries and which half is paid per query?',
+    ],
+    solution:
+      'function heapPushSmallest(items, value) {\n' +
+      '  items.push(value);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent] <= items[index]) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapPopSmallest(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left] < items[best]) best = left;\n' +
+      '      if (right < items.length && items[right] < items[best]) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'function heapPushLargest(items, value) {\n' +
+      '  items.push(value);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent] >= items[index]) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapPopLargest(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left] > items[best]) best = left;\n' +
+      '      if (right < items.length && items[right] > items[best]) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'class KthLargest {\n' +
+      '  constructor(k, values) {\n' +
+      '    this.k = k;\n' +
+      '    this.heap = [];\n' +
+      '    for (const value of values) this.offer(value);\n' +
+      '  }\n' +
+      '\n' +
+      '  offer(value) {\n' +
+      '    heapPushSmallest(this.heap, value);\n' +
+      '    if (this.heap.length > this.k) heapPopSmallest(this.heap);\n' +
+      '  }\n' +
+      '\n' +
+      '  add(value) {\n' +
+      '    this.offer(value);\n' +
+      '    return this.peek();\n' +
+      '  }\n' +
+      '\n' +
+      '  peek() {\n' +
+      '    return this.heap.length >= this.k ? this.heap[0] : undefined;\n' +
+      '  }\n' +
+      '\n' +
+      '  size() {\n' +
+      '    return this.heap.length;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'class KthLargestFromFullHeap {\n' +
+      '  constructor(k, values) {\n' +
+      '    this.k = k;\n' +
+      '    this.heap = [];\n' +
+      '    for (const value of values) heapPushLargest(this.heap, value);\n' +
+      '  }\n' +
+      '\n' +
+      '  add(value) {\n' +
+      '    heapPushLargest(this.heap, value);\n' +
+      '    const held = [];\n' +
+      '    let answer = undefined;\n' +
+      '    for (let round = 0; round < this.k; round += 1) {\n' +
+      '      answer = heapPopLargest(this.heap);\n' +
+      '      held.push(answer);\n' +
+      '    }\n' +
+      '    for (const restored of held) heapPushLargest(this.heap, restored);\n' +
+      '    return answer;\n' +
+      '  }\n' +
+      '\n' +
+      '  size() {\n' +
+      '    return this.heap.length;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'class KthLargestSorting {\n' +
+      '  constructor(k, values) {\n' +
+      '    this.k = k;\n' +
+      '    this.all = values.slice();\n' +
+      '  }\n' +
+      '\n' +
+      '  add(value) {\n' +
+      '    this.all.push(value);\n' +
+      '    this.all.sort((first, second) => second - first);\n' +
+      '    return this.all.length >= this.k ? this.all[this.k - 1] : undefined;\n' +
+      '  }\n' +
+      '}',
+    modify: 'Make the class report the kth largest of the last m adds instead of the whole stream. Which record has to hold a window, and what does the heap do with a value that leaves it?',
+  },
+  {
+    step: 11,
+    name: 'Kth largest element in a stream',
+    difficulty: 'Easy',
+    topicSlug: HEAPS,
+    stem: 'Answer the kth largest value of a growing stream while keeping only k values and without a heap.',
+    brief: 'Input: k, an initial array, then a sequence of add calls. Output: each add returns the kth largest so far. Deliver the descending window kept by binary-search insertion, the same window walked linearly, and the every-value-kept reference.',
+    concepts: ['dsa-lower-bound', 'dsa-insertion-shift', 'dsa-heap-of-size-k-keeps-the-top-k', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Keep the k largest values in a descending array of at most k entries. Each add rejects a value smaller than the last ' +
+      'entry outright, otherwise inserts it at its sorted position found by binary search and truncates to k, and returns the ' +
+      'entry at index k minus one.',
+    idealAnswer:
+      'This is the same invariant as the bounded heap - hold the k largest, let the weakest of them be the answer - carried by a ' +
+      'plain array instead of a tree. The window stays sorted descending, so the kth largest is at index k minus one and the ' +
+      'first element of a rejected comparison is the last entry: a new value smaller than that cannot displace anything, and the ' +
+      'add returns in constant time without touching the array. That fast path is the reason to know this version at all, ' +
+      'because on a stream of a million numbers with k of five, almost every value leaves immediately. When a value does belong, ' +
+      'finding its place is a binary search over k entries - log k comparisons - and the insertion itself is a splice that ' +
+      'shifts the tail, which is O(k) moves. So the honest comparison against the heap is log k versus log k plus k, and for ' +
+      'small k the array version wins on constants: it walks contiguous memory, does no index arithmetic and needs no sift code. ' +
+      'Truncating with a length assignment is only valid because the array is descending - cutting the tail throws away the ' +
+      'smallest entries, which is exactly the eviction the heap does by popping; on an unordered array the same line would delete ' +
+      'the wrong entries and answer nothing. Two details of the search are the classic off-by-one pair: the predicate is ' +
+      'strictly-greater so the insertion point is the first index whose entry is not larger than the new value, which puts an ' +
+      'equal value in front of the equals already there, and the loop exits with low equal to high, which is the position - not a ' +
+      'sentinel to test. The linear scan written the other way round - walk while the entry is greater than or equal - lands the ' +
+      'same value behind its equals instead, and because equal entries are indistinguishable both give an identical window and ' +
+      'identical answers, which is the one place where the tie-break is free. Duplicates are entries of their own and the reject ' +
+      'test uses smaller-than rather than ' +
+      'smaller-than-or-equal, so a value equal to the current kth largest is inserted and can push the window up; either choice ' +
+      'is defensible as long as the truncation follows, and the version that rejects on equality is the one that silently loses a ' +
+      'duplicate. Fewer than k values means no answer yet, so the read is guarded on the length rather than returning undefined ' +
+      'from an index that happens to be missing.',
+    walkthrough:
+      'k is 3 against the seed 4, 5, 8, 2. The window starts empty: 4 lands at index 0, 5 is inserted before it giving 5, 4, and ' +
+      '8 before that giving 8, 5, 4 - three entries, so the kth largest is index 2, which is 4. The seed 2 is smaller than index ' +
+      '2, is rejected without a splice, and the answer is still 4. add(3) is rejected the same way. add(5) is not smaller than ' +
+      'the last entry, so it is inserted at the first position whose occupant is not larger - index 1, in front of the 5 already ' +
+      'there - giving 8, ' +
+      '5, 5, 4 and the truncation drops the 4, so the root of the answer is index 2 again: 5.',
+    commonMistake:
+      'Inserting with a linear scan from the front of an ascending array, or truncating the window with a shift from the front.',
+    whyWrong:
+      'A front scan on an ascending array has to walk the whole window before it learns where the value belongs, which is the O(k) ' +
+      'search on top of the O(k) shift and gives up the binary search for nothing. Truncating with a shift is worse than slow: ' +
+      'shift removes the front entry, and on a descending window the front is the largest value the stream has - the line meant ' +
+      'to evict the weakest member of the top k instead evicts the strongest, and the window then holds the k smallest of ' +
+      'everything it has seen. The answer drifts downwards and no operation ever fails, so nothing reports it.',
+    followUps: [
+      'The window is kept ascending instead of descending. Name every index and comparison that moves, including the truncation.',
+      'k is large and most adds are rejected. What is the amortised cost per add here, and what does the same stream cost the heap version?',
+      'You need the k largest as a sorted list on demand. Which version hands it over for free and what does the heap version have to do?',
+      'Replace the splice with an in-place shift loop that moves one entry at a time. Does the complexity change, and what does the code gain?',
+    ],
+    solution:
+      'function insertionPointDescending(window, value) {\n' +
+      '  let low = 0;\n' +
+      '  let high = window.length;\n' +
+      '  while (low < high) {\n' +
+      '    const middle = (low + high) >> 1;\n' +
+      '    if (window[middle] > value) low = middle + 1;\n' +
+      '    else high = middle;\n' +
+      '  }\n' +
+      '  return low;\n' +
+      '}\n' +
+      '\n' +
+      'function insertDescending(window, value) {\n' +
+      '  const at = insertionPointDescending(window, value);\n' +
+      '  window.splice(at, 0, value);\n' +
+      '  return at;\n' +
+      '}\n' +
+      '\n' +
+      'class KthLargestWindow {\n' +
+      '  constructor(k, values) {\n' +
+      '    this.k = k;\n' +
+      '    this.window = [];\n' +
+      '    for (const value of values) this.add(value);\n' +
+      '  }\n' +
+      '\n' +
+      '  add(value) {\n' +
+      '    if (this.window.length < this.k) {\n' +
+      '      insertDescending(this.window, value);\n' +
+      '    } else if (value < this.window[this.k - 1]) {\n' +
+      '      return this.window[this.k - 1];\n' +
+      '    } else {\n' +
+      '      insertDescending(this.window, value);\n' +
+      '      this.window.length = this.k;\n' +
+      '    }\n' +
+      '    return this.window.length >= this.k ? this.window[this.k - 1] : undefined;\n' +
+      '  }\n' +
+      '\n' +
+      '  peek() {\n' +
+      '    return this.window.length >= this.k ? this.window[this.k - 1] : undefined;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'class KthLargestWindowByScan {\n' +
+      '  constructor(k, values) {\n' +
+      '    this.k = k;\n' +
+      '    this.window = [];\n' +
+      '    for (const value of values) this.add(value);\n' +
+      '  }\n' +
+      '\n' +
+      '  add(value) {\n' +
+      '    let at = 0;\n' +
+      '    while (at < this.window.length && this.window[at] >= value) at += 1;\n' +
+      '    this.window.splice(at, 0, value);\n' +
+      '    if (this.window.length > this.k) this.window.pop();\n' +
+      '    return this.window.length >= this.k ? this.window[this.k - 1] : undefined;\n' +
+      '  }\n' +
+      '\n' +
+      '  peek() {\n' +
+      '    return this.window.length >= this.k ? this.window[this.k - 1] : undefined;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function answersOf(k, values, additions, Class) {\n' +
+      '  const tracker = new Class(k, values);\n' +
+      '  const out = [];\n' +
+      '  for (const value of additions) out.push(tracker.add(value));\n' +
+      '  return out;\n' +
+      '}',
+    modify: 'Keep the window ascending and return the kth largest from the front instead of the back. Which comparisons, which index and which end of the truncation move?',
   },
 ];
 
