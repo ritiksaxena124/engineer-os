@@ -96,3 +96,15 @@ export function partTone(part: Pick<ExamPartScore, 'answered' | 'passed'>): Tone
   if (part.passed) return 'held';
   return part.answered === 0 ? 'neutral' : 'weak';
 }
+
+/**
+ * The two banks that keep the sheet's vocabulary. A drill from either of them is labelled Easy,
+ * Medium or Hard everywhere it is read, and the D-rung stays on the general bank, so a learner
+ * never sees one question described two ways.
+ */
+export const isBanded = (slug: string) => slug.startsWith('dsa-') || slug.startsWith('int-');
+
+/** The rung in the vocabulary the row's own bank uses. */
+export function difficultyLabel(row: { slug: string; difficulty: number; band?: string | null }): string {
+  return isBanded(row.slug) ? (row.band ?? 'Medium') : `D${row.difficulty}`;
+}

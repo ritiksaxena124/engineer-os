@@ -10,7 +10,7 @@ import { Prose } from '@/components/prose';
 import { RungLabel } from '@/components/rung';
 import { useQuery } from '@/lib/useQuery';
 import { api, ApiError } from '@/lib/api';
-import { PASS_SCORE, shortDate, verdictTone } from '@/lib/view';
+import { PASS_SCORE, difficultyLabel, shortDate, verdictTone } from '@/lib/view';
 import type { AnswerModel, AttemptResult, QuestionSummary, Standing } from '@/lib/types';
 
 export function PracticeAttempt() {
@@ -51,7 +51,7 @@ export function PracticeAttempt() {
           <Link href={`/topics/${row.topicSlug}`} className="hover:text-ink hover:underline">
             {row.topicSlug}
           </Link>
-          {' '}· {row.categoryLabel ?? row.category} · D{row.difficulty} · {row.levelKey}
+          {' '}· {row.categoryLabel ?? row.category} · {difficultyLabel(row)} · {row.levelKey}
         </p>
         <div className="mt-1 flex items-start justify-between gap-6">
           <h1 className="max-w-[70ch] text-[17px] leading-snug tracking-tight text-ink">{row.stem}</h1>

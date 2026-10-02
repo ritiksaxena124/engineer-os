@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Badge, Panel, inputClass } from '@/components/ui';
 import { Empty, Failure, Loading } from '@/components/states';
 import { useQuery } from '@/lib/useQuery';
+import { difficultyLabel } from '@/lib/view';
 import type { QuestionSummary, Topic } from '@/lib/types';
 
 export function PracticeList() {
@@ -66,7 +67,7 @@ export function PracticeList() {
                   </span>
                   <span className="flex shrink-0 items-center gap-2">
                     <Badge tone="neutral">{question.category}</Badge>
-                    <span className="text-[11px] text-dim">D{question.difficulty}</span>
+                    <span className="text-[11px] text-dim">{difficultyLabel(question)}</span>
                     {!open && <Badge tone="neutral">gated</Badge>}
                   </span>
                 </li>

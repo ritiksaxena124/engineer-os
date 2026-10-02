@@ -76,6 +76,8 @@ export interface QuestionSummary {
   category: string;
   categoryLabel?: string;
   difficulty: number;
+  /** the sheet name for the rung: Easy, Medium or Hard */
+  band?: string | null;
   levelKey: string;
   isDiagnostic: boolean;
   conceptCount: number;
@@ -88,6 +90,7 @@ export interface QuestionSummary {
 export interface QuestionFacets {
   companies: (CompanyTag & { count: number })[];
   difficulties: { difficulty: number; count: number }[];
+  areas: { slug: string; title: string; count: number }[];
   untagged: number;
 }
 

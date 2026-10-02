@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { ReactNode } from "react";
 import Link from "next/link";
-import { Badge, Panel, inputClass } from "@/components/ui";
+import { Badge, Chip, Panel, inputClass } from "@/components/ui";
 import { Empty, Failure, Loading } from "@/components/states";
 import { useQuery } from "@/lib/useQuery";
 import type { QuestionFacets, QuestionSummary, Topic } from "@/lib/types";
@@ -15,29 +14,6 @@ interface Browse {
 
 const RUNGS = [1, 2, 3, 4, 5, 6, 7];
 const control = `${inputClass} w-auto shrink-0 py-1 text-[12px]`;
-
-function Chip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-control border px-2 py-1 text-[12px] transition-colors ${
-        active
-          ? "border-accent/50 bg-accent/15 text-accent"
-          : "border-line-strong bg-transparent text-muted hover:bg-raised hover:text-ink"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
 
 /**
  * The bank read as a work list rather than as a syllabus: what is asked where, at which rung, and

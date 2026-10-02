@@ -6,7 +6,7 @@ import { Badge, Panel } from '@/components/ui';
 import { Empty, Failure, Loading } from '@/components/states';
 import { Rung } from '@/components/rung';
 import { useQuery } from '@/lib/useQuery';
-import { PASS_SCORE, shortDate } from '@/lib/view';
+import { PASS_SCORE, difficultyLabel, shortDate } from '@/lib/view';
 import type { LessonSummary, QuestionSummary, RepairStep, Standing, Topic } from '@/lib/types';
 
 export function TopicScreen() {
@@ -105,7 +105,7 @@ export function TopicScreen() {
                   </Link>
                   <span className="flex shrink-0 items-center gap-2">
                     <Badge tone="neutral">{question.category}</Badge>
-                    <span className="text-[11px] text-dim">D{question.difficulty} · {question.levelKey}</span>
+                    <span className="text-[11px] text-dim">{difficultyLabel(question)} · {question.levelKey}</span>
                   </span>
                 </li>
               ))}

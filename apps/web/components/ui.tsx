@@ -102,3 +102,27 @@ export function Field({
 
 export const inputClass =
   'w-full rounded-control border border-line-strong bg-canvas px-2.5 py-1.5 text-[13px] text-ink placeholder:text-dim';
+
+/** A filter that shows its own result count, so a chip never advertises a list the learner cannot reach. */
+export function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-control border px-2 py-1 text-[12px] transition-colors ${
+        active
+          ? 'border-accent/50 bg-accent/15 text-accent'
+          : 'border-line-strong bg-transparent text-muted hover:bg-raised hover:text-ink'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
