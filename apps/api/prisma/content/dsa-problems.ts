@@ -1232,6 +1232,48 @@ export const DSA_CONCEPTS = {
     terms: ['pour to reverse', 'walk right to left', 'no index access', 'mirror algorithms', 'same routine both directions'],
     weight: 2,
   },
+  'dsa-monotone-discard-never-answer': {
+    slug: 'dsa-monotone-discard-never-answer',
+    name: 'An element shadowed by a stronger newer one can never be the answer again',
+    detail: 'Once a bigger, later element stands between an older one and the rest of the scan, the older one is dead for every future query, so popping it is not a shortcut - it is provably safe.',
+    terms: ['monotonic stack', 'dominated candidate', 'pop what cannot win', 'each element pushed once', 'amortised constant work'],
+    weight: 3,
+  },
+  'dsa-index-stack-not-value-stack': {
+    slug: 'dsa-index-stack-not-value-stack',
+    name: 'The stack holds positions and the comparison reads values through them',
+    detail: 'The answer has to be written into the slot of the element being popped, so the stack stores indices and dereferences them for every comparison; a stack of values alone loses the place to write.',
+    terms: ['index stack', 'dereference to compare', 'answer slot', 'distance from positions', 'width needs the index'],
+    weight: 3,
+  },
+  'dsa-circular-second-pass': {
+    slug: 'dsa-circular-second-pass',
+    name: 'A wrap-around scan is two laps with the pushes limited to the first lap',
+    detail: 'Taking the index modulo the length lets the head of the array act as the greater element for the tail, and pushing only while on the first lap stops the second lap from doubling the work or overwriting answers.',
+    terms: ['modulo index', 'second lap only pops', 'push once', 'monotone across the seam', 'head answered by head'],
+    weight: 3,
+  },
+  'dsa-collapse-runs-into-spans': {
+    slug: 'dsa-collapse-runs-into-spans',
+    name: 'A popped entry carries the length of the run it already absorbed',
+    detail: 'When an element pops a weaker neighbour it inherits the run length that neighbour had already collected, so one stack entry stands for a whole contiguous run and the count stays exact without a rescan.',
+    terms: ['carry the count', 'run length', 'inherit on pop', 'amortised span', 'no second scan'],
+    weight: 3,
+  },
+  'dsa-directional-collision-stack': {
+    slug: 'dsa-directional-collision-stack',
+    name: 'Only one pair of directions can collide, and that decides the loop guard',
+    detail: 'Two objects moving the same way never meet and a left-mover sitting above a right-mover has already passed it, so the only possible fight is a negative on top of a positive - which is both the loop condition and the survivor test.',
+    terms: ['sign pair collides', 'pop while a fight is possible', 'magnitude decides', 'both can die', 'survivors keep order'],
+    weight: 3,
+  },
+  'dsa-amortised-pop-accounting': {
+    slug: 'dsa-amortised-pop-accounting',
+    name: 'An element that is pushed once and popped once makes the inner loop linear in total',
+    detail: 'A while loop nested inside a for loop is still O(n) when every iteration of the inner loop retires an element that can never return - the bound is on the batch, not on a single call.',
+    terms: ['amortised cost', 'pushed once popped once', 'retire to bound', 'worst case per call', 'aggregate accounting'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -1248,6 +1290,7 @@ const LINKED = 'linked-lists';
 const DP = 'dp-greedy';
 const BITS = 'dsa-bit-manipulation';
 const STACKS = 'stacks-and-queues';
+const MONO = 'monotonic-stacks';
 
 export const DSA_PROBLEMS: DsaProblem[] = [
   {
@@ -13036,6 +13079,437 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return stack.length === 1 ? stack.pop().text : null;\n' +
       '}',
     modify: 'Carry associativity per operator instead of assuming left-to-right for all of them, and make ^ bind to the right. Which of the two comparison operators changes?',
+  },
+  {
+    step: 9,
+    name: 'Next Greater Element',
+    difficulty: 'Easy',
+    topicSlug: MONO,
+    stem: 'For every element of an array, report the first larger element to its right, or -1 when there is none.',
+    brief: 'Input: an array of integers. Output: an array of the same length where position i holds the first value after i that is strictly greater than values[i], or -1. It has to be better than O(n squared).',
+    concepts: ['dsa-monotone-discard-never-answer', 'dsa-index-stack-not-value-stack', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Scan right to left with a stack of candidates kept in increasing order: pop everything that cannot beat the ' +
+      'current element, and whatever is left on top is its answer.',
+    idealAnswer:
+      'The naive reading is a nested loop that walks right from every position, which is quadratic on a sorted-downward ' +
+      'input. The monotonic stack fixes it by noticing that a smaller element hidden behind a larger one to its right can ' +
+      'never be the next greater element for anything further left either, so it is safe to throw it away. Holding the ' +
+      'stack in strictly decreasing order from the bottom means the pops remove exactly the dead candidates and the top ' +
+      'that survives is the nearest one, because the scan walks leftwards and later positions were pushed earlier. Every ' +
+      'element is pushed once and popped at most once, so the total work is O(n) with O(n) space - the amortised argument ' +
+      'is the answer to the follow-up about why a loop inside a loop is still linear.',
+    walkthrough:
+      'For [2, 1, 3] the scan starts at 3 with an empty stack, so its answer is -1 and 3 becomes the only candidate. At 1 ' +
+      'the top is 3, which is larger, so 1 is answered with 3 and joins the stack. At 2 the top 1 is not larger, so it is ' +
+      'popped - 1 can never answer anything to its left, since 2 is bigger and closer - and 3 answers. The result is ' +
+      '[3, 3, -1].',
+    commonMistake:
+      'Popping while the top is strictly less than the current element instead of less-than-or-equal, and comparing with ' +
+      '>= when deciding that the top answers.',
+    whyWrong:
+      'An equal element is not a strictly greater answer, so leaving duplicates on the stack lets a repeated value be ' +
+      'reported as its own next greater element and breaks the strict monotonicity the pop rule depends on. For [5, 5] the ' +
+      'wrong guard returns [5, -1] where the honest answer is [-1, -1]; the second element of the pair is also dead as a ' +
+      'candidate, because the later 5 is at least as good for everything further left.',
+    followUps: [
+      'LeetCode 496 gives a second array that is a subset of the first. Which single pass answers all of them, and where does the hash go?',
+      'Rewrite it to report the distance to the next greater element rather than the value. What does the stack have to store now?',
+      'Daily Temperatures asks for the number of days until a warmer temperature. Which line changes?',
+    ],
+    solution:
+      'function nextGreaterElement(values) {\n' +
+      '  const answer = new Array(values.length).fill(-1);\n' +
+      '  const stack = [];\n' +
+      '  for (let index = values.length - 1; index >= 0; index--) {\n' +
+      '    while (stack.length > 0 && stack[stack.length - 1] <= values[index]) stack.pop();\n' +
+      '    if (stack.length > 0) answer[index] = stack[stack.length - 1];\n' +
+      '    stack.push(values[index]);\n' +
+      '  }\n' +
+      '  return answer;\n' +
+      '}',
+    modify: 'Report the index of the next greater element instead of its value, then reuse the same routine to answer a batch of queries against a second array.',
+  },
+  {
+    step: 9,
+    name: 'Next Greater Element II',
+    difficulty: 'Medium',
+    topicSlug: MONO,
+    stem: 'Same question as the linear version, except the array wraps around: the successor of the last element is the first.',
+    brief: 'Input: a circular array of integers. Output: for each position, the first strictly greater value encountered when moving right, continuing from index 0 when the end is reached, or -1.',
+    concepts: ['dsa-circular-second-pass', 'dsa-monotone-discard-never-answer', 'dsa-index-stack-not-value-stack', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Run the monotonic stack for two laps with the index taken modulo the length, pushing only during the first lap so ' +
+      'the second lap can answer without adding new candidates.',
+    idealAnswer:
+      'Circularity means an element near the head can be the answer for an element near the tail, so a single leftwards ' +
+      'pass is not enough. The standard fix is to walk 2n positions and map each back with the modulo, which gives every ' +
+      'element a full view of the ring. The detail that makes it correct rather than merely terminating early is the push ' +
+      'guard: candidates only enter during the first lap, because a second push would re-add an element that has already ' +
+      'been answered and could overwrite a settled slot. Popping still happens on both laps, and the stack holds indices so ' +
+      'that the answer can be written into the dead position. Work is O(n) time and O(n) space with at most 2n compares.',
+    walkthrough:
+      'For [1, 2, 1] the first lap answers position 0 with 2 and leaves positions 1 and 2 on the stack. The second lap ' +
+      'reaches 2 at the wrapped index 1 and pops position 2, whose answer is therefore 2, while position 1 never finds ' +
+      'anything strictly greater than itself and keeps its -1. The output is [2, -1, 2].',
+    commonMistake:
+      'Pushing on both laps, or running only one lap and treating the leftovers as -1 immediately.',
+    whyWrong:
+      'Pushing twice puts the same index on the stack a second time, so a later pop writes an answer into a slot that was ' +
+      'already settled and the same element ends up competing with itself. A single lap is the opposite failure: in ' +
+      '[5, 4, 3, 2, 1] every position except the first is answered by the 5 at the head, and stopping early reports five ' +
+      '-1 values instead of [-1, 5, 5, 5, 5].',
+    followUps: [
+      'What is the exact number of comparisons in the worst case for 2n steps, and why is the stack never longer than n?',
+      'Solve it by concatenating the array to itself. What extra memory does that buy and what does it cost?',
+      'Next greater on a ring with equal elements: which pop guard decides whether a duplicate can answer itself?',
+    ],
+    solution:
+      'function nextGreaterElementCircular(values) {\n' +
+      '  const size = values.length;\n' +
+      '  const answer = new Array(size).fill(-1);\n' +
+      '  const stack = [];\n' +
+      '  for (let step = 0; step < size * 2; step++) {\n' +
+      '    const index = step % size;\n' +
+      '    while (stack.length > 0 && values[stack[stack.length - 1]] < values[index]) {\n' +
+      '      answer[stack.pop()] = values[index];\n' +
+      '    }\n' +
+      '    if (step < size) stack.push(index);\n' +
+      '  }\n' +
+      '  return answer;\n' +
+      '}',
+    modify: 'Make it next greater or equal, and make the ring answer distances instead of values. Which guard changes from < to <=, and where does the lap counter have to stop?',
+  },
+  {
+    step: 9,
+    name: 'Next Smaller Element',
+    difficulty: 'Medium',
+    topicSlug: MONO,
+    stem: 'For every element, report the first smaller element to its right, or -1 when none exists.',
+    brief: 'Input: an array of integers. Output: for each position, the first strictly smaller value after it, or -1. The mirror image of the next greater element.',
+    concepts: ['dsa-monotone-discard-never-answer', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Same right-to-left scan, with the comparison flipped: pop everything that is not smaller than the current element ' +
+      'because it can never be a smaller answer for anything further left.',
+    idealAnswer:
+      'The direction of the discard argument reverses. Scanning right to left, an element that is greater than or equal to ' +
+      'the current one is useless as a next-smaller candidate for anything left of the current position, since the current ' +
+      'element is both smaller and closer. Popping while the top is at least the current value leaves a stack that ' +
+      'increases towards the top, and that top is the first smaller element. The rule to state out loud is which side is ' +
+      'strict: the answer must be strictly smaller, so equal values are popped rather than reported. Complexity stays ' +
+      'O(n) time and O(n) space.',
+    walkthrough:
+      'For [4, 3, 2, 1] the scan keeps a strictly decreasing chain of candidates and each new element finds the previous ' +
+      'one smaller, giving [3, 2, 1, -1]. For [1, 3, 2, 4] the 4 has nothing to its right, the 2 pops the 4 and is ' +
+      'answered -1, the 3 sees the 2 on top and is answered 2, and the 1 pops both and is answered -1 - so the output is ' +
+      '[-1, 2, -1, -1].',
+    commonMistake:
+      'Popping only while the top is strictly greater, which reports an equal value as the next smaller element.',
+    whyWrong:
+      'Smaller is strict, so a duplicate is not an answer even though it survives the wrong pop rule. It is also a dead ' +
+      'candidate: the later equal element is at least as good for every position to the left. [5, 5] with the wrong guard ' +
+      'prints [5, -1]; the correct answer is [-1, -1].',
+    followUps: [
+      'Final Prices With a Special Discount in a Shop applies exactly this rule to a price list. Which two lines do you copy?',
+      'Convert it to previous smaller element. What is the only change, and why is it not just a reversal of the array?',
+      'Give an input where the naive nested loop and the stack disagree, so that the strictness of the comparison is the whole test.',
+    ],
+    solution:
+      'function nextSmallerElement(values) {\n' +
+      '  const answer = new Array(values.length).fill(-1);\n' +
+      '  const stack = [];\n' +
+      '  for (let index = values.length - 1; index >= 0; index--) {\n' +
+      '    while (stack.length > 0 && stack[stack.length - 1] >= values[index]) stack.pop();\n' +
+      '    if (stack.length > 0) answer[index] = stack[stack.length - 1];\n' +
+      '    stack.push(values[index]);\n' +
+      '  }\n' +
+      '  return answer;\n' +
+      '}',
+    modify: 'Add a mode argument covering the four combinations of greater or smaller and to the left or to the right. Which two of the four share a single scan?',
+  },
+  {
+    step: 9,
+    name: 'Number of NGEs to the right',
+    difficulty: 'Medium',
+    topicSlug: MONO,
+    stem: 'For every element, count how many elements to its right are strictly greater than it.',
+    brief: 'Input: an array of integers. Output: for each position, the number of greater elements anywhere to its right. Not the nearest one - the count of all of them.',
+    concepts: ['dsa-inversion-count', 'dsa-divide-and-conquer', 'dsa-index-order-loss', 'dsa-complexity-counting'],
+    shortAnswer:
+      'A merge sort that merges the two halves in descending order: every right element already placed is strictly greater ' +
+      'than the left element being placed, so the right-hand pointer is its running count.',
+    idealAnswer:
+      'This is the counting version of an inversion problem, and the monotonic stack is the wrong tool: it answers the ' +
+      'nearest greater element and throws away the rest, which is exactly the information this question needs. The merge ' +
+      'sort keeps the count because the two halves are position-contiguous - every element of the right half sits to the ' +
+      'right of every element of the left half - so the pairs formed at merge time are precisely the pairs the answer ' +
+      'asks about. The subtlety is strictness. Merging in descending order and taking an element from the left only when it ' +
+      'is at least the current right element means each right element already placed was placed because it was strictly ' +
+      'greater than the left elements still waiting, so the right-hand pointer is the exact subtotal to add - and equal ' +
+      'values are deliberately placed left-first so they never inflate it. The leftover left elements must be drained with ' +
+      'the same addition, which is the step most implementations drop. Work is O(n log n) time; the O(n) extra arrays are ' +
+      'what buys exactness over the stack.',
+    walkthrough:
+      'For [3, 1, 2] the inner merge places 3 ahead of 1 with j still at 0, so nothing is counted yet. The outer merge has ' +
+      'the descending left half [3, 1] against the right half [2]: 3 is at least 2 so it is placed with j still 0, then 2 ' +
+      'beats 1 and is placed with j becoming 1, and draining the leftover 1 adds that j to its counter. The result is ' +
+      '[0, 1, 0] - nothing on the right of 3 is greater, 2 is greater than 1, and the last position has nothing after it.',
+    commonMistake:
+      'Reusing the next greater element stack, or counting the not-greater elements and subtracting from the number of ' +
+      'positions to the right.',
+    whyWrong:
+      'The stack pops the smaller candidates away, and after a pop there is no record of how many were discarded, so it ' +
+      'answers a different question. The subtraction route is worse because it has to classify equal values on one side of ' +
+      'the comparison or the other, and equal elements are neither greater nor smaller: on [3, 3, 3] counting strictly ' +
+      'smaller right-hand elements and subtracting reports [2, 1, 0] where the correct answer is [0, 0, 0]. Ties are the ' +
+      'test that separates a merge sort that understands its own comparison from one that only sorted.',
+    followUps: [
+      'Count the inversions of the whole array as a by-product. Which single accumulator would you add, and why is the sum of the answers not enough?',
+      'Replace the merge sort with a Fenwick tree over compressed values. What does each pass count then, and in which order do you scan?',
+      'Adapt it to count elements greater than the current one within a distance k. Which structure now bounds the work?',
+    ],
+    solution:
+      'function numberOfGreaterToRight(values) {\n' +
+      '  const greater = new Array(values.length).fill(0);\n' +
+      '  const items = values.map((value, index) => ({ value, index }));\n' +
+      '  const mergeSort = (list) => {\n' +
+      '    if (list.length < 2) return list;\n' +
+      '    const middle = Math.floor(list.length / 2);\n' +
+      '    const left = mergeSort(list.slice(0, middle));\n' +
+      '    const right = mergeSort(list.slice(middle));\n' +
+      '    const merged = [];\n' +
+      '    let i = 0;\n' +
+      '    let j = 0;\n' +
+      '    while (i < left.length && j < right.length) {\n' +
+      '      if (left[i].value >= right[j].value) {\n' +
+      '        greater[left[i].index] += j;\n' +
+      '        merged.push(left[i]);\n' +
+      '        i++;\n' +
+      '      } else {\n' +
+      '        merged.push(right[j]);\n' +
+      '        j++;\n' +
+      '      }\n' +
+      '    }\n' +
+      '    while (i < left.length) {\n' +
+      '      greater[left[i].index] += j;\n' +
+      '      merged.push(left[i]);\n' +
+      '      i++;\n' +
+      '    }\n' +
+      '    while (j < right.length) {\n' +
+      '      merged.push(right[j]);\n' +
+      '      j++;\n' +
+      '    }\n' +
+      '    return merged;\n' +
+      '  };\n' +
+      '  mergeSort(items);\n' +
+      '  return greater;\n' +
+      '}',
+    modify: 'Turn it into count of smaller elements to the right, which is the classic inversion-per-index question. Which comparison flips, and does the descending merge become an ascending one?',
+  },
+  {
+    step: 9,
+    name: 'Asteroid Collision',
+    difficulty: 'Medium',
+    topicSlug: MONO,
+    stem: 'Asteroids move on a line: sign is direction, magnitude is size. Resolve every collision and return the survivors in order.',
+    brief: 'Input: an array of non-zero integers, positive meaning right and negative meaning left, all at equal speed. On a head-on collision the smaller explodes, equal sizes destroy both. Return the state after everything settles.',
+    concepts: ['dsa-directional-collision-stack', 'dsa-lifo-fifo-end-discipline', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Push survivors left to right. An incoming left-mover only fights a right-mover on top of the stack, so the collide ' +
+      'loop runs while the top is positive - pop, keep, or kill both depending on magnitude.',
+    idealAnswer:
+      'Order matters here, so the stack is a survivor list rather than a candidate list: whatever is in it has already ' +
+      'settled and will never move again. The collision condition is the whole insight - two asteroids meet only when the ' +
+      'incoming one is negative and the one to its left is positive, because same-direction pairs share a speed and a ' +
+      'left-mover followed by a right-mover is already separating. That gives a loop guarded on the sign pair, with three ' +
+      'outcomes inside it: the stack top is smaller so it explodes and the fight continues, the sizes are equal so both ' +
+      'explode, or the top is larger so the incoming one dies. An incoming asteroid that survives the loop is pushed, and ' +
+      'a left-moving stack top freezes the loop because nothing to its left can ever reach it. Each asteroid is pushed once ' +
+      'and popped at most once, so O(n) time and O(n) space.',
+    walkthrough:
+      'For [5, 10, -5] the 5 and the 10 are pushed without a fight. The incoming -5 meets the 10, which is larger, so the ' +
+      '-5 dies and the answer is [5, 10]. For [10, 2, -5] the -5 destroys the 2, keeps going, meets the 10 and dies there, ' +
+      'leaving [10]. For [8, 1, -8] the -8 destroys the 1, then meets an equal 8 and both explode, leaving the empty array.',
+    commonMistake:
+      'Colliding whenever the signs differ, or handling the equal-size case by only destroying the incoming asteroid.',
+    whyWrong:
+      'A negative followed by a positive never meets - they start apart and move apart - so a symmetric sign test destroys ' +
+      'pairs that should both survive, and [-2, 1] must stay [-2, 1]. Ignoring the mutual destruction case leaves [8, 1, -8] ' +
+      'answering [8, 1] instead of [], which is the difference between an explosion and an annihilation.',
+    followUps: [
+      'Return the collisions in the order they happen. Do you need the stack, a queue, or a sweep?',
+      'Rewrite the collide loop so that the incoming asteroid is destroyed by a larger top. Which branch disappears?',
+      'Planetary collision variants give each body its own speed. What extra state does the loop guard need then?',
+    ],
+    solution:
+      'function asteroidCollision(values) {\n' +
+      '  const stack = [];\n' +
+      '  for (const rock of values) {\n' +
+      '    let alive = true;\n' +
+      '    while (alive && rock < 0 && stack.length > 0 && stack[stack.length - 1] > 0) {\n' +
+      '      const top = stack[stack.length - 1];\n' +
+      '      if (top < -rock) {\n' +
+      '        stack.pop();\n' +
+      '        continue;\n' +
+      '      }\n' +
+      '      if (top === -rock) stack.pop();\n' +
+      '      alive = false;\n' +
+      '    }\n' +
+      '    if (alive) stack.push(rock);\n' +
+      '  }\n' +
+      '  return stack;\n' +
+      '}',
+    modify: 'Give every asteroid a distinct speed so a faster chaser can overtake a slower one. Which assumption in the sign-pair guard breaks first?',
+  },
+  {
+    step: 9,
+    name: 'Next Greater Element to the Left',
+    difficulty: 'Medium',
+    topicSlug: MONO,
+    stem: 'For every element, report the nearest strictly greater element on its left side.',
+    brief: 'Input: an array of integers. Output: for each position, the closest value to its left that is strictly greater than it, or -1. The scan goes the other way from the next greater element.',
+    concepts: ['dsa-monotone-discard-never-answer', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Scan left to right keeping a decreasing stack: pop everything at most the current value, and the surviving top is ' +
+      'the nearest greater on the left.',
+    idealAnswer:
+      'Reversing the direction reverses what the stack means. Scanning left to right, the top of the stack is the closest ' +
+      'settled candidate on the left, so the same discard argument applies with the roles swapped: an element that is at ' +
+      'most the current one can never be a greater-left answer for the current or any later position, because the current ' +
+      'element is larger and closer. Pop while the top is less than or equal to the current value, read the top or -1, then ' +
+      'push. Note that this is not achieved by reversing the array and running the right-to-left version - that would ' +
+      'report the nearest greater in the reversed order, which is a different element. Complexity stays O(n).',
+    walkthrough:
+      'For [4, 3, 2, 1] each element keeps the previous one on the stack and is answered by it, giving [-1, 4, 3, 2]. For ' +
+      '[1, 2, 3] every element pops its smaller predecessor and finds nothing behind it, so the answer is [-1, -1, -1] - ' +
+      'the ascending array is the case where the stack drains completely at every step.',
+    commonMistake:
+      'Reporting the maximum to the left instead of the nearest greater, or solving it by reversing and reusing the ' +
+      'right-to-left routine without reversing the output back.',
+    whyWrong:
+      'Nearest and greatest are different questions: for [6, 1, 5] the nearest greater on the left of 5 is 6 and the ' +
+      'maximum is also 6, but for [6, 7, 1, 5] the nearest greater is 7 while a max-tracking scan would keep answering 6 ' +
+      'or 7 without regard to distance. Reversing without un-reversing writes the answers into the wrong positions, which ' +
+      'is a bug that only shows on asymmetric inputs.',
+    followUps: [
+      'Previous greater or equal: which single comparison flips, and does the stack monotonicity change direction?',
+      'Distance to the nearest greater on the left instead of the value - what does the stack have to hold?',
+      'Prove the stack stays decreasing from bottom to top, and show why that makes the top the nearest candidate.',
+    ],
+    solution:
+      'function nextGreaterToLeft(values) {\n' +
+      '  const answer = new Array(values.length).fill(-1);\n' +
+      '  const stack = [];\n' +
+      '  for (let index = 0; index < values.length; index++) {\n' +
+      '    while (stack.length > 0 && stack[stack.length - 1] <= values[index]) stack.pop();\n' +
+      '    if (stack.length > 0) answer[index] = stack[stack.length - 1];\n' +
+      '    stack.push(values[index]);\n' +
+      '  }\n' +
+      '  return answer;\n' +
+      '}',
+    modify: 'Add a flag for nearest versus maximum on the chosen side. What extra state does the maximum version need, and why is it not a stack at all?',
+  },
+  {
+    step: 9,
+    name: 'Previous Smaller Element',
+    difficulty: 'Medium',
+    topicSlug: MONO,
+    stem: 'For every element, report the nearest strictly smaller element to its left, or -1.',
+    brief: 'Input: an array of integers. Output: for each position, the closest smaller value on its left, or -1 when there is none.',
+    concepts: ['dsa-monotone-discard-never-answer', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Left to right with a stack that increases towards the top: pop everything not smaller than the current element and ' +
+      'read the top.',
+    idealAnswer:
+      'Both comparisons have to be reasoned about separately: which elements get thrown away, and whether the reported ' +
+      'answer is strict. Scanning left to right, an element that is greater than or equal to the current one can never be ' +
+      'the previous smaller for the current or a later position, so it is popped; the top that remains is the nearest ' +
+      'smaller because the stack is a subsequence of the array in position order. The pop condition and the answer ' +
+      'condition are the same inequality read from opposite sides, which is why a single off-by-one in the comparison ' +
+      'silently turns smaller into smaller-or-equal. O(n) time, O(n) space.',
+    walkthrough:
+      'For [1, 3, 2] the 1 has no left neighbour and reports -1, the 3 sees 1 on top and reports 1, and the 2 pops the 3 ' +
+      'because 3 is not smaller, then reports the 1 that remains: [-1, 1, 1]. For [4, 3, 2, 1] each new element pops the ' +
+      'whole stack, so every position reports -1.',
+    commonMistake:
+      'Popping while the top is strictly greater so that an equal value is reported as smaller, or returning the smallest ' +
+      'value seen so far instead of the nearest.',
+    whyWrong:
+      'Strictness is part of the question: for [5, 5] the second 5 has no strictly smaller predecessor, but the loose pop ' +
+      'rule reports 5. Confusing nearest with minimum is worse because it survives symmetric tests - on [2, 1, 3] the ' +
+      'answer for 3 is 1 either way, but on [1, 2, 0, 3] the nearest smaller is 0 while the running minimum says 1.',
+    followUps: [
+      'Final Prices With a Special Discount is this exact routine applied to a price list. Which line becomes the discount?',
+      'Report the index of the previous smaller element. Why does that force a stack of indices rather than values?',
+      'Build the histogram version: for each bar, the first shorter bar on each side. How many passes do you need?',
+    ],
+    solution:
+      'function previousSmallerElement(values) {\n' +
+      '  const answer = new Array(values.length).fill(-1);\n' +
+      '  const stack = [];\n' +
+      '  for (let index = 0; index < values.length; index++) {\n' +
+      '    while (stack.length > 0 && stack[stack.length - 1] >= values[index]) stack.pop();\n' +
+      '    if (stack.length > 0) answer[index] = stack[stack.length - 1];\n' +
+      '    stack.push(values[index]);\n' +
+      '  }\n' +
+      '  return answer;\n' +
+      '}',
+    modify: 'Make it previous smaller or equal. Which side of each comparison moves, and what does the stack invariant become?',
+  },
+  {
+    step: 9,
+    name: 'Online Stock Span',
+    difficulty: 'Medium',
+    topicSlug: MONO,
+    stem: 'Prices arrive one at a time. For each, report how many consecutive recent prices, ending with this one, are at most this price.',
+    brief: 'Input: a stream of prices. Output per call: the span - the number of consecutive days up to and including today whose price is less than or equal to today. No batch access to the history.',
+    concepts: ['dsa-collapse-runs-into-spans', 'dsa-monotone-discard-never-answer', 'dsa-amortised-pop-accounting', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Keep a decreasing stack of [price, span] pairs. Pop every pair whose price is at most today, adding its span to ' +
+      'today, then push today with the total.',
+    idealAnswer:
+      'A naive walk backwards over the history is O(span) per call and quadratic on a rising sequence. The stack fix is to ' +
+      'store, next to each price, how many days it already swallowed: when a new price pops a weaker entry it inherits the ' +
+      'run length that entry had collected, because every day in the run is also behind the new price and no longer than ' +
+      'it. One entry then stands for a whole contiguous run, the stack stays strictly decreasing, and the count is exact ' +
+      'without a rescan. Each day is pushed once and popped at most once across the entire stream, so the amortised cost ' +
+      'per call is O(1) even though a single call can pop many entries - the classic distinction between worst-case-per-' +
+      'call and amortised, which is what the interviewer is actually probing.',
+    walkthrough:
+      'Feeding 100, 80, 60, 70, 60, 75, 85: the first three spans are 1, 1, 1. The 70 pops the 60 and inherits its 1, so ' +
+      'its span is 2 and the 80 below it is still larger. The next 60 reports 1. The 75 pops the 60 and then the 70, ' +
+      'gaining 1 + 2 for a span of 4. The 85 pops the 75 and the 80 for 4 + 1 plus its own day, giving 6, and stops at the ' +
+      '100. The output is 1, 1, 1, 2, 1, 4, 6.',
+    commonMistake:
+      'Adding only 1 for each pop instead of the span the popped entry had stored, or keeping a plain stack of prices with ' +
+      'no payload.',
+    whyWrong:
+      'Counting pops rather than inherited lengths loses every day that a previous entry had already absorbed, so a long ' +
+      'flat stretch collapses: prices 100, 80, 60, 70, 70 report 1, 1, 1, 2, 2 with the wrong rule where the true spans ' +
+      'are 1, 1, 1, 2, 3. It also silently reintroduces the quadratic behaviour, because the swallowed days have to be ' +
+      'rediscovered by a later walk.',
+    followUps: [
+      'Why is the per-call worst case O(n) but the amortised cost O(1)? Where exactly does the argument break if entries could be pushed twice?',
+      'Answer the same stream offline with a previous greater element pass. Which monotonic row do you reuse, and in which direction?',
+      'Extend it to report the span of the minimum price too. What second stack would you keep, and does it stay monotonic?',
+    ],
+    solution:
+      'class StockSpanner {\n' +
+      '  constructor() {\n' +
+      '    this.records = [];\n' +
+      '  }\n' +
+      '\n' +
+      '  next(price) {\n' +
+      '    let span = 1;\n' +
+      '    while (this.records.length > 0 && this.records[this.records.length - 1][0] <= price) {\n' +
+      '      span += this.records[this.records.length - 1][1];\n' +
+      '      this.records.pop();\n' +
+      '    }\n' +
+      '    this.records.push([price, span]);\n' +
+      '    return span;\n' +
+      '  }\n' +
+      '}',
+    modify: 'Make the span strictly less than today instead of at most. Which comparison flips, and what happens to a run of equal prices?',
   },
 ];
 

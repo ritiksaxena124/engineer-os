@@ -423,6 +423,22 @@ const EXPECTS: Record<string, string> = {
     'postfixToPrefix("ab+cde*-*") === "*+ab-c*de" && postfixToPrefix("abc-*") === "*a-bc" && postfixToPrefix("ab+") === "+ab" && postfixToPrefix("a") === "a" && postfixToPrefix("+ab") === null && postfixToPrefix("abc*") === null && postfixToPrefix("ab-cd-*") === "*-ab-cd"',
   'Postfix to Infix Conversion':
     'postfixToInfix("abc-*") === "(a*(b-c))" && postfixToInfix("ab+") === "(a+b)" && postfixToInfix("ab+c+") === "((a+b)+c)" && postfixToInfix("a") === "a" && postfixToInfix("abc*") === null && postfixToInfixMinimal("abc-*") === "a*(b-c)" && postfixToInfixMinimal("ab+c+") === "a+b+c" && postfixToInfixMinimal("abc*+") === "a+b*c" && postfixToInfixMinimal("ab+cd*+") === "a+b+c*d" && postfixToInfixMinimal("ab-c-") === "a-b-c" && postfixToInfixMinimal("abc--") === "a-(b-c)"',
+  'Next Greater Element':
+    'nextGreaterElement([2,1,3]).join() === "3,3,-1" && nextGreaterElement([1,2,3,4]).join() === "2,3,4,-1" && nextGreaterElement([4,3,2,1]).join() === "-1,-1,-1,-1" && nextGreaterElement([5,5]).join() === "-1,-1" && nextGreaterElement([1,1,1]).join() === "-1,-1,-1" && nextGreaterElement([]).join() === ""',
+  'Next Greater Element II':
+    'nextGreaterElementCircular([1,2,1]).join() === "2,-1,2" && nextGreaterElementCircular([5,4,3,2,1]).join() === "-1,5,5,5,5" && nextGreaterElementCircular([1,2,3,4]).join() === "2,3,4,-1" && nextGreaterElementCircular([1,2,3,2,1]).join() === "2,3,-1,3,2" && nextGreaterElementCircular([3,3]).join() === "-1,-1" && nextGreaterElementCircular([]).join() === ""',
+  'Next Smaller Element':
+    'nextSmallerElement([4,3,2,1]).join() === "3,2,1,-1" && nextSmallerElement([2,1,3]).join() === "1,-1,-1" && nextSmallerElement([1,3,2,4]).join() === "-1,2,-1,-1" && nextSmallerElement([5,5]).join() === "-1,-1" && nextSmallerElement([1,1,1]).join() === "-1,-1,-1" && nextSmallerElement([]).join() === ""',
+  'Number of NGEs to the right':
+    'numberOfGreaterToRight([12,13,11,9,1]).join() === "1,0,0,0,0" && numberOfGreaterToRight([1,2,3]).join() === "2,1,0" && numberOfGreaterToRight([3,1,2]).join() === "0,1,0" && numberOfGreaterToRight([2,1,3,4]).join() === "2,2,1,0" && numberOfGreaterToRight([5,4,3,2,1]).join() === "0,0,0,0,0" && numberOfGreaterToRight([3,3,3]).join() === "0,0,0" && numberOfGreaterToRight([]).join() === ""',
+  'Asteroid Collision':
+    'asteroidCollision([5,10,-5]).join() === "5,10" && asteroidCollision([10,2,-5]).join() === "10" && asteroidCollision([-2,-1,1,-8]).join() === "-2,-1,-8" && asteroidCollision([5,-4,-5]).join() === "" && asteroidCollision([8,1,-8]).join() === "" && asteroidCollision([1,-1,-2]).join() === "-2" && asteroidCollision([-1,-2]).join() === "-1,-2" && asteroidCollision([1,2]).join() === "1,2" && asteroidCollision([]).join() === ""',
+  'Next Greater Element to the Left':
+    'nextGreaterToLeft([4,3,2,1]).join() === "-1,4,3,2" && nextGreaterToLeft([1,2,3]).join() === "-1,-1,-1" && nextGreaterToLeft([3,1,2]).join() === "-1,3,3" && nextGreaterToLeft([6,7,1,5]).join() === "-1,-1,7,7" && nextGreaterToLeft([5,5]).join() === "-1,-1" && nextGreaterToLeft([]).join() === ""',
+  'Previous Smaller Element':
+    'previousSmallerElement([4,3,2,1]).join() === "-1,-1,-1,-1" && previousSmallerElement([1,3,2]).join() === "-1,1,1" && previousSmallerElement([2,1,3]).join() === "-1,-1,1" && previousSmallerElement([1,2,0,3]).join() === "-1,1,-1,0" && previousSmallerElement([5,5]).join() === "-1,-1" && previousSmallerElement([]).join() === ""',
+  'Online Stock Span':
+    '(() => { const a = new StockSpanner(); const w = [100,80,60,70,60,75,85].map((p) => a.next(p)).join(); const b = new StockSpanner(); const x = [100,80,60,70,70].map((p) => b.next(p)).join(); const c = new StockSpanner(); const y = [8,7,6,5,4,3,2,1,10].map((p) => c.next(p)).join(); const d = new StockSpanner(); const z = [1,2,3,4].map((p) => d.next(p)).join(); return w === "1,1,1,2,1,4,6" && x === "1,1,1,2,3" && y === "1,1,1,1,1,1,1,1,9" && z === "1,2,3,4"; })()',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */
