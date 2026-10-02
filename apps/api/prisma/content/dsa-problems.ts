@@ -1148,6 +1148,55 @@ export const DSA_CONCEPTS = {
     terms: ['reciprocal of the positive', 'zero base', 'infinity not exception', 'sign lives on the exponent', 'float precision after dividing'],
     weight: 2,
   },
+  'dsa-lifo-fifo-end-discipline': {
+    slug: 'dsa-lifo-fifo-end-discipline',
+    name: 'A stack and a queue are the same storage with different ends',
+    detail: 'Which end is written and which is read is the entire difference: one end for both gives last-in-first-out, two ends give first-in-first-out, and the backing array never changes.',
+    terms: ['same storage', 'top end', 'back end', 'last in first out', 'first in first out'],
+    weight: 3,
+  },
+  'dsa-two-stack-queue-transfer': {
+    slug: 'dsa-two-stack-queue-transfer',
+    name: 'Two stacks make a queue by flipping the order once',
+    detail: 'Pushing onto an in-stack and pouring it into an out-stack reverses the sequence twice, which restores arrival order - and doing the pour only when the out-stack is empty is what makes the cost amortised rather than per dequeue.',
+    terms: ['in stack', 'out stack', 'double reversal', 'transfer only when empty', 'two moves per element'],
+    weight: 3,
+  },
+  'dsa-queue-rotation-order': {
+    slug: 'dsa-queue-rotation-order',
+    name: 'Rotating a queue exposes the element that arrived last',
+    detail: 'Dequeue and re-enqueue everything ahead of the newest arrival and that element ends up at the front, which is the only way a first-in-first-out structure can serve a last-in-first-out request.',
+    terms: ['rotate past the front', 'newest at the front', 'one rotation per push', 'cost moved to the writer', 'order by movement'],
+    weight: 3,
+  },
+  'dsa-head-index-circular-buffer': {
+    slug: 'dsa-head-index-circular-buffer',
+    name: 'A queue on an array needs a head index, not a shift',
+    detail: 'Removing the front of an array moves every later element, so the structure keeps an index of where the live window starts and reclaims the skipped space in one slice when it is worth it.',
+    terms: ['head index', 'array shift is linear', 'compaction when half wasted', 'wrap-around modulo', 'amortised reclaim'],
+    weight: 3,
+  },
+  'dsa-list-end-symmetry': {
+    slug: 'dsa-list-end-symmetry',
+    name: 'A linked list is cheap at the head and needs a tail to be cheap at the back',
+    detail: 'Push and pop at the head are two pointer writes, so a stack is free on a bare list; a queue also has to write at the back, which is O(1) only if the structure keeps the last node as well as the first.',
+    terms: ['head insert', 'tail pointer', 'no traversal on enqueue', 'both ends tracked', 'list beats array here'],
+    weight: 3,
+  },
+  'dsa-bracket-matching-stack': {
+    slug: 'dsa-bracket-matching-stack',
+    name: 'A closer has to match the most recent unmatched opener',
+    detail: 'That most-recent rule is exactly last-in-first-out, so the openers go on a stack and each closer pops and compares - which is also why a single-depth counter cannot tell bracket types apart.',
+    terms: ['push openers', 'pop on closer', 'empty stack means unmatched', 'leftovers mean unclosed', 'counter versus stack'],
+    weight: 3,
+  },
+  'dsa-shadow-history-min': {
+    slug: 'dsa-shadow-history-min',
+    name: 'An aggregate over a stack needs its own history',
+    detail: 'Popping restores an earlier minimum, so the structure keeps a parallel record of the value each pop returns to - repeating a value has to repeat its record or the restore is wrong.',
+    terms: ['parallel stack', 'history of minima', 'restore on pop', 'repeats need their own entry', 'constant extra per push'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -1163,6 +1212,7 @@ const NUMERIC = 'numeric-strings';
 const LINKED = 'linked-lists';
 const DP = 'dp-greedy';
 const BITS = 'dsa-bit-manipulation';
+const STACKS = 'stacks-and-queues';
 
 export const DSA_PROBLEMS: DsaProblem[] = [
   {
@@ -11934,6 +11984,675 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return exponent % 2 === 0 ? squared : squared * base;\n' +
       '}',
     modify: 'Add powerMod(base, exponent, modulus) that keeps every intermediate inside the 32-bit range. What breaks if the modulus is close to 2 to the 31?',
+  },
+  {
+    step: 9,
+    name: 'Implement Stack using Array',
+    difficulty: 'Easy',
+    topicSlug: STACKS,
+    stem: 'Build a stack on a plain JavaScript array with push, pop, peek, size and isEmpty, and define what an operation on the empty stack returns.',
+    brief: 'Implement the ADT: push appends, pop removes and returns the most recent value, peek reads it without removing. Say what pop and peek do at size zero, and why both ends of the array are not equally good choices.',
+    concepts: ['dsa-lifo-fifo-end-discipline', 'dsa-boundary-conditions', 'dsa-value-versus-reference'],
+    shortAnswer:
+      'Append with push and remove with pop at the same end - the tail. Growing and shrinking at the tail is where the ' +
+      'array is already O(1); the head is where it has to move everything.',
+    idealAnswer:
+      'The stack is a rule about ends, not a data structure, and an array can serve either end. Using the tail is the ' +
+      'correct mapping because Array.prototype.push and pop grow and shrink the buffer in place, both amortised O(1), ' +
+      'while the head end would need shift and unshift, each of which re-indexes every remaining element and turns the ' +
+      'whole structure into O(n) per operation. That is the same cost the queue row has to pay for, and the difference ' +
+      'between the two is only which end the reader is allowed to touch. The empty case is a design decision the sheet ' +
+      'leaves open and production cannot: throwing forces every caller into a try block, undefined is silent and ' +
+      'indistinguishable from a stored undefined, and a sentinel value lies about the contents - so return null or throw ' +
+      'deliberately and say which, because a stack that returns undefined is one pushed undefined away.',
+    walkthrough:
+      'Size comes from the array length rather than a counter, which removes the bug class where the two disagree; peek is ' +
+      'pop without the removal, so it must not be written with splice or any other method that mutates. Reading the last ' +
+      'element through length minus one is the only index arithmetic the structure needs, and it is safe precisely because ' +
+      'nothing else is allowed to touch the tail.',
+    commonMistake:
+      'Using shift and unshift so that the top is at index 0, or returning undefined for an empty pop without documenting it.',
+    whyWrong:
+      'Index zero is the expensive end: every pop from the head moves all remaining elements one slot, so a million ' +
+      'operations on a stack of a million entries costs a quadratic number of writes instead of a million. An undocumented ' +
+      'undefined also cannot be told apart from a real stored undefined, so a caller cannot distinguish an empty stack from ' +
+      'a stack holding nothing meaningful.',
+    followUps: [
+      'Give the version that throws on empty and the version that returns null. Which does a parser loop prefer, and why?',
+      'What is the memory behaviour of a stack implemented this way after a million pushes and a million pops?',
+      'Implement the same ADT so that push and pop are both O(1) worst case rather than amortised. What does that cost?',
+    ],
+    solution:
+      'class ArrayStack {\n' +
+      '  constructor() {\n' +
+      '    this.items = [];\n' +
+      '  }\n' +
+      '\n' +
+      '  push(value) {\n' +
+      '    this.items.push(value);\n' +
+      '    return this.items.length;\n' +
+      '  }\n' +
+      '\n' +
+      '  pop() {\n' +
+      '    if (this.items.length === 0) return null;\n' +
+      '    return this.items.pop();\n' +
+      '  }\n' +
+      '\n' +
+      '  peek() {\n' +
+      '    if (this.items.length === 0) return null;\n' +
+      '    return this.items[this.items.length - 1];\n' +
+      '  }\n' +
+      '\n' +
+      '  size() {\n' +
+      '    return this.items.length;\n' +
+      '  }\n' +
+      '\n' +
+      '  isEmpty() {\n' +
+      '    return this.items.length === 0;\n' +
+      '  }\n' +
+      '}',
+    modify: 'Add a capacity that makes push throw once the stack is full, and a clear method. Why is capacity worth having on a call stack but rarely worth having on a request stack?',
+  },
+  {
+    step: 9,
+    name: 'Implement Queue using Array',
+    difficulty: 'Easy',
+    topicSlug: STACKS,
+    stem: 'Build a FIFO queue on an array without paying the linear cost of shifting on every dequeue.',
+    brief: 'Implement enqueue, dequeue, front, size and isEmpty on a single array. Dequeue must not move the surviving elements, so the structure has to track where its live window starts.',
+    concepts: ['dsa-head-index-circular-buffer', 'dsa-lifo-fifo-end-discipline', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Append at the tail and keep a head index instead of calling shift; reclaim the skipped prefix in one slice once it ' +
+      'is worth the copy.',
+    idealAnswer:
+      'A queue reads at the opposite end from where it writes, and an array is only cheap at the write end, so the naive ' +
+      'array queue is one shift per dequeue - O(n) each, O(n squared) for a full drain. The fix is to stop physically ' +
+      'removing anything: keep the elements and move an index, which makes dequeue O(1) and size a subtraction. The cost ' +
+      'of that fix is garbage - the skipped prefix is still allocated - so the structure needs a reclaim rule, and the ' +
+      'standard one is to compact when the wasted part reaches half the buffer, which bounds wasted memory to a constant ' +
+      'factor and makes each element participate in at most one copy per halving, i.e. amortised O(1) again. A ring buffer ' +
+      'with modulo indices is the version that never compacts and is the one that shows up in kernels and ring loggers; ' +
+      'here the JavaScript array with a slice reclaims is easier to read and the same complexity.',
+    walkthrough:
+      'Every index the structure exposes has to be offset by the head, which is where off-by-one bugs live: front reads ' +
+      'items at head, size is length minus head, and the empty test is head reaching length. The compaction is written ' +
+      'after the value is taken so that the returned element is the one at the old head, and it resets both fields ' +
+      'together - forgetting the head reset is the bug that makes a queue skip elements after the first reclaim.',
+    commonMistake:
+      'Calling shift on every dequeue, or compacting without resetting the head index.',
+    whyWrong:
+      'A shift rewrites every later slot, so a queue drained in order performs a quadratic number of writes and becomes ' +
+      'the bottleneck of any pipeline that uses it. Compacting without resetting head makes the live window start past ' +
+      'the beginning of a shortened array, so the next dequeues return nothing while the queue still reports a nonzero ' +
+      'size.',
+    followUps: [
+      'Rewrite it as a fixed-size ring buffer with modulo indices. What does dequeue cost now, and what happens when the buffer is full?',
+      'What does the reclaim threshold do to worst-case latency of a single dequeue, and is that acceptable in a request path?',
+      'Give the version that keeps the wasted prefix forever. When is that the right trade?',
+    ],
+    solution:
+      'class ArrayQueue {\n' +
+      '  constructor() {\n' +
+      '    this.items = [];\n' +
+      '    this.head = 0;\n' +
+      '  }\n' +
+      '\n' +
+      '  enqueue(value) {\n' +
+      '    this.items.push(value);\n' +
+      '    return this.size();\n' +
+      '  }\n' +
+      '\n' +
+      '  dequeue() {\n' +
+      '    if (this.head >= this.items.length) return null;\n' +
+      '    const value = this.items[this.head];\n' +
+      '    this.head += 1;\n' +
+      '    if (this.head * 2 >= this.items.length) {\n' +
+      '      this.items = this.items.slice(this.head);\n' +
+      '      this.head = 0;\n' +
+      '    }\n' +
+      '    return value;\n' +
+      '  }\n' +
+      '\n' +
+      '  front() {\n' +
+      '    if (this.head >= this.items.length) return null;\n' +
+      '    return this.items[this.head];\n' +
+      '  }\n' +
+      '\n' +
+      '  size() {\n' +
+      '    return this.items.length - this.head;\n' +
+      '  }\n' +
+      '\n' +
+      '  isEmpty() {\n' +
+      '    return this.size() === 0;\n' +
+      '  }\n' +
+      '}',
+    modify: 'Turn it into a fixed-capacity ring buffer where enqueue refuses to overwrite and returns false when full. Which index arithmetic replaces the slice?',
+  },
+  {
+    step: 9,
+    name: 'Implement Stack using Queue',
+    difficulty: 'Easy',
+    topicSlug: STACKS,
+    stem: 'Serve last-in-first-out reads from a first-in-first-out structure, and say which operation you are willing to make expensive.',
+    brief: 'Implement push, pop, peek, size and isEmpty using only queue enqueue and dequeue - no direct index access. Name the cost you moved and the reason the choice is push rather than pop.',
+    concepts: ['dsa-queue-rotation-order', 'dsa-lifo-fifo-end-discipline', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Rotate the queue after each push so the newest element lands at the front; every pop is then a single dequeue. The ' +
+      'cost moves to push, which pays size minus one rotations.',
+    idealAnswer:
+      'A queue can only hand back the oldest element, so the newest has to be made the oldest - after pushing the new ' +
+      'value, rotating the other n minus one elements behind it puts it at the front and the structure is a stack again. ' +
+      'Doing the work at push is the version worth writing when pops and peeks dominate, which is the usual case for a ' +
+      'depth-first loop that peeks repeatedly; the alternative is to rotate at pop, which makes push free and every read ' +
+      'linear. Either way the total for n pushes and n pops is O(n squared) - the rotation is not a trick that avoids the ' +
+      'cost, it only decides who pays it - and that is the honest answer to give before writing the loop. The real ' +
+      'constraint the row is testing is the API one: dequeue and enqueue only, no indices, which is how the question ' +
+      'checks that you understand the ADT rather than the array underneath it.',
+    walkthrough:
+      'One rotation loop with a moving count is the whole mechanism; the invariant is that the queue is already in '
+      + 'stack order - newest first - before each push, so the rotation only has to move the older elements out of the ' +
+      'way exactly once. Size is read before the rotation starts, and empty pop must not enter the loop at all.',
+    commonMistake:
+      'Rotating by a count that includes the new element, or claiming the rotation makes the stack cheap.',
+    whyWrong:
+      'Rotating n times instead of n minus one moves the new element back behind the others and the pop returns the ' +
+      'oldest value, silently turning the structure back into a queue. And the amortisation argument does not apply here: ' +
+      'each push still touches every earlier element, so the total work is quadratic, not linear.',
+    followUps: [
+      'Move the rotation to pop instead. Which operation is O(n) now, and which workload would prefer that?',
+      'Implement the same stack with two queues and no rotation. Where do the elements live between operations?',
+      'Why is a stack built on a queue never what you ship, and what would you use instead?',
+    ],
+    solution:
+      'class QueueStack {\n' +
+      '  constructor() {\n' +
+      '    this.items = [];\n' +
+      '  }\n' +
+      '\n' +
+      '  push(value) {\n' +
+      '    this.items.push(value);\n' +
+      '    for (let i = 0; i < this.items.length - 1; i += 1) {\n' +
+      '      this.items.push(this.items.shift());\n' +
+      '    }\n' +
+      '    return this.items.length;\n' +
+      '  }\n' +
+      '\n' +
+      '  pop() {\n' +
+      '    if (this.items.length === 0) return null;\n' +
+      '    return this.items.shift();\n' +
+      '  }\n' +
+      '\n' +
+      '  peek() {\n' +
+      '    if (this.items.length === 0) return null;\n' +
+      '    return this.items[0];\n' +
+      '  }\n' +
+      '\n' +
+      '  size() {\n' +
+      '    return this.items.length;\n' +
+      '  }\n' +
+      '\n' +
+      '  isEmpty() {\n' +
+      '    return this.items.length === 0;\n' +
+      '  }\n' +
+      '}',
+    modify: 'Rewrite it so push is O(1) and pop pays the rotation. Give the interleaved sequence of five pushes and five pops where the two versions do exactly the same total work.',
+  },
+  {
+    step: 9,
+    name: 'Implement Queue using Stack',
+    difficulty: 'Easy',
+    topicSlug: STACKS,
+    stem: 'Serve first-in-first-out reads from two last-in-first-out stacks, transferring on every dequeue.',
+    brief: 'Implement enqueue, dequeue, front, size and isEmpty with push and pop only. Count how many times one element is moved by the naive version and say what that cost is per dequeue.',
+    concepts: ['dsa-two-stack-queue-transfer', 'dsa-lifo-fifo-end-discipline', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Pour the inbox onto the outbox so the oldest element surfaces, take it, then pour everything back: two reversals ' +
+      'restore arrival order, and the return pour is what keeps the next dequeue correct.',
+    idealAnswer:
+      'A stack reverses order and two reversals restore it, so pouring the inbox onto the outbox presents the queue in ' +
+      'departure order - that is the whole proof and the reason the trick is not a coincidence. The version that is ' +
+      'correct without any cleverness pours out, removes one element, and pours back, because leaving the survivors on ' +
+      'the outbox while new arrivals pile onto the inbox would reverse them a second time when the next pour happens; ' +
+      'that single ordering hazard is the bug this row is built to expose. The price is that every dequeue shuffles every ' +
+      'waiting element, so a drain of n elements performs on the order of n squared pushes and pops - correct answers ' +
+      'with a quadratic constant, which is what makes it a fine interview answer and a poor queue. Size and isEmpty are ' +
+      'cheap here only because everything always lives in the inbox, and any peek has to run the same out-and-back dance ' +
+      'to be honest.',
+    walkthrough:
+      'Run the sequence 1, 2, 3 in and out to see the mechanism: the first pour gives an outbox whose top is 1, the pop ' +
+      'takes it, and the return pour restores 2 then 3 as the inbox in arrival order, so the next dequeue repeats the same ' +
+      'steps unchanged. The moves counter exists to make that cost visible in a test - the amortised row keeps the same ' +
+      'counter and reports a smaller number for the same sequence.',
+    commonMistake:
+      'Pouring out and leaving the survivors on the outbox, or reporting the outbox size as the queue size.',
+    whyWrong:
+      'A half-poured state breaks the moment a new element is enqueued: the next pour reverses the inbox onto the old ' +
+      'outbox contents and the queue serves an element that arrived later before one that arrived earlier. And since the ' +
+      'return pour leaves the outbox empty, reading its length as the size reports an empty queue while elements are ' +
+      'still waiting.',
+    followUps: [
+      'Make the transfer happen only when the outbox is empty and prove the move count drops to two per element.',
+      'Give the interleaved enqueue and dequeue sequence that maximises the naive version cost for a fixed number of operations.',
+      'Can a queue built from two stacks support peek in amortised constant time? What does peek change about the invariant?',
+    ],
+    solution:
+      'class StackQueue {\n' +
+      '  constructor() {\n' +
+      '    this.inbox = [];\n' +
+      '    this.outbox = [];\n' +
+      '    this.moves = 0;\n' +
+      '  }\n' +
+      '\n' +
+      '  enqueue(value) {\n' +
+      '    this.inbox.push(value);\n' +
+      '    return this.size();\n' +
+      '  }\n' +
+      '\n' +
+      '  pourToOutbox() {\n' +
+      '    while (this.inbox.length > 0) {\n' +
+      '      this.outbox.push(this.inbox.pop());\n' +
+      '      this.moves += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '\n' +
+      '  pourToInbox() {\n' +
+      '    while (this.outbox.length > 0) {\n' +
+      '      this.inbox.push(this.outbox.pop());\n' +
+      '      this.moves += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '\n' +
+      '  dequeue() {\n' +
+      '    this.pourToOutbox();\n' +
+      '    const value = this.outbox.length === 0 ? null : this.outbox.pop();\n' +
+      '    this.pourToInbox();\n' +
+      '    return value;\n' +
+      '  }\n' +
+      '\n' +
+      '  front() {\n' +
+      '    this.pourToOutbox();\n' +
+      '    const value = this.outbox.length === 0 ? null : this.outbox[this.outbox.length - 1];\n' +
+      '    this.pourToInbox();\n' +
+      '    return value;\n' +
+      '  }\n' +
+      '\n' +
+      '  size() {\n' +
+      '    return this.inbox.length;\n' +
+      '  }\n' +
+      '\n' +
+      '  isEmpty() {\n' +
+      '    return this.inbox.length === 0;\n' +
+      '  }\n' +
+      '}',
+    modify: 'Run enqueue 1, enqueue 2, dequeue, enqueue 3, dequeue on both this version and the amortised one and report the move count each performs. Which single rule accounts for the difference?',
+  },
+  {
+    step: 9,
+    name: 'Implement Queue using Stack (amortized O(1))',
+    difficulty: 'Easy',
+    topicSlug: STACKS,
+    stem: 'Make every queue operation amortised constant time by transferring from the inbox to the outbox only when the outbox is empty.',
+    brief: 'Same two stacks, one rule changed. Show that an element is moved at most twice over its whole lifetime and explain what amortised means for the latency of a single dequeue.',
+    concepts: ['dsa-two-stack-queue-transfer', 'dsa-complexity-counting', 'dsa-lifo-fifo-end-discipline', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Pour only when the outbox is empty. Each element then crosses once and leaves once, so n operations cost O(n) even ' +
+      'though a single dequeue can be O(n).',
+    idealAnswer:
+      'The one guard - do not transfer while the outbox still holds something - is the whole difference between quadratic ' +
+      'and linear, because it makes crossings irreversible: an element moves from inbox to outbox exactly once and is ' +
+      'popped exactly once, so over n enqueues and n dequeues the total number of pushes and pops is bounded by a small ' +
+      'constant times n. That is the aggregate argument, and the honest statement of the result is amortised, not worst ' +
+      'case: a dequeue that finds the outbox empty pays for every queued arrival in one step, which for a batch importer ' +
+      'means one slow operation among many fast ones. Where tail latency matters - a request path with a deadline - the ' +
+      'guarantee has to be worst case, and the answer is a linked-list queue or a ring buffer rather than this ' +
+      'construction. A common strengthening is the pair-wise bank-account argument: charge one extra unit of cost to each ' +
+      'enqueue and the debt pays for its own transfer.',
+    walkthrough:
+      'The invariant is that the outbox always holds its elements in departure order and is never refilled while ' +
+      'nonempty, so reads never interleave two arrivals. Once the outbox drains, the next read pays for a fresh pour and ' +
+      'the cycle repeats; the counter in the reference code exists only to make the move count testable.',
+    commonMistake:
+      'Transferring on a fixed schedule, or describing the result as worst-case O(1).',
+    whyWrong:
+      'A scheduled pour can move elements that would not have been read yet, and moving an element twice or pouring into ' +
+      'a nonempty outbox reverses part of the sequence, which corrupts the order. Calling it worst case O(1) is the more ' +
+      'dangerous error, since a single dequeue is visibly linear whenever a burst arrived first.',
+    followUps: [
+      'Give the interleaving of enqueues and dequeues that produces the single most expensive dequeue, and count its moves.',
+      'Prove the two-moves-per-element bound with a bank-account argument instead of a counting argument.',
+      'Which queue ADT gives worst-case constant dequeue, and what does it cost in allocation?',
+    ],
+    solution:
+      'class AmortizedQueue {\n' +
+      '  constructor() {\n' +
+      '    this.inbox = [];\n' +
+      '    this.outbox = [];\n' +
+      '    this.moves = 0;\n' +
+      '  }\n' +
+      '\n' +
+      '  enqueue(value) {\n' +
+      '    this.inbox.push(value);\n' +
+      '    return this.size();\n' +
+      '  }\n' +
+      '\n' +
+      '  transfer() {\n' +
+      '    if (this.outbox.length > 0) return;\n' +
+      '    while (this.inbox.length > 0) {\n' +
+      '      this.outbox.push(this.inbox.pop());\n' +
+      '      this.moves += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '\n' +
+      '  dequeue() {\n' +
+      '    this.transfer();\n' +
+      '    if (this.outbox.length === 0) return null;\n' +
+      '    return this.outbox.pop();\n' +
+      '  }\n' +
+      '\n' +
+      '  front() {\n' +
+      '    this.transfer();\n' +
+      '    if (this.outbox.length === 0) return null;\n' +
+      '    return this.outbox[this.outbox.length - 1];\n' +
+      '  }\n' +
+      '\n' +
+      '  size() {\n' +
+      '    return this.inbox.length + this.outbox.length;\n' +
+      '  }\n' +
+      '\n' +
+      '  isEmpty() {\n' +
+      '    return this.size() === 0;\n' +
+      '  }\n' +
+      '}',
+    modify: 'Instrument both versions with the same interleaving - five enqueues, five dequeues - and report the total move count each produces. What does the ratio become as the batch grows?',
+  },
+  {
+    step: 9,
+    name: 'Implement Stack using Linked List',
+    difficulty: 'Medium',
+    topicSlug: STACKS,
+    stem: 'Build a stack on a singly linked list so that push and pop are worst-case constant time, including when the stack empties.',
+    brief: 'Implement push, pop, peek, size and isEmpty with nodes. Say which end is the top and why the other end would need a backward pointer or a traversal.',
+    concepts: ['dsa-list-end-symmetry', 'dsa-node-holds-reference', 'dsa-null-termination', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Push and pop at the head: two pointer writes each, worst case O(1). The tail end would need a previous pointer, ' +
+      'which is what a doubly linked list exists for.',
+    idealAnswer:
+      'A singly linked list is cheap only where it has a pointer, so the top has to be the head the structure already ' +
+      'knows. Pushing there is a new node whose next is the old top, and popping is re-pointing the top to its successor - ' +
+      'both O(1) with no resizing, no copying and no worst-case spike, which is the argument for choosing a list over an ' +
+      'array when the size is unbounded or when a single operation must not jitter. The cost is per-node allocation and ' +
+      'pointer chasing instead of contiguous memory, so an array stack is faster in practice for anything that fits; the ' +
+      'list version earns its place when the stack depth is unpredictable. Size is maintained as a counter since the ' +
+      'length of a list is not free, and empty is top equal to null - a stack that keeps a stale top after the last pop is ' +
+      'the same bug as a linked list that keeps a stale tail.',
+    walkthrough:
+      'Order of assignment is the only subtle part: the new node has to be linked to the old top before the top is ' +
+      'reassigned, otherwise the rest of the stack is unreachable. On pop, reading the value and moving the top can be ' +
+      'done in either order because the node is still referenced by the local value, so there is no dangling read - the ' +
+      'garbage collector, not the programmer, reclaims it.',
+    commonMistake:
+      'Pushing at the tail to keep the array-like order, or forgetting that size cannot come from the list itself.',
+    whyWrong:
+      'Inserting at the tail of a singly list means walking to it first, so push is O(n) and the structure is slower than ' +
+      'the array it replaced. Deriving size from traversal turns every size or isEmpty call into a walk, which is what ' +
+      'the counter exists to avoid.',
+    followUps: [
+      'Keep both a head and a tail and push at the tail. What does pop cost now, and how do you get constant both ways?',
+      'Give the case where the linked stack beats the array stack on memory rather than on time.',
+      'Implement toArray without any backward pointer. What order does it produce, and is that the push order?',
+    ],
+    solution:
+      'class ListStack {\n' +
+      '  constructor() {\n' +
+      '    this.top = null;\n' +
+      '    this.count = 0;\n' +
+      '  }\n' +
+      '\n' +
+      '  push(value) {\n' +
+      '    const node = { value, next: this.top };\n' +
+      '    this.top = node;\n' +
+      '    this.count += 1;\n' +
+      '    return this.count;\n' +
+      '  }\n' +
+      '\n' +
+      '  pop() {\n' +
+      '    if (this.top === null) return null;\n' +
+      '    const value = this.top.value;\n' +
+      '    this.top = this.top.next;\n' +
+      '    this.count -= 1;\n' +
+      '    return value;\n' +
+      '  }\n' +
+      '\n' +
+      '  peek() {\n' +
+      '    return this.top === null ? null : this.top.value;\n' +
+      '  }\n' +
+      '\n' +
+      '  size() {\n' +
+      '    return this.count;\n' +
+      '  }\n' +
+      '\n' +
+      '  isEmpty() {\n' +
+      '    return this.count === 0;\n' +
+      '  }\n' +
+      '\n' +
+      '  toArray() {\n' +
+      '    const out = [];\n' +
+      '    for (let cursor = this.top; cursor !== null; cursor = cursor.next) out.push(cursor.value);\n' +
+      '    return out;\n' +
+      '  }\n' +
+      '}',
+    modify: 'Make pop refuse to lose data when the stack is used as an undo history: return the removed node itself, not just its value. What has to change so the caller can reattach it?',
+  },
+  {
+    step: 9,
+    name: 'Implement Queue using Linked List',
+    difficulty: 'Medium',
+    topicSlug: STACKS,
+    stem: 'Build a queue on a singly linked list with constant enqueue and dequeue, and get the empty-to-nonempty transitions right.',
+    brief: 'Implement enqueue, dequeue, front, size and isEmpty using nodes. Name the pointer that has to be repaired when the last element leaves, and what breaks if it is not.',
+    concepts: ['dsa-list-end-symmetry', 'dsa-sentinel-head', 'dsa-null-termination', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Write at the tail, read at the head, keep both pointers: two ends are exactly what the structure needs. When the ' +
+      'last node leaves, the tail has to be cleared with the head.',
+    idealAnswer:
+      'The queue needs both ends, so the list keeps both pointers and each operation touches only the end it owns - ' +
+      'enqueue links the new node after the tail and moves the tail, dequeue moves the head. That is worst-case O(1) on ' +
+      'both sides with no compaction, which is why a linked list is the honest backing store for a queue in a long-running ' +
+      'process. The transitions are the whole difficulty: an empty queue has head and tail both null, the first enqueue ' +
+      'has to set both, and the last dequeue has to reset the tail as well as the head - leaving a tail that points at a ' +
+      'node no longer in the queue makes the next enqueue attach behind a dead element and the queue silently loses the ' +
+      'value the caller just wrote. The alternative that avoids the special case entirely is a sentinel head node, which ' +
+      'trades an allocation for never testing null.',
+    walkthrough:
+      'Trace one cycle - enqueue, dequeue to empty, enqueue, dequeue - because that is the path the bug lives on. After ' +
+      'the tail reset the second enqueue sees a null tail and takes the first-insert branch again, so the queue is ' +
+      'structurally identical to a fresh one; without the reset it continues a chain whose head is gone.',
+    commonMistake:
+      'Forgetting to clear the tail when the queue empties, or walking the list to find the tail on every enqueue.',
+    whyWrong:
+      'A stale tail makes the next enqueue produce a queue whose head is null while a node still hangs off the tail, so ' +
+      'the enqueued value is unreachable and dequeue returns null on a queue that reports a nonzero size. Trailing ' +
+      'insertion by traversal is O(n) per enqueue, which is exactly the cost the tail pointer exists to remove.',
+    followUps: [
+      'Rewrite with a sentinel node so no branch tests null. Does dequeue still need to repair anything?',
+      'Add a drain(handler) that empties the queue without letting a re-entrant enqueue interleave. What flag does it need?',
+      'What does a queue of nodes cost in memory per element compared with the compacting array version?',
+    ],
+    solution:
+      'class ListQueue {\n' +
+      '  constructor() {\n' +
+      '    this.head = null;\n' +
+      '    this.tail = null;\n' +
+      '    this.count = 0;\n' +
+      '  }\n' +
+      '\n' +
+      '  enqueue(value) {\n' +
+      '    const node = { value, next: null };\n' +
+      '    if (this.tail === null) this.head = node;\n' +
+      '    else this.tail.next = node;\n' +
+      '    this.tail = node;\n' +
+      '    this.count += 1;\n' +
+      '    return this.count;\n' +
+      '  }\n' +
+      '\n' +
+      '  dequeue() {\n' +
+      '    if (this.head === null) return null;\n' +
+      '    const value = this.head.value;\n' +
+      '    this.head = this.head.next;\n' +
+      '    if (this.head === null) this.tail = null;\n' +
+      '    this.count -= 1;\n' +
+      '    return value;\n' +
+      '  }\n' +
+      '\n' +
+      '  front() {\n' +
+      '    return this.head === null ? null : this.head.value;\n' +
+      '  }\n' +
+      '\n' +
+      '  size() {\n' +
+      '    return this.count;\n' +
+      '  }\n' +
+      '\n' +
+      '  isEmpty() {\n' +
+      '    return this.count === 0;\n' +
+      '  }\n' +
+      '}',
+    modify: 'Remove the tail-repair line and describe the exact sequence of calls that produces a queue reporting size one while dequeue returns null. How would a test catch it?',
+  },
+  {
+    step: 9,
+    name: 'Check for Balanced Parentheses',
+    difficulty: 'Easy',
+    topicSlug: STACKS,
+    stem: 'Decide whether a string of mixed brackets is balanced, and say when a single counter is enough instead of a stack.',
+    brief: 'Input: text containing any characters. Output: whether every round, square and curly opener is closed by the matching kind in the right order. Give the mixed-kind version and the one-kind version, and name what the counter cannot see.',
+    concepts: ['dsa-bracket-matching-stack', 'dsa-parenthesis-depth', 'dsa-lifo-fifo-end-discipline', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Push openers, pop on a closer and compare kinds, and require the stack to be empty at the end. With one bracket ' +
+      'kind the stack degenerates to a depth counter.',
+    idealAnswer:
+      'Balance is a most-recent-wins rule: a closer belongs to the innermost opener still open, which is exactly the top ' +
+      'of a stack, so the algorithm is push-openers and pop-compare-closers with two failure modes to test - a closer ' +
+      'arriving when nothing is open, and openers still on the stack at the end. Ignoring any character that is not a ' +
+      'bracket is what makes the same routine work as an expression validator. With a single kind, only the depth matters ' +
+      'and the stack is one integer, which is cheaper and also answers which prefix is the outermost pair; the moment ' +
+      'there are two kinds the counter loses the information it needs, because depth three does not say whether the ' +
+      'enclosing bracket was a paren or a square - that is the precise reason the row exists. A third failure worth naming ' +
+      'is the premature negative: a counter that goes below zero has met a closer with nothing open, and can recover to ' +
+      'zero by the end while the string is already invalid.',
+    walkthrough:
+      'The empty-string case is balanced by definition, and a lone closer is not. Reading pop as a two-step - take the top ' +
+      'only if the stack is nonempty, then compare kinds - is clearer than pop-then-compare, where the pop on an empty ' +
+      'stack returns undefined and the mismatch is detected by accident rather than by intent.',
+    commonMistake:
+      'Counting openers and closers without checking kinds, or declaring balance from the final depth alone.',
+    whyWrong:
+      'Counts agree for a string like an open square followed by a close paren, so the tally says balanced while the ' +
+      'structure is invalid. Depth-only checks also miss a closer that arrives before any opener unless the running value ' +
+      'is tested for going negative at every step.',
+    followUps: [
+      'Return the index of the first offending character instead of a boolean. Which branch knows it?',
+      'Validate a string where brackets may be escaped by a backslash. What state does the loop need now?',
+      'Give the longest prefix of an unbalanced string that is itself balanced, using the stack depth as the signal.',
+    ],
+    solution:
+      'function isBalanced(text) {\n' +
+      '  const closers = { ")": "(", "]": "[", "}": "{" };\n' +
+      '  const openers = new Set(["(", "[", "{"]);\n' +
+      '  const stack = [];\n' +
+      '  for (const char of text) {\n' +
+      '    if (openers.has(char)) {\n' +
+      '      stack.push(char);\n' +
+      '    } else if (closers[char] !== undefined) {\n' +
+      '      if (stack.length === 0) return false;\n' +
+      '      if (stack.pop() !== closers[char]) return false;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return stack.length === 0;\n' +
+      '}\n' +
+      '\n' +
+      'function isBalancedDepth(text) {\n' +
+      '  let depth = 0;\n' +
+      '  for (const char of text) {\n' +
+      '    if (char === "(") depth += 1;\n' +
+      '    else if (char === ")") depth -= 1;\n' +
+      '    if (depth < 0) return false;\n' +
+      '  }\n' +
+      '  return depth === 0;\n' +
+      '}',
+    modify: 'Return the position of the first character that makes the string invalid, or -1 when it is balanced. Which of the two failure branches reports which kind of position?',
+  },
+  {
+    step: 9,
+    name: 'Implement Min Stack',
+    difficulty: 'Medium',
+    topicSlug: STACKS,
+    stem: 'Support push, pop, top and getMin all in constant time, with getMin valid after any sequence of pops.',
+    brief: 'Design a stack that reports its minimum at every moment. Handle repeated minima, and say why keeping a single min variable is not enough.',
+    concepts: ['dsa-shadow-history-min', 'dsa-lifo-fifo-end-discipline', 'dsa-boundary-conditions', 'dsa-value-versus-reference'],
+    shortAnswer:
+      'Keep a parallel stack of minima: push a record whenever the value is at or below the current minimum, and pop the ' +
+      'record when the value leaves. One variable cannot survive a pop because the minimum has a history.',
+    idealAnswer:
+      'The minimum is an aggregate over a set that only ever loses its newest member, and the value it returns after a ' +
+      'pop is the minimum of what remains - which is older information, not recomputable from the current minimum. A ' +
+      'single variable therefore cannot work: it has no idea what the second-smallest was. The standard fix is a shadow ' +
+      'stack that stores the minimum as of each push, giving O(1) for all four operations and at most one extra record ' +
+      'per element, typically far fewer. Repeats are the trap: pushing with a strict less-than test means a duplicate ' +
+      'minimum is not recorded, and the first pop of it empties the shadow stack so the next getMin is wrong - either ' +
+      'record on less-or-equal, or store a count with each record. The compressed variant stores a record only when the ' +
+      'minimum changes and keeps the previous value in the record, which trades one field for exactly the same behaviour; ' +
+      'storing pairs of value and minimum-per-stack-depth is the simplest version of all and costs one number per push.',
+    walkthrough:
+      'The invariant to state is that the top of the shadow stack is always the minimum of everything still in the main ' +
+      'stack - true after a push because the record absorbs a smaller or equal value, and true after a pop because the ' +
+      'matching record is removed only when the value it represented is the one leaving. Popping the shadow entry ' +
+      'unconditionally would be wrong, since most pops remove a value that never was the minimum.',
+    commonMistake:
+      'Keeping only the current minimum, or recording minima with a strict less-than test that drops duplicates.',
+    whyWrong:
+      'A lone variable cannot restore an older minimum, so after the minimum itself is popped the structure reports the ' +
+      'value it should no longer have. With a strict test the shadow stack has one entry where two equal minima live, so ' +
+      'the first pop empties it and getMin returns the next record up too early.',
+    followUps: [
+      'Store one number per push instead of a parallel stack. What exactly goes in the slot, and what does getMin read now?',
+      'Add getSecondMin in constant time. How deep does the shadow structure have to go?',
+      'Make the min stack work when values are pushed and popped across a distributed boundary. What stops it being O(1)?',
+    ],
+    solution:
+      'class MinStack {\n' +
+      '  constructor() {\n' +
+      '    this.values = [];\n' +
+      '    this.mins = [];\n' +
+      '  }\n' +
+      '\n' +
+      '  push(value) {\n' +
+      '    this.values.push(value);\n' +
+      '    if (this.mins.length === 0 || value <= this.mins[this.mins.length - 1]) this.mins.push(value);\n' +
+      '    return this.values.length;\n' +
+      '  }\n' +
+      '\n' +
+      '  pop() {\n' +
+      '    if (this.values.length === 0) return null;\n' +
+      '    const value = this.values.pop();\n' +
+      '    if (value === this.mins[this.mins.length - 1]) this.mins.pop();\n' +
+      '    return value;\n' +
+      '  }\n' +
+      '\n' +
+      '  top() {\n' +
+      '    if (this.values.length === 0) return null;\n' +
+      '    return this.values[this.values.length - 1];\n' +
+      '  }\n' +
+      '\n' +
+      '  getMin() {\n' +
+      '    if (this.mins.length === 0) return null;\n' +
+      '    return this.mins[this.mins.length - 1];\n' +
+      '  }\n' +
+      '\n' +
+      '  size() {\n' +
+      '    return this.values.length;\n' +
+      '  }\n' +
+      '}',
+    modify: 'Replace the shadow stack with a single stack of [value, minSoFar] pairs. Which method loses its constant-time property if you drop the second field?',
   },
 ];
 

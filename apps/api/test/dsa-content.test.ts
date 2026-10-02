@@ -395,6 +395,24 @@ const EXPECTS: Record<string, string> = {
     '(() => { const spf = smallestPrimeFactors(1000); return factoriseWithSpf(60, spf).join() === "2,2,3,5" && factoriseWithSpf(360, spf).join() === "2,2,2,3,3,5" && factoriseWithSpf(97, spf).join() === "97" && factoriseWithSpf(1, spf).join() === "" && spf[4] === 2 && spf[9] === 3 && spf[49] === 7 && spf[97] === 97 && spf[1] === 0 && smallestPrimeFactors(1)[1] === 0 && factoriseWithSpf(1001, spf).join() === ""; })()',
   'Power(n, x)':
     'power(2, 10) === 1024 && power(2, -2) === 0.25 && power(2, -10) === 0.0009765625 && power(-2, 3) === -8 && power(-2, 4) === 16 && power(3, 0) === 1 && power(0, 0) === 1 && power(0, 5) === 0 && power(0, -1) === Infinity && Math.abs(power(1.1, 3) - 1.331) < 1e-12 && powerRecursive(2, 10) === 1024 && powerRecursive(2, -3) === 0.125 && Math.abs(powerRecursive(1.1, 3) - 1.331) < 1e-12',
+  'Implement Stack using Array':
+    '(() => { const s = new ArrayStack(); s.push(1); s.push(2); s.push(3); return s.size() === 3 && s.pop() === 3 && s.peek() === 2 && s.pop() === 2 && s.pop() === 1 && s.isEmpty() && s.pop() === null && s.peek() === null && s.push(9) === 1 && !s.isEmpty() && s.pop() === 9; })()',
+  'Implement Queue using Array':
+    '(() => { const q = new ArrayQueue(); for (let v = 1; v <= 5; v += 1) q.enqueue(v); const first = q.dequeue(); const size = q.size(); q.enqueue(6); const rest = []; while (!q.isEmpty()) rest.push(q.dequeue()); return first === 1 && size === 4 && rest.join() === "2,3,4,5,6" && q.dequeue() === null && q.front() === null && q.isEmpty() && q.enqueue(7) === 1 && q.front() === 7; })()',
+  'Implement Stack using Queue':
+    '(() => { const s = new QueueStack(); const a = s.push(1) === 1 && s.push(2) === 2 && s.push(3) === 3 && s.pop() === 3 && s.peek() === 2 && s.size() === 2 && s.pop() === 2 && s.pop() === 1 && s.pop() === null && s.peek() === null && s.isEmpty(); const t = new QueueStack(); const b = t.push(1) === 1 && t.push(2) === 2 && t.pop() === 2 && t.push(3) === 2 && t.pop() === 3 && t.pop() === 1; return a && b; })()',
+  'Implement Queue using Stack':
+    '(() => { const q = new StackQueue(); q.enqueue(1); q.enqueue(2); q.enqueue(3); const a = q.dequeue(); const size = q.size(); q.enqueue(4); const rest = [q.dequeue(), q.dequeue(), q.dequeue(), q.dequeue()]; return a === 1 && size === 2 && rest.length === 4 && rest[0] === 2 && rest[1] === 3 && rest[2] === 4 && rest[3] === null && q.front() === null && q.isEmpty() && q.moves === 14; })()',
+  'Implement Queue using Stack (amortized O(1))':
+    '(() => { const q = new AmortizedQueue(); q.enqueue(1); q.enqueue(2); q.enqueue(3); const a = [q.dequeue(), q.dequeue(), q.dequeue()]; q.enqueue(4); q.enqueue(5); const b = [q.dequeue(), q.dequeue(), q.dequeue()]; return a.join() === "1,2,3" && b.length === 3 && b[0] === 4 && b[1] === 5 && b[2] === null && q.moves === 5 && q.size() === 0 && q.front() === null && q.enqueue(6) === 1 && q.front() === 6; })()',
+  'Implement Stack using Linked List':
+    '(() => { const s = new ListStack(); s.push(1); s.push(2); s.push(3); return s.size() === 3 && s.toArray().join() === "3,2,1" && s.pop() === 3 && s.peek() === 2 && s.pop() === 2 && s.pop() === 1 && s.isEmpty() && s.pop() === null && s.peek() === null && s.toArray().join() === "" && s.push(4) === 1 && s.toArray().join() === "4"; })()',
+  'Implement Queue using Linked List':
+    '(() => { const q = new ListQueue(); q.enqueue(1); q.enqueue(2); return q.dequeue() === 1 && q.enqueue(3) === 2 && q.dequeue() === 2 && q.dequeue() === 3 && q.dequeue() === null && q.front() === null && q.isEmpty() && q.enqueue(4) === 1 && q.dequeue() === 4 && q.enqueue(5) === 1 && q.enqueue(6) === 2 && q.front() === 5; })()',
+  'Check for Balanced Parentheses':
+    'isBalanced("([{}])") && isBalanced("{[()]}") && isBalanced("(a+b)*[c-d]") && isBalanced("") && !isBalanced("(]") && !isBalanced("(()") && !isBalanced(")(") && !isBalanced("[{(}]") && isBalancedDepth("(()())") && isBalancedDepth("") && !isBalancedDepth(")(") && !isBalancedDepth("(()") && !isBalancedDepth("())")',
+  'Implement Min Stack':
+    '(() => { const s = new MinStack(); s.push(-2); s.push(0); s.push(-3); const a = s.getMin() === -3 && s.top() === -3 && s.pop() === -3 && s.getMin() === -2 && s.top() === 0; const r = new MinStack(); r.push(3); r.push(3); r.push(1); r.push(1); const b = r.getMin() === 1; r.pop(); const c = r.getMin() === 1; r.pop(); const d = r.getMin() === 3; r.pop(); const e = r.getMin() === 3; r.pop(); const f = r.getMin() === null && r.pop() === null && r.size() === 0; return a && b && c && d && e && f; })()',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */
