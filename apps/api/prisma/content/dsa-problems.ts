@@ -959,6 +959,20 @@ export const DSA_CONCEPTS = {
     terms: ['membership', 'which values', 'duplicates collapse', 'reachable set', 'width not count'],
     weight: 3,
   },
+  'dsa-start-index-advances-uniqueness': {
+    slug: 'dsa-start-index-advances-uniqueness',
+    name: 'Advancing the start index is the deduplication',
+    detail: 'Each loop begins at or after the index the previous pick used, so every combination is emitted in increasing index order exactly once and the ordering rule replaces any after-the-fact uniqueness check.',
+    terms: ['start index', 'increasing order', 'emitted once', 'no post-hoc dedupe', 'loop from the index'],
+    weight: 3,
+  },
+  'dsa-construction-by-invariant': {
+    slug: 'dsa-construction-by-invariant',
+    name: 'Only appending a legal next character skips whole subtrees',
+    detail: 'When each extension is checked against the invariant before the call, the walk never visits a prefix that cannot become an answer, so the tree holds the answers instead of the entire space of strings.',
+    terms: ['legal extension', 'invariant', 'prefix rejected', 'never generated', 'prune by rule'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -9792,6 +9806,235 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return possible[target];\n' +
       '}',
     modify: 'Report one witness subset for the target instead of true. Which table cells have to remember where they came from?',
+  },
+  {
+    step: 7,
+    name: 'Combination Sum',
+    difficulty: 'Medium',
+    topicSlug: 'recursion',
+    stem: 'List every combination of candidates that sums to the target when each candidate may be reused, and say what single argument decides the reuse rule.',
+    brief: 'Input: distinct positive integers and a target. Output: every combination that sums to the target, each combination in non-decreasing order, no combination listed twice, unlimited reuse. Order of your own choosing.',
+    concepts: ['dsa-same-index-reuse', 'dsa-start-index-advances-uniqueness', 'dsa-prefix-path-carry'],
+    shortAnswer:
+      'Loop from the current start index and recurse with that same index, so the element stays available; recursing with ' +
+      'index + 1 would be a different problem.',
+    idealAnswer:
+      'walk(index, remaining) loops next from index to the end, pushes candidates[next], and calls walk(next, remaining - ' +
+      'candidates[next]) - passing next rather than next + 1 is what permits reuse. Because the loop only ever moves ' +
+      'forward, each combination comes out in increasing index order and appears exactly once, so no uniqueness check is ' +
+      'needed after the fact. Sorting the candidates first turns the loop into a break: once a value exceeds the ' +
+      'remaining need, everything after it does too. The cost is bounded by the number of solutions times their length - ' +
+      'there is no polynomial in target and n alone, since the output itself can be exponential.',
+    walkthrough:
+      'The one-argument difference between this row and the next is the whole rule set: walk(next, ...) lets a candidate ' +
+      'be spent again, walk(next + 1, ...) spends each at most once. Interviewers ask the pair together precisely to see ' +
+      'whether you know which line you changed. The other two decisions are both about the loop: sorting is what makes ' +
+      'break legal instead of continue, and looping from the start index rather than from zero is what makes the output ' +
+      'unique. Note that the empty combination is the answer when the target is 0 - the base case fires before any push - ' +
+      'and that the shipped code sorts a copy, because reordering the caller array is a side effect the signature does ' +
+      'not advertise.',
+    commonMistake:
+      'Looping from index 0 at every frame instead of from the start index, so [2, 3] and [3, 2] both appear.',
+    whyWrong:
+      'Restarting the loop at zero makes the walk a permutation generator: every ordering of the same multiset reaches ' +
+      'remaining = 0, so the answer is full of combinations that differ only in order. The fix is not a set of results, ' +
+      'it is the loop start.',
+    followUps: [
+      'Which line of your code would you change to make each candidate usable at most once?',
+      'You sort first and then break out of the loop. What breaks if the candidates are unsorted and you keep the break?',
+      'Give me the count of combinations instead of the list. What stops you from building a path at all?',
+    ],
+    solution:
+      'function combinations(items, target) {\n' +
+      '  const sorted = items.slice().sort((a, b) => a - b);\n' +
+      '  const results = [];\n' +
+      '  const path = [];\n' +
+      '  function walk(index, remaining) {\n' +
+      '    if (remaining === 0) {\n' +
+      '      results.push(path.slice());\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    for (let next = index; next < sorted.length; next += 1) {\n' +
+      '      if (sorted[next] > remaining) break;\n' +
+      '      path.push(sorted[next]);\n' +
+      '      walk(next, remaining - sorted[next]);\n' +
+      '      path.pop();\n' +
+      '    }\n' +
+      '  }\n' +
+      '  walk(0, target);\n' +
+      '  return results;\n' +
+      '}',
+    modify: 'Return the number of combinations without listing them. Which of the three things you carry - path, index, remaining - can you stop carrying first?',
+  },
+  {
+    step: 7,
+    name: 'Combination Sum II',
+    difficulty: 'Medium',
+    topicSlug: 'recursion',
+    stem: 'List every combination that sums to the target using each candidate at most once when the input itself repeats, and explain the sibling test that keeps the output unique.',
+    brief: 'Input: integers that may repeat, and a target. Output: every combination summing to the target, each element used at most once per combination, no combination appearing twice. Argue why skipping a sibling is safe.',
+    concepts: ['dsa-duplicate-sibling-skip', 'dsa-start-index-advances-uniqueness', 'dsa-sum-so-far-pruning'],
+    shortAnswer:
+      'Sort, recurse with next + 1 so nothing is spent twice, and inside the loop skip any candidate equal to the one ' +
+      'just consumed at the same depth - equal siblings are the duplicates.',
+    idealAnswer:
+      'Two rules do two different jobs. Advancing to next + 1 makes each input position usable once. Sorting puts equal ' +
+      'values next to each other, and then the test next > index && sorted[next] === sorted[next - 1] refuses the second ' +
+      'and later equals at the same depth of the tree, because a combination built from the later one was already built ' +
+      'from the first. The condition deliberately compares against the previous loop value at this depth and not against ' +
+      'the previous element in the path, so [1, 1, 6] still exists when the input has two 1s: the first 1 opens the ' +
+      'branch, only its siblings are refused. Cost stays exponential in the worst case, bounded by the number of ' +
+      'combinations, with sorting as the O(n log n) prefix.',
+    walkthrough:
+      'This is the row where a wrong uniqueness rule still passes the obvious examples, so the worth of the sibling test ' +
+      'is best argued from the tree. At one depth the loop offers the equal 1s as alternatives; the second one can only ' +
+      'produce combinations the first already produced, since everything available to it is a subset of what was ' +
+      'available to the first. Comparing against sorted[next - 1] with next > index encodes exactly that: the first ' +
+      'offer at this depth is always taken, later equal offers are refused. Write it as a comparison against path last ' +
+      'element instead and you lose legitimate combinations that use the same value twice from two different positions.',
+    commonMistake:
+      'Skipping a candidate whenever it equals the previous element in the path, rather than only when it equals a sibling already consumed at this depth.',
+    whyWrong:
+      'With input [1, 1, 6] and target 8 the answer is the single combination [1, 1, 6], and a path-based test refuses the ' +
+      'second 1 because it equals what is already in the path. The result is a missing combination that no example with ' +
+      'distinct values would ever reveal.',
+    followUps: [
+      'Why does the skip compare against the loop predecessor and not against the last value pushed?',
+      'Could you generate everything and dedupe afterwards? What does that cost compared to the sibling test?',
+      'The input is not sorted and you are not allowed to sort it. What structure still gives uniqueness, and at what price?',
+    ],
+    solution:
+      'function combinationsOnce(items, target) {\n' +
+      '  const sorted = items.slice().sort((a, b) => a - b);\n' +
+      '  const results = [];\n' +
+      '  const path = [];\n' +
+      '  function walk(index, remaining) {\n' +
+      '    if (remaining === 0) {\n' +
+      '      results.push(path.slice());\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    for (let next = index; next < sorted.length; next += 1) {\n' +
+      '      if (sorted[next] > remaining) break;\n' +
+      '      if (next > index && sorted[next] === sorted[next - 1]) continue;\n' +
+      '      path.push(sorted[next]);\n' +
+      '      walk(next + 1, remaining - sorted[next]);\n' +
+      '      path.pop();\n' +
+      '    }\n' +
+      '  }\n' +
+      '  walk(0, target);\n' +
+      '  return results;\n' +
+      '}',
+    modify: 'Do the same for combinations of exactly k elements. Which budget now has to travel with the remaining need, and where does the loop stop early?',
+  },
+  {
+    step: 7,
+    name: 'Combination Sum III',
+    difficulty: 'Medium',
+    topicSlug: 'recursion',
+    stem: 'Find all combinations of exactly k distinct digits from 1 to 9 that sum to n, and state the two budgets the walk must respect.',
+    brief: 'Input: k and n. Output: every combination of exactly k different digits in 1..9 summing to n, digits in increasing order. Say which budget prunes harder and why the loop bound moves as the path grows.',
+    concepts: ['dsa-start-index-advances-uniqueness', 'dsa-recursive-decomposition', 'dsa-sum-so-far-pruning'],
+    shortAnswer:
+      'Same loop from a start index, but the frame carries two budgets - slots left and remaining sum - and both have to ' +
+      'reach zero together for a combination to count.',
+    idealAnswer:
+      'walk(digit, slots, remaining) loops next from digit to 9, pushes it and recurses from next + 1 with one fewer slot ' +
+      'and less remaining. Distinctness and increasing order come from the advancing start index, the same rule as the ' +
+      'previous two rows. The acceptance test is slots === 0 && remaining === 0: reaching zero slots with a positive ' +
+      'need is a dead branch, and reaching zero need with slots left is dead too unless zeros were allowed, which they ' +
+      'are not. The cheap prune is next > remaining, valid because all digits are positive; the sharper one compares ' +
+      'remaining against the smallest sum the free slots could still make, which is next + (next + 1) + ... over the ' +
+      'slots left. Total work is bounded by the 9 choose k subsets.',
+    walkthrough:
+      'Two budgets, one loop bound. Because digits must be increasing, the loop start rises with every push, so the ' +
+      'search space is the choose ladder rather than 9 to the k - that is the sentence to say out loud before writing ' +
+      'code. The interesting failure mode is accepting on remaining === 0 alone: with k = 3 and n = 6 the combination ' +
+      '[1, 5] would be reported as an answer although only two of three slots were filled. Checking the slots first is ' +
+      'what makes this a fixed-size problem instead of a subset-sum problem, and it is the reason this row sits in the ' +
+      'step rather than being identical to Combination Sum.',
+    commonMistake:
+      'Returning the combination as soon as the running sum hits n, without checking that k digits were used.',
+    whyWrong:
+      'The target alone does not fix the size of a combination: for k = 3 and n = 9 the pair [3, 6] hits the sum in two ' +
+      'digits, and reporting it means the answer mixes sizes. The slot count is part of the question, so it has to be ' +
+      'part of the base case.',
+    followUps: [
+      'Which prune fires first for k = 4 and n = 27, and how many branches does it remove?',
+      'Replace digits 1..9 with values down to -50. Does the next > remaining test survive?',
+      'Give the count of such combinations without listing them. What is the recursion now returning?',
+    ],
+    solution:
+      'function digitCombinations(k, target) {\n' +
+      '  const results = [];\n' +
+      '  const path = [];\n' +
+      '  function walk(digit, slots, remaining) {\n' +
+      '    if (slots === 0) {\n' +
+      '      if (remaining === 0) results.push(path.slice());\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    for (let next = digit; next <= 9; next += 1) {\n' +
+      '      if (next > remaining) break;\n' +
+      '      path.push(next);\n' +
+      '      walk(next + 1, slots - 1, remaining - next);\n' +
+      '      path.pop();\n' +
+      '    }\n' +
+      '  }\n' +
+      '  walk(1, k, target);\n' +
+      '  return results;\n' +
+      '}',
+    modify: 'Add the smallest-possible-sum prune: refuse to try a digit when the remaining slots cannot even reach the needed total. How much of the tree disappears for k = 5 and n = 12?',
+  },
+  {
+    step: 7,
+    name: 'Generate Parentheses',
+    difficulty: 'Medium',
+    topicSlug: 'recursion',
+    stem: 'Generate every balanced string of n pairs by appending only legal characters, and argue why nothing illegal is ever built.',
+    brief: 'Input: n pairs. Output: all strings of n opens and n closes in which no prefix has more closes than opens. Give the constructive walk and state how many strings there are.',
+    concepts: ['dsa-construction-by-invariant', 'dsa-parenthesis-depth', 'dsa-accumulator-parameter'],
+    shortAnswer:
+      'Two counters: append an open while fewer than n are used, append a close while closes trail opens. Every string ' +
+      'reaches full length already balanced.',
+    idealAnswer:
+      'walk(built, open, closed) has one base case - length 2n - and two conditional extensions. The open branch is legal ' +
+      'while open < n, the close branch is legal while closed < open, and those two tests are the balance invariant ' +
+      'written as guards. Because an illegal prefix is never created, the tree has exactly the Catalan(n) leaves ' +
+      'instead of 2 to the 2n branches, so the enumeration is optimal in output size; each leaf is a string of length ' +
+      '2n, so the cost is O(n * Catalan(n)) time with O(n) frames of stack. The counters travel as arguments, which is ' +
+      'why there is nothing to undo on the way back.',
+    walkthrough:
+      'The framing worth defending is construct-then-check versus check-then-extend. Generating all 2 to the 2n strings ' +
+      'and filtering them is a correct algorithm with an absurd constant, and the guard form is the same recursion with ' +
+      'the two dead branches cut off before they are taken. Note that closed < open is a statement about the prefix, not ' +
+      'about the finished string - it is the depth counter from the bracket-scan rows used as a legality test. Also note ' +
+      'the built value is a string, so concatenation copies it per frame: the immutable-path version trades the push and ' +
+      'pop of a shared array for O(n) copying, and at this size both are the same order.',
+    commonMistake:
+      'Allowing a close whenever the string still needs one, instead of only while closes trail opens.',
+    whyWrong:
+      'Testing closed < n admits ")(" style prefixes that can never be repaired, so the walk builds strings it will ' +
+      'throw away and the leaf count stops matching the answer. The invariant is about the prefix order, not the final ' +
+      'totals.',
+    followUps: [
+      'How many strings does your walk produce for n = 4, and what is that number formally?',
+      'Swap the two guards for a single validity check at length 2n. What does that cost on n = 12?',
+      'Generalise to three bracket types that must nest in order. Which guard changes?',
+    ],
+    solution:
+      'function generateBalanced(pairs) {\n' +
+      '  const results = [];\n' +
+      '  function walk(built, open, closed) {\n' +
+      '    if (built.length === 2 * pairs) {\n' +
+      '      results.push(built);\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    if (open < pairs) walk(built + "(", open + 1, closed);\n' +
+      '    if (closed < open) walk(built + ")", open, closed + 1);\n' +
+      '  }\n' +
+      '  walk("", 0, 0);\n' +
+      '  return results;\n' +
+      '}',
+    modify: 'Emit the strings in order of the depth they reach - shallowest first. Do you have to regenerate, or can the walk be reordered?',
   },
 ];
 

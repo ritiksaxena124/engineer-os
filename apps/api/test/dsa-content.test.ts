@@ -329,6 +329,14 @@ const EXPECTS: Record<string, string> = {
     '(() => { const want = "0,1,2,3,4,5,6,7,8,9,10"; return uniqueSumsBySet([1, 2, 3, 4]).join() === want && uniqueSumsBySkipping([1, 2, 3, 4]).join() === want && uniqueSumsBySet([1, 2, 1]).join() === "0,1,2,3,4" && uniqueSumsBySkipping([1, 2, 1]).join() === "0,1,2,3,4" && uniqueSumsBySet([]).join() === "0" && uniqueSumsBySet([0, 0, 0]).join() === "0" && uniqueSumsBySet([5, 5]).join() === "0,5,10"; })()',
   'Subset Sum with Target':
     'hasSumMemo([3, 4, 5], 7) && hasSumTable([3, 4, 5], 7) && !hasSumMemo([1, 2, 3], 7) && !hasSumTable([1, 2, 3], 7) && hasSumMemo([3, 4], 0) && hasSumTable([3, 4], 0) && hasSumMemo([5, 5], 10) && hasSumTable([5, 5], 10) && !hasSumTable([5, 5], 7) && hasSumTable([], 0) && hasSumMemo([], 0) && hasSumTable([0], 0) && hasSumMemo([2, 7, 1], 9)',
+  'Combination Sum':
+    '(() => { const a = combinations([2, 3, 5], 5).map((c) => c.join("+")).join("|"); const b = combinations([2, 3, 6, 7], 7).map((c) => c.join("+")).join("|"); const input = [3, 1, 2]; combinations(input, 4); return a === "2+3|5" && b === "2+2+3|7" && combinations([2], 1).length === 0 && combinations([2, 3, 5], 0).length === 1 && combinations([2, 3, 5], 0)[0].length === 0 && input.join() === "3,1,2"; })()',
+  'Combination Sum II':
+    '(() => { const a = combinationsOnce([10, 1, 2, 7, 6, 1, 5], 8).map((c) => c.join("+")).join("|"); const b = combinationsOnce([2, 5, 2, 1, 2], 5).map((c) => c.join("+")).join("|"); return a === "1+1+6|1+2+5|1+7|2+6" && b === "1+2+2|5" && combinationsOnce([1, 1], 3).length === 0 && combinationsOnce([], 0).length === 1; })()',
+  'Combination Sum III':
+    '(() => { const a = digitCombinations(3, 7).map((c) => c.join("")).join("|"); const b = digitCombinations(3, 9).map((c) => c.join("")).join("|"); return a === "124" && b === "126|135|234" && digitCombinations(2, 7).length === 3 && digitCombinations(9, 45).length === 1 && digitCombinations(1, 5).length === 1 && digitCombinations(2, 20).length === 0 && digitCombinations(3, 6).map((c) => c.join("")).join("|") === "123"; })()',
+  'Generate Parentheses':
+    '(() => { const three = generateBalanced(3); return three.join("|") === "((()))|(()())|(())()|()(())|()()()" && generateBalanced(1).join() === "()" && generateBalanced(0).length === 1 && generateBalanced(0).join() === "" && generateBalanced(2).length === 2 && generateBalanced(4).length === 14; })()',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */
