@@ -1379,6 +1379,13 @@ export const DSA_CONCEPTS = {
     terms: ['last seen index', 'jump not walk', 'stale index outside the window', 'seen >= start', 'no rewind needed'],
     weight: 3,
   },
+  'dsa-fixed-window-complement': {
+    slug: 'dsa-fixed-window-complement',
+    name: 'Choosing both ends is choosing the block left in the middle',
+    detail: 'Taking k items from the two ends of a row always leaves one contiguous block of n minus k items untouched, so maximising the pick is the same problem as minimising the block - and a fixed-size window needs no legality rule to slide.',
+    terms: ['complement window', 'fixed size', 'minimise the kept block', 'total minus window', 'every block reachable'],
+    weight: 3,
+  },
   'dsa-stale-maximum-still-bounds': {
     slug: 'dsa-stale-maximum-still-bounds',
     name: 'A maximum that is never lowered still gives the right answer in a growing window',
@@ -14697,6 +14704,298 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return best;\n' +
       '}',
     modify: 'Change the rule so replacements may only create the letter that is already dominant in the window. Does the stale maximum still bound the answer correctly?',
+  },
+  {
+    step: 10,
+    name: 'Binary Subarrays With Sum',
+    difficulty: 'Medium',
+    topicSlug: WINDOW,
+    stem: 'Return the number of contiguous subarrays of a binary array whose sum is exactly goal.',
+    brief: 'Input: an array of 0s and 1s and an integer goal. Output: one integer - how many segments add up to exactly goal. A segment of only zeros answers a goal of 0.',
+    concepts: ['dsa-prefix-count-map', 'dsa-exactly-is-two-at-most', 'dsa-positive-only-window', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Count running totals in a map seeded with the empty prefix, and for each element add how many earlier totals were ' +
+      'exactly goal behind. Equivalently: count the subarrays with at most goal ones and subtract those with at most goal ' +
+      'minus 1.',
+    idealAnswer:
+      'Two shapes of the same idea, and it is worth giving both. The prefix form turns the question into a lookup: a subarray ' +
+      'sums to goal exactly when the total now minus the total then equals goal, so a map from running total to how often it ' +
+      'has occurred answers with one probe per element. The map has to start with the empty prefix at count 1, otherwise a ' +
+      'segment beginning at index 0 has nothing to be measured against and is never counted - the single most common miss in ' +
+      'this family. The window form uses the identity that exactly k is at most k minus at most k minus 1, which works here ' +
+      'because the entries are non-negative: extending the window can only raise the sum, so shrinking the left edge while ' +
+      'the sum is illegal is safe, and every legal window of width w ending at the current index contributes w subarrays. ' +
+      'That second property is exactly what breaks on an array holding negatives, where the at-most window silently misses ' +
+      'segments - the prefix map has no such restriction, which is why it is the general answer and the window the fast one. ' +
+      'On the count itself: a run of m zeros contains m times m plus 1, over two, subarrays and all of them sum to zero, so ' +
+      'the total can pass 32-bit range on a 10^5 element input; the IEEE double a JavaScript number uses is exact to 2^53, ' +
+      'so the sum is safe here and unsafe in an int.',
+    walkthrough:
+      'On 1 0 1 0 1 with goal 2 the running totals are 1, 1, 2, 2, 3. At index 2 the total reaches 2, and the map holds the ' +
+      'empty prefix at 0, so one earlier total is short by exactly goal - the segment 1 0 1. At index 4 the total is 3 and ' +
+      'the short-by-goal query asks for 1, which has appeared twice, adding the two segments that start at index 1 or 2. Four ' +
+      'in total, which is what the array has.',
+    commonMistake:
+      'Leaving the map empty at the start instead of seeding the zero prefix, or counting subarrays with at most goal and ' +
+      'returning that.',
+    whyWrong:
+      'An unseeded map loses every segment that begins at index 0, because those are the ones measured against the empty ' +
+      'prefix - on 1 0 1 0 1 with goal 2 that is two of the four answers, so the count comes back as 2. Returning the ' +
+      'at-most count instead of the difference is a different question: it credits every segment whose sum falls short of ' +
+      'the target as well, and on the same input that is 14 segments rather than 4.',
+    followUps: [
+      'The array is fixed to 0s and 1s here. Which of the two solutions still answers correctly once it holds arbitrary integers, and why?',
+      'Return the longest subarray with sum goal instead of the count. Does the window formulation or the map formulation give it more directly?',
+      'Replace the Map with a plain object keyed by the running total. What collides, and what does the empty prefix key become?',
+    ],
+    solution:
+      'function numSubarraysWithSum(nums, goal) {\n' +
+      '  const seen = new Map();\n' +
+      '  seen.set(0, 1);\n' +
+      '  let prefix = 0;\n' +
+      '  let count = 0;\n' +
+      '  for (const value of nums) {\n' +
+      '    prefix += value;\n' +
+      '    const need = seen.get(prefix - goal);\n' +
+      '    if (need !== undefined) count += need;\n' +
+      '    const held = seen.get(prefix);\n' +
+      '    seen.set(prefix, held === undefined ? 1 : held + 1);\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}\n' +
+      '\n' +
+      'function numSubarraysWithSumAtMost(nums, goal) {\n' +
+      '  function atMost(bound) {\n' +
+      '    if (bound < 0) return 0;\n' +
+      '    let start = 0;\n' +
+      '    let sum = 0;\n' +
+      '    let total = 0;\n' +
+      '    for (let end = 0; end < nums.length; end += 1) {\n' +
+      '      sum += nums[end];\n' +
+      '      while (sum > bound) {\n' +
+      '        sum -= nums[start];\n' +
+      '        start += 1;\n' +
+      '      }\n' +
+      '      total += end - start + 1;\n' +
+      '    }\n' +
+      '    return total;\n' +
+      '  }\n' +
+      '  return atMost(goal) - atMost(goal - 1);\n' +
+      '}',
+    modify: 'Count the subarrays whose sum is at most goal in a single pass, then say which line of the at-most helper disappears. What does the same helper report for an array containing -1?',
+  },
+  {
+    step: 10,
+    name: 'Count Number of Nice Subarrays',
+    difficulty: 'Medium',
+    topicSlug: WINDOW,
+    stem: 'Return the number of contiguous subarrays that contain exactly k odd numbers.',
+    brief: 'Input: an array of integers and an integer k, at least 1. Output: one integer - the count of segments holding exactly k odd elements, with any number of even elements among them.',
+    concepts: ['dsa-exactly-is-two-at-most', 'dsa-window-invariant-shrink-to-repair', 'dsa-prefix-count-map', 'dsa-single-pass-tracking', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Count the segments with at most k odds in one shrinking pass, subtract the same count for at most k minus 1, and the ' +
+      'difference is exactly k. The parity is what the window tracks, not the values.',
+    idealAnswer:
+      'Exactly k odds is an awkward thing to maintain: the moment the window reaches k it could still grow, and it is not ' +
+      'obvious which widths to credit. The at-most formulation is mechanical - extend by one element, and while the odd ' +
+      'count exceeds the bound, release from the left - and a legal window of width w ending at index end contributes ' +
+      'exactly w subarrays, because every start from the window start to end gives a segment that still satisfies the bound. ' +
+      'Summing those widths is the at-most count, and subtracting the bound minus 1 leaves only the segments with exactly k ' +
+      'odds. Note that the shrink stays valid even with negative entries: the tracked quantity is the odd count, which rises ' +
+      'by zero or one per element regardless of sign, so the monotonicity the window needs is on parity rather than on ' +
+      'magnitude. That distinction is also where the JavaScript trap sits - value % 2 equals 1 is false for -3, because the ' +
+      'remainder keeps the sign of the dividend, so a negative odd is silently read as even; Math.abs, a bitwise and with 1, ' +
+      'or a test against 0 rather than 1 all fix it. A prefix map over odd counts gives the same answer in one pass and does ' +
+      'not need the subtraction at all.',
+    walkthrough:
+      'On 1 1 2 1 1 with k = 3 there are fifteen segments in total. Exactly one of them - the whole array - holds four odds, ' +
+      'so at-most-3 counts fourteen. Three segments hold at least three odds, so at-most-2 counts twelve. The difference is ' +
+      'two, and they are the segments 1 1 2 1 and 1 2 1 1 - the only ones holding exactly three odds.',
+    commonMistake:
+      'Testing parity with value modulo 2 equal to 1, or resetting the odd count when the left edge moves instead of ' +
+      'decrementing it.',
+    whyWrong:
+      'The modulo test is a JavaScript behaviour, not a style choice: -3 % 2 evaluates to -1, so a negative odd never ' +
+      'registers and every segment containing one is credited to the wrong bound. A reset of the count instead of a ' +
+      'decrement makes the window believe it is still illegal after the offending element has left, so the left edge walks ' +
+      'past the right one and the widths go negative.',
+    followUps: [
+      'Generalise to exactly k elements divisible by 3. Where does the sign trap reappear, and which formulation cannot have it?',
+      'Return the list of nice segments rather than the count. Does the at-most difference still describe them, or does the prefix map?',
+      'Write the single-pass prefix version and compare its memory with the two-pass window version on an array of 10^5 elements.',
+    ],
+    solution:
+      'function niceSubarrays(nums, k) {\n' +
+      '  function atMost(bound) {\n' +
+      '    if (bound < 0) return 0;\n' +
+      '    let start = 0;\n' +
+      '    let odds = 0;\n' +
+      '    let total = 0;\n' +
+      '    for (let end = 0; end < nums.length; end += 1) {\n' +
+      '      if ((nums[end] & 1) === 1) odds += 1;\n' +
+      '      while (odds > bound) {\n' +
+      '        if ((nums[start] & 1) === 1) odds -= 1;\n' +
+      '        start += 1;\n' +
+      '      }\n' +
+      '      total += end - start + 1;\n' +
+      '    }\n' +
+      '    return total;\n' +
+      '  }\n' +
+      '  return atMost(k) - atMost(k - 1);\n' +
+      '}\n' +
+      '\n' +
+      'function niceSubarraysByPrefix(nums, k) {\n' +
+      '  const seen = new Map();\n' +
+      '  seen.set(0, 1);\n' +
+      '  let odds = 0;\n' +
+      '  let count = 0;\n' +
+      '  for (const value of nums) {\n' +
+      '    if ((value & 1) === 1) odds += 1;\n' +
+      '    const need = seen.get(odds - k);\n' +
+      '    if (need !== undefined) count += need;\n' +
+      '    const held = seen.get(odds);\n' +
+      '    seen.set(odds, held === undefined ? 1 : held + 1);\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}',
+    modify: 'Count subarrays with at least one odd number instead. Which of the two formulations becomes a one-liner, and what does the other one need?',
+  },
+  {
+    step: 10,
+    name: 'Number of Substrings Containing All Three Characters',
+    difficulty: 'Medium',
+    topicSlug: WINDOW,
+    stem: 'Return the number of substrings of a string over a, b and c that contain at least one of each character.',
+    brief: 'Input: a string whose characters are only a, b and c. Output: one integer - how many contiguous substrings hold all three letters at least once.',
+    concepts: ['dsa-window-invariant-shrink-to-repair', 'dsa-last-seen-position-jumps-the-left-edge', 'dsa-single-pass-tracking', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Track the last position of each letter. The substrings ending here that already hold all three start at or before the ' +
+      'earliest of those three positions, so add that position plus one and move on.',
+    idealAnswer:
+      'The count, not the list, is what makes this short. At each right edge, a substring ending there contains all three ' +
+      'letters exactly when it begins no later than the oldest of the three last-seen positions - if it started after that ' +
+      'position, the letter last seen there would be missing. So the contribution of the edge is that earliest index plus ' +
+      'one, and the whole answer is the sum, with no inner loop at all: three numbers and a Math.min per character. The ' +
+      'alternative is the canonical shrink: hold counts per letter, and while the window is legal, credit every longer ' +
+      'right end (length minus end), then release from the left. That version is the one to reach for when the legality rule ' +
+      'is more complicated than three letters - it costs the same linear bound and generalises to an alphabet of any size. ' +
+      'In JavaScript the three slots are best written as explicit named fields or a Map with the letters seeded, because ' +
+      'reading a key that the string has not yet produced gives undefined, and Math.min of undefined is NaN - which then ' +
+      'poisons the accumulator silently rather than throwing.',
+    walkthrough:
+      'On aaacb the first three edges hold no c, so the earliest last-seen position stays at the never-seen sentinel and ' +
+      'nothing is credited. Reading c at index 3 still leaves b unseen. Reading b at index 4 makes the three positions 2, 4 ' +
+      'and 3, whose minimum is 2 - so starts 0, 1 and 2 all reach the whole alphabet, giving aaacb, aacb and acb, which is ' +
+      'the answer 3.',
+    commonMistake:
+      'Counting only the shortest legal window at each edge, or leaving a letter slot unset until it first appears.',
+    whyWrong:
+      'Crediting one window per edge counts the minimal ones and forgets that extending a legal substring to the right stays ' +
+      'legal - on abcabc that undercounts badly. An unset slot is worse than wrong: it reads as undefined, Math.min returns ' +
+      'NaN, the comparison against NaN is false, and the total comes back as NaN with no error anywhere to point at.',
+    followUps: [
+      'Generalise to strings over k distinct letters where every letter must appear. Which formulation survives, and what is the cost per edge?',
+      'Count substrings missing at least one letter instead, and subtract from the total. What is the total number of substrings of a length n string?',
+      'Seed the slots with a Map rather than an object literal. What does the object version do with an input that contains the letter constructor?',
+    ],
+    solution:
+      'function substringsWithAllThree(text) {\n' +
+      '  const lastSeen = { a: -1, b: -1, c: -1 };\n' +
+      '  let count = 0;\n' +
+      '  for (let index = 0; index < text.length; index += 1) {\n' +
+      '    const character = text[index];\n' +
+      '    if (!(character in lastSeen)) continue;\n' +
+      '    lastSeen[character] = index;\n' +
+      '    const earliest = Math.min(lastSeen.a, lastSeen.b, lastSeen.c);\n' +
+      '    if (earliest >= 0) count += earliest + 1;\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}\n' +
+      '\n' +
+      'function substringsWithAllThreeShrink(text) {\n' +
+      '  const counts = { a: 0, b: 0, c: 0 };\n' +
+      '  let start = 0;\n' +
+      '  let count = 0;\n' +
+      '  for (let end = 0; end < text.length; end += 1) {\n' +
+      '    const character = text[end];\n' +
+      '    if (!(character in counts)) continue;\n' +
+      '    counts[character] += 1;\n' +
+      '    while (counts.a > 0 && counts.b > 0 && counts.c > 0) {\n' +
+      '      count += text.length - end;\n' +
+      '      counts[text[start]] -= 1;\n' +
+      '      start += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}',
+    modify: 'Require each letter to appear at least twice. Which of the two formulations changes by one comparison, and which needs a counter per letter?',
+  },
+  {
+    step: 10,
+    name: 'Maximum Points You Can Obtain from Cards',
+    difficulty: 'Medium',
+    topicSlug: WINDOW,
+    stem: 'Take exactly k cards from either end of the row and return the highest total obtainable.',
+    brief: 'Input: an array of card scores and an integer k not exceeding its length. Each turn takes the leftmost or the rightmost remaining card. Output: one integer - the best sum of k cards.',
+    concepts: ['dsa-fixed-window-complement', 'dsa-prefix-sum', 'dsa-complexity-counting', 'dsa-boundary-conditions', 'dsa-single-pass-tracking'],
+    shortAnswer:
+      'Choosing k cards from the ends leaves one untouched contiguous block of length n minus k, so maximise the pick by ' +
+      'minimising the block: slide a fixed window of that width and return the total of all cards minus its smallest sum.',
+    idealAnswer:
+      'The direct reading of the problem is a choice per turn - take from the left or the right - which is exponential as a ' +
+      'search and awkward as a dynamic program, because the state has to know how many were taken from each side. The ' +
+      'complement observation collapses it: whatever the order of taking, k cards from the two ends leave exactly one ' +
+      'contiguous run of n minus k cards in the middle, and every such run is reachable by some order of taking. So the ' +
+      'question becomes the smallest fixed-size window sum, which is one pass: build the first window, then step it across ' +
+      'by adding the entering card and dropping the leaving one, and subtract the minimum from the total. Fixed-size is the ' +
+      'easier case of the sliding window - there is no legality rule and no shrink loop, only a carry. Two edges are worth ' +
+      'naming: when k equals the array length the kept window has width 0, and the slide adds and removes the same element, ' +
+      'so the minimum is 0 and the total is returned without any special branch; when k is 0 the window is the whole array ' +
+      'and the answer is 0. Both fall out of the same code.',
+    walkthrough:
+      'On 1 2 3 4 5 6 1 with k = 3 the kept block has width 4. Its four windows sum to 10, 14, 18 and 16, the smallest being ' +
+      '1 2 3 4, and the total of the row is 22 - so the best pick is 22 minus 10 = 12, which is taking 5, 6 and 1 from the ' +
+      'right end. The all-from-one-side case is what the complement handles for free: no window of four is smaller than the ' +
+      'first one here.',
+    commonMistake:
+      'Greedily taking the larger of the two ends, k times, or sliding a window of width k instead of width n minus k.',
+    whyWrong:
+      'The greedy rule fails because a small card at one end can be the door to a large run behind it - on 5 1 100 1 1 6 with ' +
+      'k = 3 the larger end is 6, so greedy spends its first pick there and ends with 6 plus 5 plus 1 = 12, while taking the ' +
+      'three leftmost cards gives 5 + 1 + 100 = 106. A window of width k computes the opposite quantity: it minimises what ' +
+      'is picked rather than what is left, and the two agree only when k is half the length.',
+    followUps: [
+      'Return the number of cards taken from the left in an optimal pick. What extra state does the window need to give it?',
+      'Allow taking from the left end only. Which term of the formula disappears?',
+      'Cards may be negative now. Does the complement argument still hold, and does the fixed window still find the minimum?',
+    ],
+    solution:
+      'function maxScore(cards, k) {\n' +
+      '  const keep = cards.length - k;\n' +
+      '  let windowSum = 0;\n' +
+      '  for (let index = 0; index < keep; index += 1) windowSum += cards[index];\n' +
+      '  let least = windowSum;\n' +
+      '  for (let index = keep; index < cards.length; index += 1) {\n' +
+      '    windowSum += cards[index] - cards[index - keep];\n' +
+      '    if (windowSum < least) least = windowSum;\n' +
+      '  }\n' +
+      '  let total = 0;\n' +
+      '  for (const value of cards) total += value;\n' +
+      '  return total - least;\n' +
+      '}\n' +
+      '\n' +
+      'function maxScoreByEnds(cards, k) {\n' +
+      '  if (k === 0) return 0;\n' +
+      '  let picked = 0;\n' +
+      '  for (let index = 0; index < k; index += 1) picked += cards[index];\n' +
+      '  let best = picked;\n' +
+      '  for (let fromLeft = k - 1; fromLeft >= 0; fromLeft -= 1) {\n' +
+      '    picked = picked - cards[fromLeft] + cards[cards.length - k + fromLeft];\n' +
+      '    if (picked > best) best = picked;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Report the two split points - how many cards came from each end - for an optimal pick. Which formulation gives them without a second pass?',
   },
 ];
 
