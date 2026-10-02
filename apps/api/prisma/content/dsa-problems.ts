@@ -1358,6 +1358,34 @@ export const DSA_CONCEPTS = {
     terms: ['bucket per frequency', 'insertion ordered set', 'minimum frequency pointer', 'empty bucket advances the minimum', 'promote on both paths'],
     weight: 3,
   },
+  'dsa-window-invariant-shrink-to-repair': {
+    slug: 'dsa-window-invariant-shrink-to-repair',
+    name: 'The window holds an invariant, and the left end is moved until it holds again',
+    detail: 'Extend the right edge unconditionally, record what that added, then shrink from the left while the record is illegal - which is why both ends only ever advance and the pass stays linear.',
+    terms: ['invariant on the window', 'shrink to repair', 'record what is inside', 'neither end rewinds', 'one advance per side'],
+    weight: 3,
+  },
+  'dsa-exactly-is-two-at-most': {
+    slug: 'dsa-exactly-is-two-at-most',
+    name: 'Exactly k is at most k minus at most k minus 1',
+    detail: 'Counting a window with exactly the target quantity is awkward, but counting at most the target is a single shrinking pass - so the difference of two such counts is the answer.',
+    terms: ['at most prefix', 'difference of counts', 'one pass per bound', 'counting instead of enumerating', 'off-by-one on k minus 1'],
+    weight: 3,
+  },
+  'dsa-last-seen-position-jumps-the-left-edge': {
+    slug: 'dsa-last-seen-position-jumps-the-left-edge',
+    name: 'A collision is cleared by jumping the left edge past where it happened',
+    detail: 'Remembering the last position of each character lets the left edge leap straight to one past the repeat, instead of walking - and the guard that the remembered position is still inside the window is what makes the leap honest.',
+    terms: ['last seen index', 'jump not walk', 'stale index outside the window', 'seen >= start', 'no rewind needed'],
+    weight: 3,
+  },
+  'dsa-stale-maximum-still-bounds': {
+    slug: 'dsa-stale-maximum-still-bounds',
+    name: 'A maximum that is never lowered still gives the right answer in a growing window',
+    detail: 'The window length only ever needs an upper bound on the dominant count, so a stale larger value simply makes the shrink test fire once and the recorded best never shrinks - the invariant survives an over-estimate.',
+    terms: ['monotone over-estimate', 'bound instead of exact', 'best length never decreases', 'shrink once per step', 'window never shrinks below the answer'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -1377,6 +1405,7 @@ const STACKS = 'stacks-and-queues';
 const MONO = 'monotonic-stacks';
 const GRAPH = 'graph-traversal';
 const APPLIED = 'lru-rate-limiter';
+const WINDOW = 'sliding-window';
 
 export const DSA_PROBLEMS: DsaProblem[] = [
   {
@@ -14377,6 +14406,297 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  }\n' +
       '}',
     modify: 'Make the tie-break most recently used instead of least, so the frequency bucket needs a different front. Which container replaces the set and why does the minimum pointer still need no search?',
+  },
+  {
+    step: 10,
+    name: 'Longest Substring Without Repeating Characters',
+    difficulty: 'Medium',
+    topicSlug: WINDOW,
+    stem: 'Return the length of the longest contiguous substring that contains no repeated character.',
+    brief: 'Input: a string of letters, digits and spaces. Output: one integer - the length of the longest run whose characters are all distinct. The empty string answers 0.',
+    concepts: ['dsa-window-invariant-shrink-to-repair', 'dsa-last-seen-position-jumps-the-left-edge', 'dsa-hash-frequency', 'dsa-single-pass-tracking', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Keep a left index for the window and a map from character to the last index where it was read. A repeat jumps the ' +
+      'left edge to one past that index, and the widest window reached is the answer.',
+    idealAnswer:
+      'The brute force enumerates every substring and scans it for duplicates, which is quadratic in the length plus a linear ' +
+      'check per candidate. The sliding window form reads the string once while holding one promise: the slice from start to ' +
+      'the current index has no repeats. Extending by one character can break that promise in exactly one way, so the repair ' +
+      'is exactly one action - if the new character was last seen at or after start, start moves to that position plus one. ' +
+      'The comparison against start is load bearing, because the map is never cleared: it records where each character was ' +
+      'last seen in the whole string, and a position behind start belongs to a run that already left the window. Trusting it ' +
+      'moves the left edge backwards, which is the rewind the template forbids. The equivalent formulation deletes ' +
+      'characters from a set on the left until the incoming one fits, and it produces the same widths - the map version just ' +
+      'pays for the whole repair in one jump instead of in a walk, which is why it survives when the alphabet is large. For ' +
+      'an ASCII input a 128-slot array of last-seen indices, pre-filled with -1, replaces the map and the hashing with it.',
+    walkthrough:
+      'Take abba. After reading a, b and the second b the map holds a at 0 and b at 1 while start is 0, so the collision at ' +
+      'index 2 pushes start to 2 and the window is that single b. At index 3 the map still says a was last read at 0, and 0 ' +
+      'is behind start, so the guard rejects it and the window stays 2..3 - the substring ba, of length 2, which is the ' +
+      'answer. Drop the guard and start would rewind to 1, the window would claim aba and the function would return 3.',
+    commonMistake:
+      'Clearing the whole map when a repeat is found, or trusting a remembered index without checking that it is still ' +
+      'inside the window.',
+    whyWrong:
+      'Clearing the map discards the characters left of the collision that are still in the window, so their next repeat is ' +
+      'invisible and the window quietly contains a duplicate. Skipping the bounds check is the mirror error: a stale index ' +
+      'drags the left edge backwards, and a rewound window can report a substring that was never distinct - abba answers 2 ' +
+      'and the unchecked version answers 3.',
+    followUps: [
+      'Replace the Map with a fixed array of last-seen indices. What must the never-seen sentinel be, and why does 0 not work?',
+      'Count the distinct-character substrings instead of the longest one. What does each right edge contribute?',
+      'A character outside the Basic Multilingual Plane occupies two UTF-16 units. What breaks when the window is built from length and index instead of Array.from?',
+    ],
+    solution:
+      'function longestSubstringWithoutRepeats(text) {\n' +
+      '  const lastSeen = new Map();\n' +
+      '  let start = 0;\n' +
+      '  let best = 0;\n' +
+      '  for (let index = 0; index < text.length; index += 1) {\n' +
+      '    const character = text[index];\n' +
+      '    const previous = lastSeen.get(character);\n' +
+      '    if (previous !== undefined && previous >= start) {\n' +
+      '      start = previous + 1;\n' +
+      '    }\n' +
+      '    lastSeen.set(character, index);\n' +
+      '    const width = index - start + 1;\n' +
+      '    if (width > best) best = width;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}\n' +
+      '\n' +
+      'function longestSubstringWithoutRepeatsShrink(text) {\n' +
+      '  const window = new Set();\n' +
+      '  let start = 0;\n' +
+      '  let best = 0;\n' +
+      '  for (let end = 0; end < text.length; end += 1) {\n' +
+      '    while (window.has(text[end])) {\n' +
+      '      window.delete(text[start]);\n' +
+      '      start += 1;\n' +
+      '    }\n' +
+      '    window.add(text[end]);\n' +
+      '    const width = end - start + 1;\n' +
+      '    if (width > best) best = width;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Return the substring itself rather than its length. Which extra piece of state tells you where the winning window began?',
+  },
+  {
+    step: 10,
+    name: 'Max Consecutive Ones III',
+    difficulty: 'Medium',
+    topicSlug: WINDOW,
+    stem: 'Return the length of the longest run of 1s obtainable by flipping at most k zeros to 1s.',
+    brief: 'Input: an array of bits and an integer k. Output: one integer - the length of the longest contiguous segment that contains at most k zeros, since those are the flips you are allowed to spend.',
+    concepts: ['dsa-window-invariant-shrink-to-repair', 'dsa-single-pass-tracking', 'dsa-complexity-counting', 'dsa-boundary-conditions', 'dsa-two-pointer'],
+    shortAnswer:
+      'Slide a window and count the zeros inside it. While the count exceeds k, advance the left edge - decrementing only ' +
+      'when the bit that leaves is a zero - and keep the widest window reached.',
+    idealAnswer:
+      'This is the at-most-k template with the zero count as the record. The right edge never rewinds; every left advance is ' +
+      'forced by one illegal state, so each element is entered and left at most once and the pass is linear. Because only the ' +
+      'maximum width is required, the shrink can be weakened to a shift: when the window takes in its k plus 1 th zero, move ' +
+      'the left edge by exactly one step. The window then never drops below the best width already found, and the answer is ' +
+      'simply the final width - the shift version is the one to write on a whiteboard because it has no inner loop, and the ' +
+      'shrink version is the one to write when the caller wants the segment itself. The alternative that recomputes a flip ' +
+      'budget per start is quadratic on a dense input, and the alternative that flips in place destroys the array the caller ' +
+      'still owns.',
+    walkthrough:
+      'On 1 1 1 0 0 0 1 1 1 1 0 with k = 2, the window reaches indices 0..4 at width 5 with two zeros inside. The zero at ' +
+      'index 5 makes three, so the left edge walks off the three ones at 0, 1 and 2 - the count does not fall - and then off ' +
+      'the zero at 3, which brings it back to two. From there the window grows over the run of ones to 4..9, width 6, and ' +
+      'that is the answer: flip the zeros at 4 and 5 and the segment becomes six consecutive ones.',
+    commonMistake:
+      'Advancing the left edge without decrementing the zero count when the bit that leaves is a zero.',
+    whyWrong:
+      'The count then never returns to legal, so the shrink loop keeps walking the left edge - past the right edge, where ' +
+      'bits[start] is undefined rather than a zero, the decrement can never fire, and the while loop spins forever. Even a ' +
+      'version that bounds the loop reports a too-short answer, because it threw away valid length it did not have to.',
+    followUps: [
+      'Return the index of the best window start, not its length. Which of the two formulations still gives it to you?',
+      'Generalise from bits to an array of arbitrary integers where at most k of them may be changed to match their neighbour. What is the illegal state now?',
+      'If k is guaranteed to be at least the number of zeros, what should the function return without looking at the array?',
+    ],
+    solution:
+      'function maxConsecutiveOnes(bits, k) {\n' +
+      '  let start = 0;\n' +
+      '  let zeros = 0;\n' +
+      '  let best = 0;\n' +
+      '  for (let end = 0; end < bits.length; end += 1) {\n' +
+      '    if (bits[end] === 0) zeros += 1;\n' +
+      '    while (zeros > k) {\n' +
+      '      if (bits[start] === 0) zeros -= 1;\n' +
+      '      start += 1;\n' +
+      '    }\n' +
+      '    const width = end - start + 1;\n' +
+      '    if (width > best) best = width;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}\n' +
+      '\n' +
+      'function maxConsecutiveOnesShift(bits, k) {\n' +
+      '  let start = 0;\n' +
+      '  let zeros = 0;\n' +
+      '  for (let end = 0; end < bits.length; end += 1) {\n' +
+      '    if (bits[end] === 0) zeros += 1;\n' +
+      '    if (zeros > k) {\n' +
+      '      if (bits[start] === 0) zeros -= 1;\n' +
+      '      start += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return bits.length - start;\n' +
+      '}',
+    modify: 'Allow flipping at most k zeros but require the result to be reported as the list of positions to flip. Which formulation keeps the positions available?',
+  },
+  {
+    step: 10,
+    name: 'Fruit Into Baskets',
+    difficulty: 'Medium',
+    topicSlug: WINDOW,
+    stem: 'With two baskets that each accept one variety, return the maximum number of fruits you can collect from one contiguous run of trees.',
+    brief: 'Input: tree[i] is the variety at position i. Start at any tree, then walk right taking exactly one fruit per tree, and stop the moment a third variety would have to be forced into a basket. Output: the longest contiguous segment holding at most two varieties.',
+    concepts: ['dsa-window-invariant-shrink-to-repair', 'dsa-hash-frequency', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'The at-most-two-distinct window: keep a count per variety in a Map, and as soon as it holds a third key, evict trees ' +
+      'from the left until one variety reaches zero and that key is deleted.',
+    idealAnswer:
+      'Stripped of the orchard, this is the sliding window whose illegal state is a distinct count above two, so the whole ' +
+      'problem is the eviction. A variety leaves the window only when its last tree leaves, which means the record needs a ' +
+      'count per variety rather than a set of varieties seen: decrement on the way out and delete the key at zero, because a ' +
+      'key sitting at zero still occupies a slot in the size test. A Map is the right container here rather than a plain ' +
+      'object: varieties are numeric and an object coerces every key to a string, so variety 1 and the string "1" would ' +
+      'merge into one slot - and a Map compares with SameValueZero, which keeps number keys distinct and even tolerates NaN ' +
+      'as a variety. Track the widest window reached, and the pass is linear since the left edge only ever advances. The ' +
+      'narrower trick of remembering just the two current varieties and resetting one of them works on this input shape, but ' +
+      'it cannot answer the obvious generalisation to k baskets.',
+    walkthrough:
+      'On 1 2 3 2 2 the window holds 1 and 2 at width 2, then reads 3 and breaks the rule. The left edge releases the tree of ' +
+      'variety 1, whose count falls to zero and whose key is deleted, leaving the window 1..2 at width 2. Reading the two ' +
+      'remaining 2s grows it to 1..4, which is the varieties 2, 3, 2, 2 - four fruits in two baskets, and the answer.',
+    commonMistake:
+      'Leaving a variety in the map with a count of zero, or shrinking the window to empty whenever a third variety appears.',
+    whyWrong:
+      'A key at zero still counts, so the size test never becomes legal again and the left edge walks off the right one; ' +
+      'from then on every width is computed against an edge that has already passed it. Shrinking to empty is the softer ' +
+      'error - it is always legal, so it is never wrong about validity, but it discards the run of the previous variety that ' +
+      'is still collectable, and an input like 1 2 3 2 2 answers 4 while that version answers 2.',
+    followUps: [
+      'Generalise to k baskets. Which single constant changes, and what happens to the cost when k is large?',
+      'Report the starting index of the best run as well. Does the eviction loop give it to you for free?',
+      'Rewrite the record as a plain object keyed by variety. What collides on an array containing both 1 and "1"?',
+    ],
+    solution:
+      'function totalFruit(tree) {\n' +
+      '  const counts = new Map();\n' +
+      '  let start = 0;\n' +
+      '  let best = 0;\n' +
+      '  for (let end = 0; end < tree.length; end += 1) {\n' +
+      '    const variety = tree[end];\n' +
+      '    const held = counts.get(variety);\n' +
+      '    counts.set(variety, held === undefined ? 1 : held + 1);\n' +
+      '    while (counts.size > 2) {\n' +
+      '      const leaving = tree[start];\n' +
+      '      const remaining = counts.get(leaving) - 1;\n' +
+      '      if (remaining === 0) counts.delete(leaving);\n' +
+      '      else counts.set(leaving, remaining);\n' +
+      '      start += 1;\n' +
+      '    }\n' +
+      '    const width = end - start + 1;\n' +
+      '    if (width > best) best = width;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}\n' +
+      '\n' +
+      'function totalFruitNaive(tree) {\n' +
+      '  let best = 0;\n' +
+      '  for (let start = 0; start < tree.length; start += 1) {\n' +
+      '    const varieties = new Set();\n' +
+      '    for (let end = start; end < tree.length; end += 1) {\n' +
+      '      varieties.add(tree[end]);\n' +
+      '      if (varieties.size > 2) break;\n' +
+      '      if (end - start + 1 > best) best = end - start + 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Suppose the orchard is a circular route, so the run may wrap from the last tree back to the first. How does the window change, and what stops it from counting the circuit twice?',
+  },
+  {
+    step: 10,
+    name: 'Longest Repeating Character Replacement',
+    difficulty: 'Medium',
+    topicSlug: WINDOW,
+    stem: 'You may change at most k characters of a string of uppercase letters; return the longest run of one repeated letter you can produce.',
+    brief: 'Input: a string over A-Z and an integer k. Output: one integer - the longest window whose length minus the count of its most frequent letter is at most k, because the letters that are not the majority are the ones you would overwrite.',
+    concepts: ['dsa-stale-maximum-still-bounds', 'dsa-window-invariant-shrink-to-repair', 'dsa-character-codes', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Keep counts for the 26 letters in the window and the largest count ever reached, without lowering it. The window is ' +
+      'legal while its length minus that maximum is at most k; otherwise advance the left edge.',
+    idealAnswer:
+      'The test length - maxCount <= k says how many characters in the window are not the majority letter, and those are ' +
+      'exactly the replacements being spent. The interesting part is the maximum: when the left edge advances, the majority ' +
+      'letter may leave with it, yet the recorded maximum is not recomputed - it stays too high. That is safe rather than ' +
+      'sloppy. An over-estimate makes the shrink test fire earlier, so the window is at most one step narrower than it ' +
+      'strictly needs to be, and since only the widest window ever reached is returned, a window that is never wider than ' +
+      'the answer is still bounded by it. Recomputing the true maximum by scanning the 26 counters each step is correct and ' +
+      '26 times the cost, which is the trade worth stating out loud. In JavaScript the frequency table is an array of 26 ' +
+      'slots indexed by charCodeAt minus 65, since uppercase letters are contiguous in UTF-16 - and it must be built with ' +
+      'fill(0), because a bare new Array(26) holds holes and undefined plus 1 is NaN.',
+    walkthrough:
+      'On AABABBA with k = 1, the window grows to AABA at width 4 with three As, so one replacement covers the single B. ' +
+      'Reading the next B makes the majority two characters short of legal, so the left edge releases an A; the recorded ' +
+      'maximum stays at 3 even though the true majority count in the window has fallen. That stale value only ever causes an ' +
+      'extra shrink step, and the widest width reached - 4 - is still returned.',
+    commonMistake:
+      'Recomputing the maximum by scanning all 26 counters on every left advance, or indexing the counters with the ' +
+      'character itself instead of its code.',
+    whyWrong:
+      'The scan is not wrong, it is just the quadratic-looking version of a linear algorithm, and an interviewer reading for ' +
+      'the invariant will ask why the maximum was repaired. Indexing by character is wrong: an array keyed by letters ' +
+      'sparse-fills to 57 slots, and a lowercase or non-letter input such as a space or a digit yields NaN or an out of ' +
+      'range slot, so the counts stop being numbers.',
+    followUps: [
+      'Return the letter the answer window is made of. Why does the never-lowered maximum cost you that answer, and what fixes it?',
+      'Allow the alphabet to be arbitrary Unicode rather than A-Z. Which container replaces the 26 slots and what does the index arithmetic become?',
+      'Prove or break the claim that the window never shrinks below the best width found so far.',
+    ],
+    solution:
+      'function characterReplacement(text, k) {\n' +
+      '  const counts = new Array(26).fill(0);\n' +
+      '  let start = 0;\n' +
+      '  let maxCount = 0;\n' +
+      '  let best = 0;\n' +
+      '  for (let end = 0; end < text.length; end += 1) {\n' +
+      '    const slot = text.charCodeAt(end) - 65;\n' +
+      '    counts[slot] += 1;\n' +
+      '    if (counts[slot] > maxCount) maxCount = counts[slot];\n' +
+      '    while (end - start + 1 - maxCount > k) {\n' +
+      '      counts[text.charCodeAt(start) - 65] -= 1;\n' +
+      '      start += 1;\n' +
+      '    }\n' +
+      '    const width = end - start + 1;\n' +
+      '    if (width > best) best = width;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}\n' +
+      '\n' +
+      'function characterReplacementNaive(text, k) {\n' +
+      '  let best = 0;\n' +
+      '  for (let start = 0; start < text.length; start += 1) {\n' +
+      '    const counts = new Array(26).fill(0);\n' +
+      '    let windowMax = 0;\n' +
+      '    for (let end = start; end < text.length; end += 1) {\n' +
+      '      const slot = text.charCodeAt(end) - 65;\n' +
+      '      counts[slot] += 1;\n' +
+      '      if (counts[slot] > windowMax) windowMax = counts[slot];\n' +
+      '      if (end - start + 1 - windowMax > k) break;\n' +
+      '      if (end - start + 1 > best) best = end - start + 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Change the rule so replacements may only create the letter that is already dominant in the window. Does the stale maximum still bound the answer correctly?',
   },
 ];
 
