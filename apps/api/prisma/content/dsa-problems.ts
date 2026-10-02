@@ -1541,6 +1541,13 @@ export const DSA_CONCEPTS = {
     terms: ['count is at most n', 'one slot per frequency', 'read from the top down', 'no comparisons', 'bounded key range beats sorting'],
     weight: 4,
   },
+  'dsa-two-heaps-hold-the-middle': {
+    slug: 'dsa-two-heaps-hold-the-middle',
+    name: 'Two heaps meet at the middle and nothing else is ordered',
+    detail: 'A max heap holds the lower half and a min heap the upper half, so the only two values ever needed are their roots; the size rule is that the low side carries one more than the high side at most, and an insert is a placement against the split plus at most one value moved across it.',
+    terms: ['max heap below', 'min heap above', 'two roots are the answer', 'sizes differ by one', 'move one across to rebalance'],
+    weight: 4,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -17990,6 +17997,436 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return out;\n' +
       '}',
     modify: 'Keep the window ascending and return the kth largest from the front instead of the back. Which comparisons, which index and which end of the truncation move?',
+  },
+  {
+    step: 11,
+    name: 'Find Median from Data Stream',
+    difficulty: 'Hard',
+    topicSlug: HEAPS,
+    stem: 'Return the median of everything a stream has delivered so far, after every add, without sorting the stream.',
+    brief: 'Input: a sequence of addNum calls, then findMedian queries. Output: the middle value when an odd number of values have arrived, the mean of the two middles when the count is even. Deliver the two-heap split, the push-through variant that needs no comparison to place a value, and the sort-everything reference.',
+    concepts: ['dsa-two-heaps-hold-the-middle', 'dsa-heap-guarantees-only-the-root', 'dsa-sift-up-sift-down', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Hold the lower half in a max heap and the upper half in a min heap, with the low side equal to the high side or one ahead. ' +
+      'The median is the root of the low heap when the count is odd and the mean of the two roots when it is even, so addNum ' +
+      'costs a couple of sifts and findMedian costs no work at all.',
+    idealAnswer:
+      'A median is a single position in a sorted view of the data, and the sorted view is what the two heaps refuse to build. ' +
+      'Split the values into a lower half and an upper half, keep the lower half in a max heap so its root is the largest value ' +
+      'below the split, and the upper half in a min heap so its root is the smallest value above it. Those two roots are the two ' +
+      'middle entries and nothing else is ever read, which is exactly the trade a heap is for - a heap promises only its root, ' +
+      'and this design asks for nothing more. Neither heap can point the other way: with the lower half in a min heap its root is ' +
+      'the smallest value of that half, which is the middle of nothing, and the odd-count answer drifts down to a minimum - the ' +
+      'ascending stream 1, 2, 3, 4, 5, 6 answers 1, 1.5, 1, 2.5, 1, 3.5 instead of 1, 1.5, 2, 2.5, 3, 3.5, and the halves stop ' +
+      'being halves at all. Two ' +
+      'invariants carry the design: the sizes, where the low side holds ceil of the total so it is equal or exactly one ahead, and ' +
+      'the order, where every value in the low heap is at most every value in the high heap. Because the low side always holds the ' +
+      'extra element, an odd total is answered by low root alone and the high heap is never read on an odd count - after the first ' +
+      'add the roots read 2 and undefined, and code that averages the pair regardless of parity produces NaN as its first answer, ' +
+      'then 4 and 4.5 where the stream says 3 and 4. Placement is a single comparison against the low root - at or below it goes ' +
+      'down, above it goes up - and then at most one value moves across to restore the size rule, which keeps the order rule ' +
+      'intact because what moves is an extreme of the side it leaves. That comparison is the whole correctness of the structure; ' +
+      'inserting into whichever heap has room instead is a balanced pair of wrong sets: on 2, 3, 5, 4, 7, 1, 6 it answers 2, 2.5, ' +
+      '5, 4, 7, 4, 7 and the split is violated five times, first after 2, 3, 5, where the low heap holds 5 above a high heap ' +
+      'holding 3. The push-through variant removes the comparison by always pushing into the low heap and then moving the low ' +
+      'root up - the value that crosses is by definition the largest of the lower side, so the order rule is repaired rather than ' +
+      'protected - at the cost of two sifts on every add instead of a sift and sometimes one. Reading costs O(1) either way, which ' +
+      'is the reason to prefer this over the sorted array: a query that happens a thousand times a second should not shift a ' +
+      'million entries. Memory is n, unavoidable, and the resort-per-add reference pays n log n for every add to answer the same ' +
+      'question. The even branch is the mean of the two roots, not a truncated read and not the value at one index: 1000000001 ' +
+      'and 999999999 have median 1000000000, which is exact here because a double keeps every integer below 2 to the 53, while a ' +
+      '32-bit integer sum overflows once both roots pass 2 to the 30 and integer division turns a true 3.5 into 3 - the even ' +
+      'branch is the first place a median stops being an element of the input at all. Duplicates need no special case - the ' +
+      'comparison sends an equal value down ' +
+      'and the two middles can be equal, which is why 5, 5, 5, 5 answers 5 four times.',
+    walkthrough:
+      'The stream 2, 3, 5, 4, 7, 1, 6 is a full walk of both branches. 2 arrives into an empty low heap: sizes 1:0, the total is ' +
+      'odd, the answer is the low root 2, and the high root is undefined - the single moment the even branch must not be taken. ' +
+      '3 is above the low root so it goes up: 1:1, even, mean of 2 and 3 gives 2.5. 5 also goes up, which puts the high side ahead ' +
+      'by one, so the smallest of the upper half - 3 - crosses down: 2:1, odd, answer 3. 4 goes up against a root of 5 and the ' +
+      'sizes even out at 2:2, giving the mean of 3 and 4, which is 3.5. 7 goes up and overflows, 4 crosses down, and the answer is ' +
+      '4 at 3:2. 1 is at or below the low root so it goes down and overflows that side, and the largest of the lower half - 4 - ' +
+      'crosses up to give 3:3 and the mean of 3 and 4, which is 3.5 again. 6 goes up, overflows, and 5 crosses down: the final ' +
+      'arrays are 4, 3, 1, 2 below and 5, 6, 7 above, the roots are 4 and 5, the total is odd so only the first is read, and the ' +
+      'median is 4.',
+    commonMistake:
+      'Placing a value by size alone - into whichever heap has room - instead of comparing it against the split, or averaging the ' +
+      'two roots on every query regardless of parity.',
+    whyWrong:
+      'Balancing by size keeps the shapes perfect and the answers wrong: on 2, 3, 5, 4, 7, 1, 6 it returns 2, 2.5, 5, 4, 7, 4, 7, ' +
+      'because the third add puts 5 into the low heap while 3 sits in the high one, so the low root - which is the answer for an ' +
+      'odd total - is a value from the upper half. The split is broken at five of the seven prefixes, first at 2, 3, 5. Pointing ' +
+      'the heaps the other way is the same class of error: the low heap then reports the minimum of everything, and the ascending ' +
+      'stream answers 1, 1.5, 1, 2.5, 1, 3.5 instead of 1, 1.5, 2, 2.5, 3, 3.5. Averaging on every query reads the empty high ' +
+      'heap on the first add, and (2 + undefined) / 2 is NaN - the run then continues 2.5, 4, 3.5, 4.5 against the correct 2.5, 3, ' +
+      '3.5, 4, so a single element is used where two are needed and a single element is read where none exists. None of the three ' +
+      'throw.',
+    followUps: [
+      'Both heaps hold n over two entries. What is the exact sift cost of an add in each, and why is the total still O(log n)?',
+      'Add a removeNum so the structure answers a sliding-window median. Which side can the removed value be on, and what does a heap do with an element that is not at its root?',
+      'The queries ask for the 25th percentile too. How many heaps does that take, and what does the size rule become?',
+      'You are told the stream is already sorted ascending before it arrives. Which structure wins the O(log n) versus O(1) argument, and why?',
+    ],
+    solution:
+      'function pushMax(items, value) {\n' +
+      '  items.push(value);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent] >= items[index]) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function popMax(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left] > items[best]) best = left;\n' +
+      '      if (right < items.length && items[right] > items[best]) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'function pushMin(items, value) {\n' +
+      '  items.push(value);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent] <= items[index]) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function popMin(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left] < items[best]) best = left;\n' +
+      '      if (right < items.length && items[right] < items[best]) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'class MedianFinder {\n' +
+      '  constructor() {\n' +
+      '    this.low = [];\n' +
+      '    this.high = [];\n' +
+      '  }\n' +
+      '\n' +
+      '  addNum(value) {\n' +
+      '    if (this.low.length === 0 || value <= this.low[0]) pushMax(this.low, value);\n' +
+      '    else pushMin(this.high, value);\n' +
+      '    if (this.low.length > this.high.length + 1) pushMin(this.high, popMax(this.low));\n' +
+      '    else if (this.high.length > this.low.length) pushMax(this.low, popMin(this.high));\n' +
+      '    return this.findMedian();\n' +
+      '  }\n' +
+      '\n' +
+      '  findMedian() {\n' +
+      '    const total = this.low.length + this.high.length;\n' +
+      '    if (total === 0) return undefined;\n' +
+      '    if (total % 2 === 1) return this.low[0];\n' +
+      '    return (this.low[0] + this.high[0]) / 2;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'class MedianFinderByPushThrough {\n' +
+      '  constructor() {\n' +
+      '    this.low = [];\n' +
+      '    this.high = [];\n' +
+      '  }\n' +
+      '\n' +
+      '  addNum(value) {\n' +
+      '    pushMax(this.low, value);\n' +
+      '    pushMin(this.high, popMax(this.low));\n' +
+      '    if (this.high.length > this.low.length) pushMax(this.low, popMin(this.high));\n' +
+      '    return this.findMedian();\n' +
+      '  }\n' +
+      '\n' +
+      '  findMedian() {\n' +
+      '    const total = this.low.length + this.high.length;\n' +
+      '    if (total === 0) return undefined;\n' +
+      '    if (total % 2 === 1) return this.low[0];\n' +
+      '    return (this.low[0] + this.high[0]) / 2;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function medianOfSorted(sorted) {\n' +
+      '  const count = sorted.length;\n' +
+      '  if (count === 0) return undefined;\n' +
+      '  const middle = count >> 1;\n' +
+      '  return count % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;\n' +
+      '}\n' +
+      '\n' +
+      'function mediansOf(values, Class) {\n' +
+      '  const tracker = new Class();\n' +
+      '  const out = [];\n' +
+      '  for (const value of values) out.push(tracker.addNum(value));\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function mediansByResort(values) {\n' +
+      '  const seen = [];\n' +
+      '  const out = [];\n' +
+      '  for (const value of values) {\n' +
+      '    seen.push(value);\n' +
+      '    out.push(medianOfSorted(seen.slice().sort((first, second) => first - second)));\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function balanceOf(values, Class) {\n' +
+      '  const tracker = new Class();\n' +
+      '  const out = [];\n' +
+      '  for (const value of values) {\n' +
+      '    tracker.addNum(value);\n' +
+      '    out.push(tracker.low.length + ":" + tracker.high.length);\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function rootsOf(values, Class) {\n' +
+      '  const tracker = new Class();\n' +
+      '  const out = [];\n' +
+      '  for (const value of values) {\n' +
+      '    tracker.addNum(value);\n' +
+      '    out.push(tracker.low[0] + "/" + tracker.high[0]);\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function heapArraysOf(values, Class) {\n' +
+      '  const tracker = new Class();\n' +
+      '  for (const value of values) tracker.addNum(value);\n' +
+      '  return tracker.low.join(",") + " | " + tracker.high.join(",");\n' +
+      '}',
+    modify: 'Give the class a removeNum so it tracks the median of the last w values instead of all of them. Which heap can the victim be sitting in, and what does a heap do with an element that is not its root?',
+  },
+  {
+    step: 11,
+    name: 'Find running median from data stream',
+    difficulty: 'Hard',
+    topicSlug: HEAPS,
+    stem: 'Answer the median of a growing stream by keeping every value in one sorted array instead of splitting them across two heaps.',
+    brief: 'Input: a sequence of add calls, each returning the median of everything seen so far. Output: the middle entry of the sorted prefix, or the mean of its two middle entries. Deliver the binary-search insert, the insertion-sort shift that needs no search, and the full resort on every add.',
+    concepts: ['dsa-insertion-shift', 'dsa-lower-bound', 'dsa-two-heaps-hold-the-middle', 'dsa-default-sort-is-lexicographic', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Keep one ascending array by inserting each value at its sorted position - found by binary search, or reached by shifting ' +
+      'larger entries right from the back - and the median becomes a read: the entry at count over two for an odd count, the mean ' +
+      'of that entry and its predecessor for an even one. Adds pay the shift, queries pay nothing.',
+    idealAnswer:
+      'This is the two-heap answer traded the other way: the whole array is ordered rather than only the split, so the cost moves ' +
+      'from the query to the insert and every order statistic becomes free, not just the middle. Two invariants instead of four ' +
+      'sections - the array is ascending after every add, and the median is a function of its length. Insertion has two honest ' +
+      'forms. The search form runs a lower bound - the predicate is strictly less, so the loop exits at the first index whose ' +
+      'occupant is not smaller than the new value and equal values land in front of their equals - costing log n comparisons and ' +
+      'then a splice that moves the tail. The shift form is the insertion-sort move: open a hole at the end, slide entries right ' +
+      'while they are strictly greater, and drop the key into the hole, which finds the position and makes the room in one pass ' +
+      'and lands an equal value behind its equals instead. On 1, 3, 3, 5 a new 3 goes to index 1 by search and index 3 by shift; ' +
+      'both arrays are sorted and both give the same medians for as long as the entries are indistinguishable, which is the one ' +
+      'tie-break in the step that is genuinely free - it stops being free the moment the array holds records and the reader wants ' +
+      'the earlier one. The moves are the real cost and they depend entirely on arrival order: an ascending stream shifts nothing ' +
+      'at all, six ascending values cost 0 moves, six descending ones cost 15, and a thousand descending values cost 499500, ' +
+      'which is n minus 1 over 2 times n - quadratic on exactly the input a heap handles in log time. The interleaved stream 2, 3, ' +
+      '5, 4, 7, 1, 6 costs 7 moves, and that is the average case: half the tail on average, so O(n) per add and O(n squared) to ' +
+      'build, against the heap pair at O(log n) per add. What the array buys is the read. The median is one index - middle is ' +
+      'count over two - so an odd count returns sorted at middle and an even count returns the mean of middle minus one and ' +
+      'middle, and on the six-element prefix of that same sequence the array is 1, 2, 3, 4, 5, 6, where index 3 holds 4 and the ' +
+      'median is 3.5. Taking the entry at the middle index for an even count is the off-by-one this design invites: it returns an ' +
+      'element of the input where the answer is not an element of the input at all, and on an array version the mistake looks ' +
+      'harmless because both readings are legitimate entries. The same parity decides the odd branch: one value has middle index 0 ' +
+      'and no predecessor to average, so the count test has to come first. The resort-everything version is the reference a ' +
+      'reviewer accepts for tiny streams and the one to quote in a complexity argument: it is correct, it needs no search, and it ' +
+      'pays a full sort - n log n comparisons - on every add to re-derive an order the array already had, while the incremental ' +
+      'insert makes that work explicit as moves instead of hiding it. The comparator is the other classic failure: the default ' +
+      'sort stringifies, so 10, 2, 1 becomes 1, 10, 2 and its middle entry is 10 where the numeric median is 2 - a wrong answer ' +
+      'that grows silently with the stream, and the reason the shift form is safer than a sort call, because a comparison written ' +
+      'in the loop cannot be forgotten.',
+    walkthrough:
+      'The stream 2, 3, 5, 4, 7, 1, 6 walks the array from one entry to seven: 2, then 2/3, then 2/3/5, then 2/3/4/5, then ' +
+      '2/3/4/5/7, then 1/2/3/4/5/7, then 1/2/3/4/5/6/7, and the insertion points are 0, 1, 2, 2, 4, 0, 5. 2 is the only entry, so ' +
+      'middle index 0 answers 2. 3 appends at index 1 and the count is even: indices 0 and 1 give the mean of 2 and 3, which is ' +
+      '2.5. 5 appends at index 2 and middle index 1 reads 3. 4 is inserted at index 2 - not 3, because the search stops at the ' +
+      'first entry not smaller than it - and the even read averages indices 1 and 2, 3 and 4, for 3.5. 7 appends at index 4 for ' +
+      'the odd answer 4. Then 1 arrives: its binary search ends at 0 and the whole five-entry array shifts right one place, the ' +
+      'most expensive add of the seven, and the even read averages indices 2 and 3 - 3 and 4 - for 3.5 again. 6 lands at index 5 ' +
+      'with one entry to move and the odd answer 4. Total moves for the stream: 7.',
+    commonMistake:
+      'Reading the entry at the middle index whatever the parity, or sorting with the default comparator instead of a numeric one.',
+    whyWrong:
+      'On the sorted array 1, 2, 3, 4, 5, 6 the count over two is index 3, which holds 4, while the median of an even count is the ' +
+      'mean of indices 2 and 3 - 3.5, a value that is not in the array. The rule is not a rounding choice: for an odd count the ' +
+      'middle index is the answer, and for an even one it is the second of the two middles, so the same line is right on one ' +
+      'prefix and wrong on the next, and a stream that alternates parity reports the upper middle half the time. The default ' +
+      'comparator is worse because it looks plausible: 10, 2, 1 sorted without a function reads 1, 10, 2, its middle entry is 10, ' +
+      'and the true median is 2. Neither failure raises an error and both survive a test on single-digit inputs, where lexical and ' +
+      'numeric order agree.',
+    followUps: [
+      'The stream is ascending. This version costs 0 moves per add and the heaps still cost a sift - which structure wins, and for how long?',
+      'You also need the 90th percentile and the interquartile range on demand. What does each cost here, and what would they cost the two-heap pair?',
+      'Add a remove so the array becomes a sliding window. Which end of the array can the victim be at, and what is the cost of the hole it leaves?',
+      'Store records instead of numbers and keep the array ordered by one field. Which of the two insert forms can afford a comparator, and which one has to change its loop condition?',
+    ],
+    solution:
+      'function insertAt(sorted, value) {\n' +
+      '  let low = 0;\n' +
+      '  let high = sorted.length;\n' +
+      '  while (low < high) {\n' +
+      '    const middle = (low + high) >> 1;\n' +
+      '    if (sorted[middle] < value) low = middle + 1;\n' +
+      '    else high = middle;\n' +
+      '  }\n' +
+      '  sorted.splice(low, 0, value);\n' +
+      '  return low;\n' +
+      '}\n' +
+      '\n' +
+      'function insertByShift(sorted, value) {\n' +
+      '  sorted.push(undefined);\n' +
+      '  let index = sorted.length - 2;\n' +
+      '  while (index >= 0 && sorted[index] > value) {\n' +
+      '    sorted[index + 1] = sorted[index];\n' +
+      '    index -= 1;\n' +
+      '  }\n' +
+      '  sorted[index + 1] = value;\n' +
+      '  return index + 1;\n' +
+      '}\n' +
+      '\n' +
+      'class RunningMedian {\n' +
+      '  constructor() {\n' +
+      '    this.sorted = [];\n' +
+      '  }\n' +
+      '\n' +
+      '  add(value) {\n' +
+      '    insertAt(this.sorted, value);\n' +
+      '    return this.median();\n' +
+      '  }\n' +
+      '\n' +
+      '  median() {\n' +
+      '    const count = this.sorted.length;\n' +
+      '    if (count === 0) return undefined;\n' +
+      '    const middle = count >> 1;\n' +
+      '    return count % 2 === 1 ? this.sorted[middle] : (this.sorted[middle - 1] + this.sorted[middle]) / 2;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'class RunningMedianByShift {\n' +
+      '  constructor() {\n' +
+      '    this.sorted = [];\n' +
+      '  }\n' +
+      '\n' +
+      '  add(value) {\n' +
+      '    insertByShift(this.sorted, value);\n' +
+      '    return this.median();\n' +
+      '  }\n' +
+      '\n' +
+      '  median() {\n' +
+      '    const count = this.sorted.length;\n' +
+      '    if (count === 0) return undefined;\n' +
+      '    const middle = count >> 1;\n' +
+      '    return count % 2 === 1 ? this.sorted[middle] : (this.sorted[middle - 1] + this.sorted[middle]) / 2;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'class RunningMedianByResort {\n' +
+      '  constructor() {\n' +
+      '    this.sorted = [];\n' +
+      '  }\n' +
+      '\n' +
+      '  add(value) {\n' +
+      '    this.sorted.push(value);\n' +
+      '    this.sorted.sort((first, second) => first - second);\n' +
+      '    return this.median();\n' +
+      '  }\n' +
+      '\n' +
+      '  median() {\n' +
+      '    const count = this.sorted.length;\n' +
+      '    if (count === 0) return undefined;\n' +
+      '    const middle = count >> 1;\n' +
+      '    return count % 2 === 1 ? this.sorted[middle] : (this.sorted[middle - 1] + this.sorted[middle]) / 2;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function mediansStreamed(values, Class) {\n' +
+      '  const tracker = new Class();\n' +
+      '  const out = [];\n' +
+      '  for (const value of values) out.push(tracker.add(value));\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function sortedAfter(values, Class) {\n' +
+      '  const tracker = new Class();\n' +
+      '  for (const value of values) tracker.add(value);\n' +
+      '  return tracker.sorted.join("/");\n' +
+      '}\n' +
+      '\n' +
+      'function insertionPoints(values) {\n' +
+      '  const sorted = [];\n' +
+      '  const out = [];\n' +
+      '  for (const value of values) out.push(insertAt(sorted, value));\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function shiftPoints(values) {\n' +
+      '  const sorted = [];\n' +
+      '  const out = [];\n' +
+      '  for (const value of values) out.push(insertByShift(sorted, value));\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function movesFor(values) {\n' +
+      '  const sorted = [];\n' +
+      '  let moves = 0;\n' +
+      '  for (const value of values) {\n' +
+      '    sorted.push(undefined);\n' +
+      '    let index = sorted.length - 2;\n' +
+      '    while (index >= 0 && sorted[index] > value) {\n' +
+      '      sorted[index + 1] = sorted[index];\n' +
+      '      moves += 1;\n' +
+      '      index -= 1;\n' +
+      '    }\n' +
+      '    sorted[index + 1] = value;\n' +
+      '  }\n' +
+      '  return moves;\n' +
+      '}\n' +
+      '\n' +
+      'function middleEntry(values) {\n' +
+      '  const sorted = [];\n' +
+      '  for (const value of values) insertAt(sorted, value);\n' +
+      '  return sorted[values.length >> 1];\n' +
+      '}',
+    modify: 'Keep the array ordered by a second field when the values are equal, so a 3 with an earlier timestamp beats a 3 with a later one. Which comparison in each insert form has to become a tie-break, and which form keeps the earlier record where the search lands it?',
   },
 ];
 
