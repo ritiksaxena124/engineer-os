@@ -45,6 +45,16 @@ describe('question content', () => {
     expect([...difficulties].sort()).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 
+  test('the interview bank is banded, answerable, and never a sheet duplicate', () => {
+    const interview = ALL_QUESTIONS.filter((question) => question.slug.startsWith('int-'));
+    expect(interview.length).toBeGreaterThanOrEqual(20);
+    // Easy, Medium and Hard are stored as 3, 4 and 5 so the badge and the filter cannot drift
+    expect(new Set(interview.map((question) => question.difficulty))).toEqual(new Set([3, 4, 5]));
+    expect(interview.every((question) => question.answer.idealAnswer.length > 200)).toBe(true);
+    expect(interview.every((question) => question.concepts.length > 1)).toBe(true);
+    expect(new Set(ALL_QUESTIONS.map((question) => question.slug)).size).toBe(ALL_QUESTIONS.length);
+  });
+
   test('the diagnostic is thirty answerable items and nothing else claims to be', () => {
     const diagnostic = ALL_QUESTIONS.filter((question) => question.isDiagnostic);
     expect(diagnostic).toHaveLength(30);

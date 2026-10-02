@@ -107,6 +107,29 @@ export const ASKED_AT: Record<string, string[]> = {
   'drill-interview-event-loop': ['amazon', 'microsoft'],
   'drill-interview-process-model': ['google'],
   'drill-scale-before-shape': ['google', 'amazon'],
+
+  // the 2026 interview bank: LLMs as production dependencies, and the backend rounds that stayed
+  'int-what-is-a-token': ['google', 'microsoft'],
+  'int-ai-assistant-workflow': ['amazon', 'google', 'microsoft'],
+  'int-p99-not-average': ['amazon', 'google', 'microsoft'],
+  'int-llm-call-as-flaky-infra': ['amazon', 'google', 'microsoft'],
+  'int-structured-json-output': ['amazon', 'google'],
+  'int-nondeterministic-test': ['google'],
+  'int-chunk-boundary': ['amazon'],
+  'int-ttft-four-seconds': ['google', 'amazon'],
+  'int-agent-ran-forty-turns': ['google'],
+  'int-idempotent-llm-retry': ['amazon', 'microsoft'],
+  'int-cache-stampede': ['amazon', 'google', 'microsoft'],
+  'int-payment-webhook-duplicate': ['amazon', 'microsoft'],
+  'int-hiring-signal-under-ai': ['microsoft'],
+  'int-instructions-in-retrieved-pdf': ['google'],
+  'int-eval-for-unshipped-feature': ['google'],
+  'int-model-deprecation-two-weeks': ['amazon'],
+  'int-agent-write-tools': ['microsoft', 'google'],
+  'int-self-host-or-api': ['google', 'microsoft'],
+  'int-per-tenant-token-budget': ['amazon', 'microsoft'],
+  'int-quality-drop-silent': ['amazon'],
+  'int-when-not-to-build-rag': ['microsoft', 'google'],
 };
 
 /**

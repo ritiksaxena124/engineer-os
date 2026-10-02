@@ -1,0 +1,5 @@
+[test]
+# The integration files seed the whole graph and then sit a full exam on a real Postgres, which
+# runs past the five second default on an ordinary laptop. The ceiling is generous, not a mask:
+# a test that hangs still fails, and it fails with the file's own name on it.
+timeout = 30000

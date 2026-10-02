@@ -202,7 +202,9 @@ describe('question engine', () => {
     const interview = await browse('/questions?bank=interview');
     expect(dsa.questions.some((row) => row.slug.startsWith('int-'))).toBe(false);
     expect(interview.questions.some((row) => row.slug.startsWith('dsa-'))).toBe(false);
+    expect(interview.questions.length).toBeGreaterThan(20);
     expect(interview.questions.every((row) => row.slug.startsWith('int-'))).toBe(true);
+    expect(new Set(interview.questions.map((row) => row.band))).toEqual(new Set(['Easy', 'Medium', 'Hard']));
 
     expect((await request('/questions?bank=leetcode', 'GET', token)).status).toBe(400);
   });
