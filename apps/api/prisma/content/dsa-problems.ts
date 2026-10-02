@@ -994,6 +994,20 @@ export const DSA_CONCEPTS = {
     terms: ['attacked lines', 'membership test', 'row and column sets', 'diagonal key', 'legal by lookup'],
     weight: 3,
   },
+  'dsa-candidate-narrowing': {
+    slug: 'dsa-candidate-narrowing',
+    name: 'Branch where the options are fewest, and do not branch where there is only one',
+    detail: 'Choosing the empty cell with the smallest candidate list makes every failed guess cost as much as possible for the search, and a cell with a single option can be filled without a branch at all.',
+    terms: ['most constrained cell', 'candidate list', 'fewest options', 'forced move', 'branch cost'],
+    weight: 3,
+  },
+  'dsa-last-term-tracks-precedence': {
+    slug: 'dsa-last-term-tracks-precedence',
+    name: 'The last term added is what a multiply has to replace',
+    detail: 'A running total cannot absorb a higher-precedence operator directly, so the frame keeps the value of the last term, removes it, and puts the product back in its place.',
+    terms: ['running value', 'last term', 'undo the addition', 'product replaces term', 'precedence without parsing'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -10487,6 +10501,292 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return walk(0) ? assignment : null;\n' +
       '}',
     modify: 'Count every proper colouring rather than returning the first. What changes in the frame, and why does the short-circuit have to go?',
+  },
+  {
+    step: 7,
+    name: 'Word Break',
+    difficulty: 'Medium',
+    topicSlug: DP,
+    stem: 'Decide whether a string can be segmented into dictionary words, and explain why memoising positions beats memoising substrings.',
+    brief: 'Input: a string of lowercase letters and a dictionary of words. Output: whether the string is a concatenation of one or more dictionary words, with unlimited reuse. Give the memoised walk and the table version.',
+    concepts: ['dsa-reachability-set', 'dsa-memo-decision-table', 'dsa-recursive-decomposition'],
+    shortAnswer:
+      'The only state is the position in the string: from each start, try every dictionary word that matches there and ' +
+      'recurse on what follows. Memoise the boolean per start index.',
+    idealAnswer:
+      'walk(start) is true when start reaches the end, otherwise it tries each cut whose prefix is in the dictionary and ' +
+      'recurses on the remainder. Because the answer depends only on start, the table has length + 1 cells, so the walk ' +
+      'is O(length^2 * word test) rather than exponential - the exponential fear in this problem comes from re-exploring ' +
+      'the same suffix, not from the dictionary. Bottom-up, reachable[i] means the prefix of length i is fully ' +
+      'segmentable, and a position becomes reachable when some earlier reachable position reaches it through one ' +
+      'dictionary word. Both versions are pseudo-polynomial in the number of positions, and the dictionary becomes a Set ' +
+      'so a candidate word is one lookup.',
+    walkthrough:
+      'This looks like a subsequences row and is not one: nothing is enumerated, so the exponential tree collapses the ' +
+      'moment you notice the state is a single index. That is the same observation as the subset-sum decision earlier in ' +
+      'the step, with positions instead of sums, and it is why the row sits under dynamic programming rather than under ' +
+      'backtracking. The detail most answers miss is that the table version also answers reconstruction: keeping the cut ' +
+      'that made each position reachable turns the boolean back into one segmentation, at no extra asymptotic cost.',
+    commonMistake:
+      'Memoising by the substring itself, or treating a failed prefix as proof that the whole string fails.',
+    whyWrong:
+      'A substring key hashes the thing the recursion is trying to avoid recomputing and costs O(length) per copy, while ' +
+      'the index key is one integer. And one dictionary word that matches at a start position does not settle the ' +
+      'question: the walk has to keep trying the other words at that position before reporting failure.',
+    followUps: [
+      'Reconstruct one segmentation instead of a boolean. What extra table do you need?',
+      'The dictionary may contain the empty string. Which line has to refuse it and why?',
+      'Give the number of distinct segmentations. What does the cell hold now, and why is the answer exponential?',
+    ],
+    solution:
+      'function wordBreakable(text, dictionary) {\n' +
+      '  const words = new Set(dictionary);\n' +
+      '  const seen = new Map();\n' +
+      '  function walk(start) {\n' +
+      '    if (start === text.length) return true;\n' +
+      '    if (seen.has(start)) return seen.get(start);\n' +
+      '    let ok = false;\n' +
+      '    for (let end = start + 1; end <= text.length; end += 1) {\n' +
+      '      if (words.has(text.slice(start, end)) && walk(end)) {\n' +
+      '        ok = true;\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '    seen.set(start, ok);\n' +
+      '    return ok;\n' +
+      '  }\n' +
+      '  return walk(0);\n' +
+      '}\n' +
+      '\n' +
+      'function wordBreakableByTable(text, dictionary) {\n' +
+      '  const words = new Set(dictionary);\n' +
+      '  const reachable = new Array(text.length + 1).fill(false);\n' +
+      '  reachable[0] = true;\n' +
+      '  for (let index = 1; index <= text.length; index += 1) {\n' +
+      '    for (let cut = 0; cut < index; cut += 1) {\n' +
+      '      if (reachable[cut] && words.has(text.slice(cut, index))) {\n' +
+      '        reachable[index] = true;\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return reachable[text.length];\n' +
+      '}',
+    modify: 'Return the segmentation with the fewest pieces, or null when there is none. Which table replaces the boolean, and what does the inner loop do differently?',
+  },
+  {
+    step: 7,
+    name: 'Sudoku Solver',
+    difficulty: 'Hard',
+    topicSlug: 'graph-traversal',
+    stem: 'Fill a 9 by 9 Sudoku grid by backtracking and argue what the frame has to undo before it returns false.',
+    brief: 'Input: a 9 by 9 grid using 0 for empty cells, guaranteed to have exactly one solution. Output: the same grid filled in, and true when a completion was found. Say which three lines a candidate has to clear.',
+    concepts: ['dsa-mark-unmark-occupancy', 'dsa-conflict-set-per-placement', 'dsa-recursive-decomposition'],
+    shortAnswer:
+      'Find the first empty cell, try 1 to 9 against its row, column and box, write the value, recurse, and put the cell ' +
+      'back to 0 if the recursion fails.',
+    idealAnswer:
+      'The grid is the state and the recursion is over empty cells: locate one, test each digit for a conflict in its ' +
+      'row, its column and its 3 by 3 box, place it and recurse. Writing the digit is the mark; restoring 0 on the '
+      + 'failure path is the unmark, and without it a grid that fails deep down comes back full of wrong givens. The ' +
+      'base case is no empty cell left, which is the definition of solved. Cost is bounded by 9 to the empty cells in ' +
+      'the worst case, and the practical bound is set entirely by how early a cell runs out of digits - which is why ' +
+      'this naive scan order is the baseline the next row improves on.',
+    walkthrough:
+      'The legality test walks 27 cells - nine in the row, nine in the column, nine in the box - by arithmetic on the box ' +
+      'origin, which is the part worth writing cleanly once rather than three times. Both exits have to be argued: the ' +
+      'return true after a successful recursive call leaves the value in place on purpose, because the answer is the ' +
+      'filled grid, while the return false after the digit loop has to clear the cell, because the caller is going to ' +
+      'try a different digit and the row must not contain two copies of the old one. Getting those two paths mixed is ' +
+      'the classic failure of this row: the grid ends up half-solved and the caller still reports true.',
+    commonMistake:
+      'Leaving the trial digit in the cell when the recursive call returns false, or clearing it when the call returns true.',
+    whyWrong:
+      'A digit left behind after failure becomes a given that no caller can remove, so later frames reject legal digits ' +
+      'and a solvable grid reports no solution. Clearing on success hands the caller a grid with holes in it while ' +
+      'reporting that it is solved.',
+    followUps: [
+      'Return false for a grid with no completion. Does your base case distinguish that from a grid that was already full?',
+      'The legality scan looks at 27 cells per candidate. What precomputed state makes it three lookups?',
+      'How many empty cells can this version handle before the runtime becomes embarrassing, and what tells you?',
+    ],
+    solution:
+      'function solveSudoku(grid) {\n' +
+      '  function legal(row, column, value) {\n' +
+      '    for (let step = 0; step < 9; step += 1) {\n' +
+      '      if (grid[row][step] === value) return false;\n' +
+      '      if (grid[step][column] === value) return false;\n' +
+      '      const boxRow = 3 * Math.floor(row / 3) + Math.floor(step / 3);\n' +
+      '      const boxColumn = 3 * Math.floor(column / 3) + (step % 3);\n' +
+      '      if (grid[boxRow][boxColumn] === value) return false;\n' +
+      '    }\n' +
+      '    return true;\n' +
+      '  }\n' +
+      '  for (let row = 0; row < 9; row += 1) {\n' +
+      '    for (let column = 0; column < 9; column += 1) {\n' +
+      '      if (grid[row][column] !== 0) continue;\n' +
+      '      for (let value = 1; value <= 9; value += 1) {\n' +
+      '        if (!legal(row, column, value)) continue;\n' +
+      '        grid[row][column] = value;\n' +
+      '        if (solveSudoku(grid)) return true;\n' +
+      '        grid[row][column] = 0;\n' +
+      '      }\n' +
+      '      return false;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}',
+    modify: 'Validate the input before solving: report false when the givens already break a row, column or box. Which check runs in linear time and stops the search from being entered at all?',
+  },
+  {
+    step: 7,
+    name: 'Solve the Sudoku',
+    difficulty: 'Hard',
+    topicSlug: 'graph-traversal',
+    stem: 'Count the completions of a Sudoku grid up to a limit, choosing the most constrained cell at every step, and say what uniqueness has to do with a puzzle.',
+    brief: 'Input: a 9 by 9 grid with 0 for empty cells, and a cap on how many solutions to look for. Output: the number of completions found, stopping at the cap. Say why the cell order is the whole performance story.',
+    concepts: ['dsa-candidate-narrowing', 'dsa-conflict-set-per-placement', 'dsa-mark-unmark-occupancy'],
+    shortAnswer:
+      'Compute the candidate list for every empty cell, branch on the shortest one, and stop counting once the cap is ' +
+      'reached - a cell with no candidates ends that branch immediately.',
+    idealAnswer:
+      'candidatesFor derives a cell list from the digits already present in its row, column and box, so the search works ' +
+      'on options rather than on 1 to 9. emptyCellWithFewest picks the minimum list and returns as soon as it finds a ' +
+      'cell with one or zero options, which is forced-move propagation in the cheapest form: a single option is a move ' +
+      'the search does not have to guess. Branching on the most constrained cell is what turns a hopeless scan order ' +
+      'into a search that finishes, because the widest cells are the ones where a wrong guess costs an entire subtree. ' +
+      'Counting to a cap of two answers the question a puzzle setter actually cares about - uniqueness - without ' +
+      'enumerating all completions.',
+    walkthrough:
+      'The same grid and the same legality rule as the solver row, and a completely different search: here every frame ' +
+      'pays for candidate lists in exchange for never branching on a digit that is already refused. That trade is the ' +
+      'standard improvement on the naive version, and the reason it works is asymmetry - a cell with two candidates ' +
+      'branches into two subtrees while a cell with nine branches into nine, so always picking the minimum keeps the ' +
+      'tree narrow near the top where pruning still saves work. Zero candidates is a result, not an error: it means the ' +
+      'givens already contradict each other, which is why an unsolvable grid returns 0 without a single guess.',
+    commonMistake:
+      'Scanning empty cells in index order like the naive solver while still computing candidate lists, or counting past ' +
+      'the cap because the limit is only checked at the leaves.',
+    whyWrong:
+      'Candidate lists buy nothing if the cell chosen first is simply the first empty one - the work is spent and the ' +
+      'branching factor stays nine. And a cap that is only read at the end still enumerates every completion of an empty ' +
+      'grid, which is about 6.7 septillion.',
+    followUps: [
+      'Propagate forced moves to a fixpoint before branching. How many of the guesses disappear on a typical puzzle?',
+      'Report whether the puzzle has exactly one completion. Why is a cap of two enough?',
+      'Keep the candidate lists incremental instead of recomputing them per cell. What has to be undone when a frame returns?',
+    ],
+    solution:
+      'function candidatesFor(grid, row, column) {\n' +
+      '  if (grid[row][column] !== 0) return [];\n' +
+      '  const used = new Set();\n' +
+      '  for (let step = 0; step < 9; step += 1) {\n' +
+      '    if (grid[row][step] !== 0) used.add(grid[row][step]);\n' +
+      '    if (grid[step][column] !== 0) used.add(grid[step][column]);\n' +
+      '    const boxRow = 3 * Math.floor(row / 3) + Math.floor(step / 3);\n' +
+      '    const boxColumn = 3 * Math.floor(column / 3) + (step % 3);\n' +
+      '    if (grid[boxRow][boxColumn] !== 0) used.add(grid[boxRow][boxColumn]);\n' +
+      '  }\n' +
+      '  const options = [];\n' +
+      '  for (let value = 1; value <= 9; value += 1) {\n' +
+      '    if (!used.has(value)) options.push(value);\n' +
+      '  }\n' +
+      '  return options;\n' +
+      '}\n' +
+      '\n' +
+      'function emptyCellWithFewest(grid) {\n' +
+      '  let chosen = null;\n' +
+      '  for (let row = 0; row < 9; row += 1) {\n' +
+      '    for (let column = 0; column < 9; column += 1) {\n' +
+      '      if (grid[row][column] !== 0) continue;\n' +
+      '      const options = candidatesFor(grid, row, column);\n' +
+      '      if (chosen === null || options.length < chosen.options.length) {\n' +
+      '        chosen = { row: row, column: column, options: options };\n' +
+      '        if (options.length <= 1) return chosen;\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return chosen;\n' +
+      '}\n' +
+      '\n' +
+      'function countSolutions(grid, limit) {\n' +
+      '  const cell = emptyCellWithFewest(grid);\n' +
+      '  if (cell === null) return 1;\n' +
+      '  if (cell.options.length === 0) return 0;\n' +
+      '  let total = 0;\n' +
+      '  for (const value of cell.options) {\n' +
+      '    grid[cell.row][cell.column] = value;\n' +
+      '    total += countSolutions(grid, limit);\n' +
+      '    grid[cell.row][cell.column] = 0;\n' +
+      '    if (total >= limit) return total;\n' +
+      '  }\n' +
+      '  return total;\n' +
+      '}',
+    modify: 'Return the first completion instead of a count, reusing the same cell choice. Which line becomes a short-circuit, and what does the frame still have to restore?',
+  },
+  {
+    step: 7,
+    name: 'Expression Add Operators',
+    difficulty: 'Hard',
+    topicSlug: NUMERIC,
+    stem: 'Insert +, - and * between the digits of a string so the expression evaluates to a target, honouring precedence without ever parsing an expression.',
+    brief: 'Input: a string of digits and a target integer. Output: every expression that evaluates to the target, using the digits in order, with no operand carrying a leading zero. Explain the value the frame must carry besides the running total.',
+    concepts: ['dsa-last-term-tracks-precedence', 'dsa-prefix-path-carry', 'dsa-position-wise-product'],
+    shortAnswer:
+      'Carry the running value and the last term. Addition and subtraction append a term; multiplication removes the ' +
+      'last term and puts the product in its place.',
+    idealAnswer:
+      'Each frame tries every operand length from the current index, skips any slice with a leading zero, and for the ' +
+      'first operand records the number itself with no operator. For later positions the three extensions are: value + ' +
+      'number with lastTerm = number, value - number with lastTerm = -number, and for multiply the value becomes ' +
+      'value - lastTerm + lastTerm * number with lastTerm = lastTerm * number. That subtraction is the whole precedence ' +
+      'trick - the running total is a sum of signed terms, so a multiply rewrites only the term it touches. Cost is ' +
+      'three to the n-1 operator choices times the operand lengths, and evaluation stays O(1) per extension instead of ' +
+      'reparsing the expression built so far.',
+    walkthrough:
+      'A generated expression can be evaluated by a parser, and doing that per leaf is what makes this row slow in ' +
+      'interviews: the string is already a full expression, so reparsing is O(n) work repeated over an exponential ' +
+      'number of leaves. Keeping value and lastTerm as the accumulator makes each extension O(1) and is the same idea as ' +
+      'any running-sum rewrite - precedence is handled by remembering which term is still open to modification. The two ' +
+      'details that decide correctness are the leading-zero rule, which has to break the operand-length loop rather than ' +
+      'continue it, and the first position, where no operator may be emitted even if the digits start with zero.',
+    commonMistake:
+      'Multiplying the whole running value instead of the last term, or continuing the operand loop after a slice with a ' +
+      'leading zero.',
+    whyWrong:
+      'Scaling the total changes every earlier term, so 1+2*3 becomes 3*3 rather than 1+6 and the answers stop matching ' +
+      'the target. And a leading-zero slice such as 05 is a different operand than 0 followed by 5, so continuing the ' +
+      'loop keeps generating expressions the question forbids; longer slices only repeat the same defect.',
+    followUps: [
+      'Why does breaking on a leading zero beat continuing, and what does it say about the digit 0 itself?',
+      'Add parentheses to the operators. Which accumulator can no longer be updated in O(1)?',
+      'The target is huge and the digit string is 20 long. What stops you from using eval, and what does the int range do to your answer?',
+    ],
+    solution:
+      'function addOperators(digits, target) {\n' +
+      '  const results = [];\n' +
+      '  function walk(index, expression, value, lastTerm) {\n' +
+      '    if (index === digits.length) {\n' +
+      '      if (value === target) results.push(expression);\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    for (let end = index + 1; end <= digits.length; end += 1) {\n' +
+      '      const piece = digits.slice(index, end);\n' +
+      '      if (piece.length > 1 && piece[0] === "0") break;\n' +
+      '      const number = Number(piece);\n' +
+      '      if (index === 0) {\n' +
+      '        walk(end, piece, number, number);\n' +
+      '        continue;\n' +
+      '      }\n' +
+      '      walk(end, expression + "+" + piece, value + number, number);\n' +
+      '      walk(end, expression + "-" + piece, value - number, -number);\n' +
+      '      walk(end, expression + "*" + piece, value - lastTerm + lastTerm * number, lastTerm * number);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  walk(0, "", 0, 0);\n' +
+      '  return results;\n' +
+      '}',
+    modify: 'Report the number of valid expressions instead of the expressions themselves. Which of the four things the frame carries can you drop, and what does the leading-zero rule become?',
   },
 ];
 
