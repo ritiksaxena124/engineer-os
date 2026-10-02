@@ -1330,6 +1330,34 @@ export const DSA_CONCEPTS = {
     terms: ['monotonic deque', 'expire by index', 'front is the answer', 'dominated from the back', 'shift is linear in arrays'],
     weight: 3,
   },
+  'dsa-pairwise-elimination-candidate': {
+    slug: 'dsa-pairwise-elimination-candidate',
+    name: 'A two-person test retires one of them, so one pass leaves a single survivor',
+    detail: 'When a relation between two candidates proves that at most one of them can have the property, walking the list and dropping the loser each time is enough - the survivors count is one even though the tests were n minus one.',
+    terms: ['knockout round', 'at most one of the pair', 'single survivor', 'n minus one tests', 'candidate pointer'],
+    weight: 3,
+  },
+  'dsa-verify-the-survivor': {
+    slug: 'dsa-verify-the-survivor',
+    name: 'Elimination only proves nothing else survived, so the candidate still needs a full check',
+    detail: 'A greedy or tournament pass narrows the answer to one position; the second pass reads the property against every other position, and skipping it turns a maybe into a claim.',
+    terms: ['two pass structure', 'candidate is necessary not sufficient', 'verify against all', 'return none when the check fails', 'same relation both directions'],
+    weight: 3,
+  },
+  'dsa-hash-plus-list-for-order': {
+    slug: 'dsa-hash-plus-list-for-order',
+    name: 'A hash gives lookup and a list gives order, so recency costs O(1) only when they point at each other',
+    detail: 'Eviction needs the oldest entry, lookup needs the key, and neither structure has both - so the map stores the node and the node stores the key, and every touch is an unlink plus a relink.',
+    terms: ['sentinel head and tail', 'unlink and relink', 'map to node not to value', 'evict from the tail', 'delete the key from both'],
+    weight: 3,
+  },
+  'dsa-frequency-bucket-tiebreak': {
+    slug: 'dsa-frequency-bucket-tiebreak',
+    name: 'Bucket the keys by frequency and the eviction tie-break is the order inside one bucket',
+    detail: 'LFU needs least frequently used and then least recently used; a set per frequency count is insertion ordered, so the front of the lowest non-empty bucket is the victim and the whole operation stays O(1).',
+    terms: ['bucket per frequency', 'insertion ordered set', 'minimum frequency pointer', 'empty bucket advances the minimum', 'promote on both paths'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -1347,6 +1375,8 @@ const DP = 'dp-greedy';
 const BITS = 'dsa-bit-manipulation';
 const STACKS = 'stacks-and-queues';
 const MONO = 'monotonic-stacks';
+const GRAPH = 'graph-traversal';
+const APPLIED = 'lru-rate-limiter';
 
 export const DSA_PROBLEMS: DsaProblem[] = [
   {
@@ -14054,6 +14084,299 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return answer;\n' +
       '}',
     modify: 'Report the maximum of every window of size at most k, or switch to the minimum over a window given by its end index. Which of the two cursor rules has to move?',
+  },
+  {
+    step: 9,
+    name: 'The Celebrity Problem',
+    difficulty: 'Medium',
+    topicSlug: GRAPH,
+    stem: 'In a party of n people, find the person whom everyone else knows and who knows nobody, using only a knows test.',
+    brief: 'Input: an n by n matrix where entry a, b is 1 when a knows b and the diagonal is 0. Output: the index of the celebrity, or -1 when there is none.',
+    concepts: ['dsa-pairwise-elimination-candidate', 'dsa-verify-the-survivor', 'dsa-reachability-set', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Walk the people with one candidate pointer and drop the candidate whenever it knows the next person; a second pass ' +
+      'checks the survivor against everybody.',
+    idealAnswer:
+      'The relation gives a free elimination: if a knows b then a cannot be the celebrity, and if a does not know b then b ' +
+      'cannot be, so a single comparison retires exactly one of the two. Running that as a knockout over the list with one ' +
+      'candidate pointer costs n minus one tests and leaves one survivor - and only one, because two celebrities would have ' +
+      'to know each other. What it does not leave is a proved answer, which is why the second pass is mandatory: the ' +
+      'survivor has to know nobody and has to be known by everyone else, and a matrix in which nobody qualifies must return ' +
+      '-1 rather than the pointer. The degree reading of the same property - out-degree 0 and in-degree n minus 1 - is the ' +
+      'brute force worth naming because it is O(n squared) tests and O(n) counters, and it is the version that generalises ' +
+      'to a graph where the celebrity is a sink that everything reaches.',
+    walkthrough:
+      'For the matrix 010, 000, 110 the knockout starts at person 0, which knows 1, so the candidate becomes 1; person 1 ' +
+      'does not know 2, so the candidate stays 1. The verification pass finds that 1 knows nobody and is known by both 0 and ' +
+      '2, so the answer is 1. On 010, 100, 000 the pointer ends at 1, and the check fails because 1 knows 0 - the answer is ' +
+      '-1, and a solution without the second pass would have reported 1.',
+    commonMistake:
+      'Returning the survivor of the knockout without verifying it, or counting the diagonal as a self-acquaintance.',
+    whyWrong:
+      'Elimination is a necessary-condition filter, not a sufficient one: it can leave a person who is not known by ' +
+      'everybody, and the example above reports a celebrity where none exists. Treating the diagonal as data has the same ' +
+      'size of damage - an in-degree of n rather than n minus 1 - which silently makes every isolated person look like a ' +
+      'celebrity if the check is written as knownBy equals n.',
+    followUps: [
+      'Do it with a stack of candidates and n minus one pops. Where exactly does the verification pass move to?',
+      'Answer with knows queries that are expensive and must be minimised. What is the lower bound on tests, and does the knockout hit it?',
+      'Generalise to k celebrities who know each other and nobody else. Which part of the elimination argument breaks first?',
+    ],
+    solution:
+      'function celebrity(acquaintance) {\n' +
+      '  const people = acquaintance.length;\n' +
+      '  if (people === 0) return -1;\n' +
+      '  let candidate = 0;\n' +
+      '  for (let person = 1; person < people; person++) {\n' +
+      '    if (acquaintance[candidate][person] === 1) candidate = person;\n' +
+      '  }\n' +
+      '  for (let person = 0; person < people; person++) {\n' +
+      '    if (person === candidate) continue;\n' +
+      '    if (acquaintance[candidate][person] === 1) return -1;\n' +
+      '    if (acquaintance[person][candidate] === 0) return -1;\n' +
+      '  }\n' +
+      '  return candidate;\n' +
+      '}\n' +
+      '\n' +
+      'function celebrityByDegrees(acquaintance) {\n' +
+      '  const people = acquaintance.length;\n' +
+      '  const knownBy = new Array(people).fill(0);\n' +
+      '  const knows = new Array(people).fill(0);\n' +
+      '  for (let a = 0; a < people; a++) {\n' +
+      '    for (let b = 0; b < people; b++) {\n' +
+      '      if (a === b) continue;\n' +
+      '      if (acquaintance[a][b] === 1) {\n' +
+      '        knows[a] += 1;\n' +
+      '        knownBy[b] += 1;\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  for (let person = 0; person < people; person++) {\n' +
+      '    if (knows[person] === 0 && knownBy[person] === people - 1) return person;\n' +
+      '  }\n' +
+      '  return -1;\n' +
+      '}',
+    modify: 'Replace the matrix with an oracle that answers knows queries and charges for each one. How few tests can the knockout plus verification use, and what changes when the party is given as an edge list?',
+  },
+  {
+    step: 9,
+    name: 'LRU Cache',
+    difficulty: 'Medium',
+    topicSlug: APPLIED,
+    stem: 'Build a cache with a fixed capacity that evicts the least recently used entry when a put makes room, with get and put in O(1).',
+    brief: 'Design: capacity n, put(key, value) inserts or updates, get(key) returns the value or -1. Both must count as a use, and the entry that has gone longest without a use is the one that leaves.',
+    concepts: ['dsa-hash-plus-list-for-order', 'dsa-doubly-mirror-links', 'dsa-node-holds-reference', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'A hash map from key to node plus a doubly linked list ordered by recency: get and put both unlink and relink at the ' +
+      'front, and eviction takes the node before the tail sentinel.',
+    idealAnswer:
+      'Neither structure alone can be O(1): a hash map finds a key but has no idea which entry is oldest, and a list has the ' +
+      'order but costs a scan to find the key. The combination works because the map stores the node itself, so a touch is a ' +
+      'pointer rewrite rather than a search, and the list is the recency order the eviction needs. Two sentinel nodes - head ' +
+      'and tail - remove every special case for an empty or single-element list, which is the same reason a linked list ' +
+      'problem starts with a dummy head. The two paths have to be kept in step: an update replaces the value and relinks, an ' +
+      'insert appends the node to both structures, and an eviction removes the victim from the list and from the map, ' +
+      'because forgetting the map entry is a leak that resurfaces as a stale hit. A capacity of zero has to be a legal ' +
+      'construction that stores nothing rather than a divide-by-zero in disguise.',
+    walkthrough:
+      'With capacity 2: put 1 then put 2 leaves the order 2, 1. get(1) moves 1 to the front, so the recency order is 1, 2. ' +
+      'put 3 now evicts 2, and get(2) returns -1 while get(3) and get(1) both hit. Re-putting an existing key must not grow ' +
+      'the cache: put 1 again keeps two entries and simply marks 1 as newest.',
+    commonMistake:
+      'Evicting the oldest inserted entry instead of the least recently used one, or refreshing recency on put but not on ' +
+      'get.',
+    whyWrong:
+      'A queue that only records insertion order is FIFO, not LRU, and the difference shows the moment a read happens: after ' +
+      'get(1) above, a FIFO would evict 1 - the entry that was just used - and the cache would thrash on exactly the hot ' +
+      'keys it exists to protect. Skipping the refresh on get keeps the structure a write-ordered map and produces the same ' +
+      'victim for a different reason.',
+    followUps: [
+      'In JavaScript a Map is already insertion ordered. What is the two-line LRU built on it, and what does it give up compared to the list version?',
+      'Make the cache thread-safe for concurrent gets. Which pointer rewrite has to become atomic?',
+      'Add a per-entry TTL on top of the recency order. Which structure now decides eviction when both an expired and a stale entry exist?',
+    ],
+    solution:
+      'class ListLRUCache {\n' +
+      '  constructor(capacity) {\n' +
+      '    this.capacity = capacity;\n' +
+      '    this.nodes = new Map();\n' +
+      '    this.head = { key: null, value: null, prev: null, next: null };\n' +
+      '    this.tail = { key: null, value: null, prev: this.head, next: null };\n' +
+      '    this.head.next = this.tail;\n' +
+      '  }\n' +
+      '\n' +
+      '  detach(node) {\n' +
+      '    node.prev.next = node.next;\n' +
+      '    node.next.prev = node.prev;\n' +
+      '  }\n' +
+      '\n' +
+      '  attachFront(node) {\n' +
+      '    node.prev = this.head;\n' +
+      '    node.next = this.head.next;\n' +
+      '    this.head.next.prev = node;\n' +
+      '    this.head.next = node;\n' +
+      '  }\n' +
+      '\n' +
+      '  get(key) {\n' +
+      '    const node = this.nodes.get(key);\n' +
+      '    if (!node) return -1;\n' +
+      '    this.detach(node);\n' +
+      '    this.attachFront(node);\n' +
+      '    return node.value;\n' +
+      '  }\n' +
+      '\n' +
+      '  put(key, value) {\n' +
+      '    if (this.capacity <= 0) return;\n' +
+      '    const existing = this.nodes.get(key);\n' +
+      '    if (existing) {\n' +
+      '      existing.value = value;\n' +
+      '      this.detach(existing);\n' +
+      '      this.attachFront(existing);\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    const node = { key, value, prev: null, next: null };\n' +
+      '    this.nodes.set(key, node);\n' +
+      '    this.attachFront(node);\n' +
+      '    if (this.nodes.size > this.capacity) {\n' +
+      '      const victim = this.tail.prev;\n' +
+      '      this.detach(victim);\n' +
+      '      this.nodes.delete(victim.key);\n' +
+      '    }\n' +
+      '  }\n' +
+      '\n' +
+      '  recency() {\n' +
+      '    const keys = [];\n' +
+      '    let cursor = this.head.next;\n' +
+      '    while (cursor !== this.tail) {\n' +
+      '      keys.push(cursor.key);\n' +
+      '      cursor = cursor.next;\n' +
+      '    }\n' +
+      '    return keys.join();\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'class MapLRUCache {\n' +
+      '  constructor(capacity) {\n' +
+      '    this.capacity = capacity;\n' +
+      '    this.entries = new Map();\n' +
+      '  }\n' +
+      '\n' +
+      '  touch(key, value) {\n' +
+      '    this.entries.delete(key);\n' +
+      '    this.entries.set(key, value);\n' +
+      '  }\n' +
+      '\n' +
+      '  get(key) {\n' +
+      '    if (!this.entries.has(key)) return -1;\n' +
+      '    const value = this.entries.get(key);\n' +
+      '    this.touch(key, value);\n' +
+      '    return value;\n' +
+      '  }\n' +
+      '\n' +
+      '  put(key, value) {\n' +
+      '    if (this.capacity <= 0) return;\n' +
+      '    this.entries.delete(key);\n' +
+      '    this.entries.set(key, value);\n' +
+      '    if (this.entries.size > this.capacity) this.entries.delete(this.entries.keys().next().value);\n' +
+      '  }\n' +
+      '}',
+    modify: 'Add a maximum lifetime so an entry can be evicted for age even when the cache is not full. Which structure do you consult first, and what does get have to repair?',
+  },
+  {
+    step: 9,
+    name: 'LFU Cache',
+    difficulty: 'Hard',
+    topicSlug: APPLIED,
+    stem: 'Build a cache that evicts the least frequently used entry, breaking ties by least recently used, with get and put in O(1).',
+    brief: 'Design: capacity n, put(key, value) inserts or updates, get(key) returns the value or -1. Every access raises the frequency; on a full cache the victim is the entry with the fewest uses, and among those the oldest.',
+    concepts: ['dsa-frequency-bucket-tiebreak', 'dsa-hash-plus-list-for-order', 'dsa-hash-frequency', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'A map from key to entry, a bucket per frequency holding keys in the order they entered it, and a pointer to the ' +
+      'lowest non-empty bucket. Eviction takes the front of that bucket.',
+    idealAnswer:
+      'LFU is LRU with one more dimension, and the naive way to get it is a scan for the smallest frequency, which makes ' +
+      'eviction linear. The O(1) shape is to invert the index: instead of one ordered list, keep one ordered container per ' +
+      'frequency, so a touch is a move from bucket f to bucket f plus 1 - two set operations - and the only global state is ' +
+      'the minimum frequency in use. Inserting a key resets that minimum to 1, because a brand new entry is by definition ' +
+      'the least used thing in the cache; the pointer needs no search on eviction because the bucket it points at was ' +
+      'non-empty a moment ago. The tie-break is the part that decides the interview: within one frequency the entry that ' +
+      'arrived earliest is the one to drop, and an insertion ordered set gives that for free, since re-adding a key on a ' +
+      'promote puts it at the back of its new bucket.',
+    walkthrough:
+      'With capacity 2: put 1 and put 2 gives both frequency 1. get(1) raises 1 to frequency 2, so the minimum bucket is now ' +
+      'the one holding 2 alone. put 3 must evict, and the victim is 2 - the least frequent - leaving 1 and 3. get(2) returns ' +
+      '-1. Feed the same shape a fourth key and the tie between two frequency-1 entries is resolved by who entered the ' +
+      'bucket first.',
+    commonMistake:
+      'Reusing the LRU list and evicting its tail, or leaving a bucket registered at a frequency that has emptied out.',
+    whyWrong:
+      'Frequency is not recency: a hot key that has not been touched for a while is exactly the entry a cache should keep, ' +
+      'and an LRU tail eviction throws it away for a key that has only been read once. An empty bucket left in the map is ' +
+      'the quieter bug - the minimum pointer then names a bucket with no keys, the front lookup returns undefined, and the ' +
+      'next eviction either crashes or silently skips a beat.',
+    followUps: [
+      'Make the buckets plain arrays and keep the order explicit. What does a promote cost when the frequency runs into the thousands?',
+      'Compare LFU against a 1-percentile admission policy on a log of real reads. Which one keeps a burst of one-hit keys?',
+      'Add a second tie-break on the value size, so eviction prefers the smallest payload. Which container has to become ordered?',
+    ],
+    solution:
+      'class LFUCache {\n' +
+      '  constructor(capacity) {\n' +
+      '    this.capacity = capacity;\n' +
+      '    this.entries = new Map();\n' +
+      '    this.buckets = new Map();\n' +
+      '    this.minimum = 0;\n' +
+      '  }\n' +
+      '\n' +
+      '  bucket(frequency) {\n' +
+      '    if (!this.buckets.has(frequency)) this.buckets.set(frequency, new Set());\n' +
+      '    return this.buckets.get(frequency);\n' +
+      '  }\n' +
+      '\n' +
+      '  promote(entry) {\n' +
+      '    const previous = this.bucket(entry.frequency);\n' +
+      '    previous.delete(entry.key);\n' +
+      '    if (previous.size === 0) {\n' +
+      '      this.buckets.delete(entry.frequency);\n' +
+      '      if (this.minimum === entry.frequency) this.minimum = entry.frequency + 1;\n' +
+      '    }\n' +
+      '    entry.frequency += 1;\n' +
+      '    this.bucket(entry.frequency).add(entry.key);\n' +
+      '  }\n' +
+      '\n' +
+      '  get(key) {\n' +
+      '    const entry = this.entries.get(key);\n' +
+      '    if (!entry) return -1;\n' +
+      '    this.promote(entry);\n' +
+      '    return entry.value;\n' +
+      '  }\n' +
+      '\n' +
+      '  put(key, value) {\n' +
+      '    if (this.capacity <= 0) return;\n' +
+      '    const existing = this.entries.get(key);\n' +
+      '    if (existing) {\n' +
+      '      existing.value = value;\n' +
+      '      this.promote(existing);\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    if (this.entries.size >= this.capacity) {\n' +
+      '      const victims = this.bucket(this.minimum);\n' +
+      '      const victim = victims.values().next().value;\n' +
+      '      victims.delete(victim);\n' +
+      '      if (victims.size === 0) this.buckets.delete(this.minimum);\n' +
+      '      this.entries.delete(victim);\n' +
+      '    }\n' +
+      '    this.entries.set(key, { key, value, frequency: 1 });\n' +
+      '    this.bucket(1).add(key);\n' +
+      '    this.minimum = 1;\n' +
+      '  }\n' +
+      '\n' +
+      '  frequency(key) {\n' +
+      '    const entry = this.entries.get(key);\n' +
+      '    return entry ? entry.frequency : -1;\n' +
+      '  }\n' +
+      '}',
+    modify: 'Make the tie-break most recently used instead of least, so the frequency bucket needs a different front. Which container replaces the set and why does the minimum pointer still need no search?',
   },
 ];
 
