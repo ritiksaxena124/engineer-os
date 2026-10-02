@@ -1386,6 +1386,20 @@ export const DSA_CONCEPTS = {
     terms: ['complement window', 'fixed size', 'minimise the kept block', 'total minus window', 'every block reachable'],
     weight: 3,
   },
+  'dsa-satisfied-requirement-counter': {
+    slug: 'dsa-satisfied-requirement-counter',
+    name: 'Count the requirements fully met, not the characters matched',
+    detail: 'A window covers a multiset pattern when the number of distinct characters whose count has reached its demand equals the number of distinct demands - so one integer replaces a scan of the window, and the counter moves only when a count crosses its demand exactly.',
+    terms: ['formed equals required', 'distinct demands', 'cross the need exactly', 'lower before the test and the state lies', 'multiset not set'],
+    weight: 3,
+  },
+  'dsa-inclusion-exclusion-over-types': {
+    slug: 'dsa-inclusion-exclusion-over-types',
+    name: 'Count what is missing by adding and subtracting the subsets',
+    detail: 'Substrings that avoid a set of characters are the runs left between them, so the union of the missing-one-type events is an inclusion-exclusion over 2 to the k subsets - and the answer is the total number of substrings minus that union.',
+    terms: ['complement count', 'union of missing events', 'odd subsets add', 'even subsets subtract', 'runs of allowed characters'],
+    weight: 3,
+  },
   'dsa-stale-maximum-still-bounds': {
     slug: 'dsa-stale-maximum-still-bounds',
     name: 'A maximum that is never lowered still gives the right answer in a growing window',
@@ -14996,6 +15010,372 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return best;\n' +
       '}',
     modify: 'Report the two split points - how many cards came from each end - for an optimal pick. Which formulation gives them without a second pass?',
+  },
+  {
+    step: 10,
+    name: 'Longest Substring with At Most K Distinct Characters',
+    difficulty: 'Medium',
+    topicSlug: WINDOW,
+    stem: 'Return the length of the longest substring that contains at most k distinct characters.',
+    brief: 'Input: a string and an integer k. Output: one integer - the widest window holding k or fewer different characters. A k of 0 admits no character, so the answer is 0.',
+    concepts: ['dsa-window-invariant-shrink-to-repair', 'dsa-hash-frequency', 'dsa-boundary-conditions', 'dsa-complexity-counting', 'dsa-single-pass-tracking'],
+    shortAnswer:
+      'Keep a count per character inside the window. Extend to the right, and while the number of keys exceeds k release ' +
+      'characters from the left, deleting a key when its count reaches zero. Credit the width after the repair.',
+    idealAnswer:
+      'This is the at-most-two-varieties window with the constant replaced by k, and the point worth making in an interview is ' +
+      'that the generalisation costs nothing: the illegal state is the number of keys, so the only operations needed are an ' +
+      'increment on entry, a decrement on exit and a delete when the decrement reaches zero. That last step is the whole ' +
+      'algorithm - a key sitting at zero is still a key, so the size test never becomes legal again. Recording the width ' +
+      'after the shrink rather than before it matters too, because the window at the moment of recording is the one that has ' +
+      'to satisfy the rule. The two-varieties shortcut of remembering only the current pair and resetting one of them cannot ' +
+      'generalise, since with k baskets the character to evict is whichever runs out first rather than whichever was chosen ' +
+      'by name. A Map is the right container: keys are one-character strings compared by identity, and unlike a plain object ' +
+      'it has no inherited keys to accidentally count - the empty string is a legitimate character here and an object still ' +
+      'names it without trouble, but a property called constructor would be counted as a variety.',
+    walkthrough:
+      'On eceba with k = 2 the window grows through e, c and e to width 3, which is the answer already. Reading b makes ' +
+      'three keys, so the left edge releases the e at index 0 - its count falls from two to one and the key stays - and then ' +
+      'releases c, whose count reaches zero and whose key is deleted, leaving the window 2..3. Reading a repeats the eviction ' +
+      'of e, and no window wider than 3 is ever reached.',
+    commonMistake:
+      'Leaving a character in the map with a count of zero, or recording the window width before the shrink has made the ' +
+      'window legal again.',
+    whyWrong:
+      'A zero-count key still occupies a slot, so the size test never passes and the left edge walks off the right one, after ' +
+      'which every width is measured against a start that has already been passed. Crediting the width early records a window ' +
+      'that failed the rule: on eceba with k = 2 it writes down eceb, which holds three distinct characters.',
+    followUps: [
+      'Return the substring rather than its length. Does the version that records before or after the shrink give the right slice?',
+      'The alphabet is known to be lowercase Latin letters. What container replaces the Map, and how is the distinct count maintained without a size property?',
+      'Treat upper and lower case as one character. Where does the normalisation go, and what does it do to a mixed-case input?',
+    ],
+    solution:
+      'function longestSubstringWithAtMostK(text, k) {\n' +
+      '  const counts = new Map();\n' +
+      '  let start = 0;\n' +
+      '  let best = 0;\n' +
+      '  for (let end = 0; end < text.length; end += 1) {\n' +
+      '    const character = text[end];\n' +
+      '    const held = counts.get(character);\n' +
+      '    counts.set(character, held === undefined ? 1 : held + 1);\n' +
+      '    while (counts.size > k) {\n' +
+      '      const leaving = text[start];\n' +
+      '      const remaining = counts.get(leaving) - 1;\n' +
+      '      if (remaining === 0) counts.delete(leaving);\n' +
+      '      else counts.set(leaving, remaining);\n' +
+      '      start += 1;\n' +
+      '    }\n' +
+      '    const width = end - start + 1;\n' +
+      '    if (width > best) best = width;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}\n' +
+      '\n' +
+      'function longestSubstringWithAtMostKBrute(text, k) {\n' +
+      '  let best = 0;\n' +
+      '  for (let start = 0; start < text.length; start += 1) {\n' +
+      '    const distinct = new Set();\n' +
+      '    for (let end = start; end < text.length; end += 1) {\n' +
+      '      distinct.add(text[end]);\n' +
+      '      if (distinct.size > k) break;\n' +
+      '      if (end - start + 1 > best) best = end - start + 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Allow at most k distinct characters but require the window to end at the current position to count. What changes in the credit step, and what does the function report for k equal to the size of the alphabet?',
+  },
+  {
+    step: 10,
+    name: 'Subarrays with K Different Integers',
+    difficulty: 'Hard',
+    topicSlug: WINDOW,
+    stem: 'Return the number of contiguous subarrays that contain exactly k distinct integers.',
+    brief: 'Input: an array of integers and an integer k. Output: one integer - how many segments hold exactly k different values.',
+    concepts: ['dsa-exactly-is-two-at-most', 'dsa-window-invariant-shrink-to-repair', 'dsa-hash-frequency', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Count the segments with at most k distinct values in one shrinking pass, subtract the same count for at most k minus 1. ' +
+      'Neither pass can maintain exactly k directly, but both can maintain a bound.',
+    idealAnswer:
+      'A window that holds exactly k distinct values is not a monotone property: extending it can push it to k plus 1 and ' +
+      'shrinking it can pull it back to k minus 1, so there is no single legal state to credit per right edge. The at-most ' +
+      'property is monotone, and that is what makes it countable - while the window holds at most the bound, every start from ' +
+      'the left edge to the current index gives a legal segment, which is exactly the width, so the pass sums widths. ' +
+      'Subtracting the count for bound minus 1 leaves precisely the segments that reach k and no further. The eviction rule ' +
+      'is the one from the at-most-k-distinct window: decrement on the way out and delete the key at zero, because a key held ' +
+      'at zero keeps the size above the bound and the loop would then shrink the window to nothing. The alternative is a ' +
+      'two-level window that tracks both a k boundary and a k minus 1 boundary in a single pass - the same subtraction with ' +
+      'the two states walked together, worth naming because it halves the work on a long array. The brute force that adds to a ' +
+      'Set per start is quadratic and, unlike the at-most version, cannot break early: a segment that overshoots k distinct ' +
+      'values can be followed by a longer one that has dropped none of them but gained nothing new, so the exact count is not ' +
+      'monotone in the right edge even though the at-most count is.',
+    walkthrough:
+      'On 1 2 1 2 3 with k = 2 there are fifteen segments. The at-most-2 pass reaches widths 1, 2, 3, 4, 2 as the right edge ' +
+      'walks, summing to 12; the at-most-1 pass credits only the runs of a single value, which is 5. The difference is 7, and ' +
+      'listing them confirms it - the four length-2 segments, the two length-3 segments that hold 1 and 2, and the length-4 ' +
+      'segment 1 2 1 2.',
+    commonMistake:
+      'Maintaining one window whose distinct count equals k and crediting its width, or forgetting the delete at zero.',
+    whyWrong:
+      'A window held at exactly k has a left edge that could have moved further - the segments that start inside the earlier ' +
+      'run of the leaving value are also legal and are not counted, so the width of the tight window is a lower bound rather ' +
+      'than the answer. A zero-count key is the mechanical failure: the size test stays above the bound, the left edge ' +
+      'empties the window, and the widths collapse to zero.',
+    followUps: [
+      'Walk the k and k minus 1 boundaries in one pass over the array. Which two state variables do you need to carry?',
+      'Count the segments with at least k distinct values instead. Is that a subtraction from the total, and what is the total?',
+      'Replace the Map with a sorted structure of the values seen. What does the at-most pass cost, and does it still fit the name sliding window?',
+    ],
+    solution:
+      'function subarraysWithKDistinct(nums, k) {\n' +
+      '  function atMost(bound) {\n' +
+      '    if (bound <= 0) return 0;\n' +
+      '    const counts = new Map();\n' +
+      '    let start = 0;\n' +
+      '    let total = 0;\n' +
+      '    for (let end = 0; end < nums.length; end += 1) {\n' +
+      '      const value = nums[end];\n' +
+      '      const held = counts.get(value);\n' +
+      '      counts.set(value, held === undefined ? 1 : held + 1);\n' +
+      '      while (counts.size > bound) {\n' +
+      '        const leaving = nums[start];\n' +
+      '        const remaining = counts.get(leaving) - 1;\n' +
+      '        if (remaining === 0) counts.delete(leaving);\n' +
+      '        else counts.set(leaving, remaining);\n' +
+      '        start += 1;\n' +
+      '      }\n' +
+      '      total += end - start + 1;\n' +
+      '    }\n' +
+      '    return total;\n' +
+      '  }\n' +
+      '  return atMost(k) - atMost(k - 1);\n' +
+      '}\n' +
+      '\n' +
+      'function subarraysWithKDistinctBrute(nums, k) {\n' +
+      '  let count = 0;\n' +
+      '  for (let start = 0; start < nums.length; start += 1) {\n' +
+      '    const distinct = new Set();\n' +
+      '    for (let end = start; end < nums.length; end += 1) {\n' +
+      '      distinct.add(nums[end]);\n' +
+      '      if (distinct.size === k) count += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}',
+    modify: 'Return the longest segment with exactly k distinct values rather than the count. Does the at-most difference still describe it, or does the brute force need the length?',
+  },
+  {
+    step: 10,
+    name: 'Count of substrings having at least one char of all types',
+    difficulty: 'Medium',
+    topicSlug: WINDOW,
+    stem: 'Count the substrings that contain at least one occurrence of every required character type.',
+    brief: 'Input: a string and the list of required types. Output: one integer - how many contiguous substrings hold at least one of each. For the types a, b and c this is the three-letter count asked in a form that works for any alphabet.',
+    concepts: ['dsa-inclusion-exclusion-over-types', 'dsa-satisfied-requirement-counter', 'dsa-window-invariant-shrink-to-repair', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Shrink over a counter of how many required types are present: while every type is satisfied, every longer right end ' +
+      'still works, so credit length minus end and release one character from the left.',
+    idealAnswer:
+      'The window formulation needs a satisfied counter rather than a size check, because the alphabet is given rather than ' +
+      'fixed: increment a per-type count and raise the counter only when a type goes from absent to present, then while the ' +
+      'counter equals the number of types, credit all the endings from the current one to the end of the string - a legal ' +
+      'window stays legal when it grows to the right - and release from the left, lowering the counter when a type count ' +
+      'reaches zero. The complement is the other honest answer and it does not use a window at all: a substring misses at ' +
+      'least one type exactly when it lies wholly inside a run of characters that excludes that type, so for each subset of ' +
+      'types you can count the substrings avoiding all of them and combine by inclusion-exclusion, adding the odd-sized ' +
+      'subsets and subtracting the even ones. That costs 2 to the k passes, which is trivial for three types and hopeless for ' +
+      'a hundred, and it is the version to name when the interviewer asks what happens if the rule is not monotone. Two ' +
+      'JavaScript details: iterating a string with for of walks code points while indexing walks UTF-16 units, so a type ' +
+      'outside the Basic Multilingual Plane is only matched by the iterator, and the empty type list makes the satisfied test ' +
+      'true at once, so it needs a guard before the loop rather than a loop that never exits.',
+    walkthrough:
+      'On abcabc with the three letters required, the right edge reaches index 2 with every type present, so the window 0..2 ' +
+      'credits four endings - abc, abca, abcab and abcabc - before the left edge releases a and the window breaks. The three ' +
+      'later edges that complete a window credit three, two and one, and the sum is 10. The complement sees the same number ' +
+      'from the other side: of the 21 substrings, 11 miss at least one letter once the inclusion-exclusion removes the ' +
+      'overlaps.',
+    commonMistake:
+      'Raising the satisfied counter on every occurrence of a required type, or leaving the guard out when the type list is ' +
+      'empty.',
+    whyWrong:
+      'A counter that rises with each hit reaches the number of types too early or too late depending on the duplicates, so ' +
+      'the window either breaks while still legal or claims legality while a type is still missing - the counter has to track ' +
+      'absent to present transitions only. Without the guard, the empty list satisfies the test immediately at index 0 and ' +
+      'the inner loop adds endings forever, because releasing a character can never lower a counter that never rose.',
+    followUps: [
+      'Require each type to appear at least twice. Which counter changes, and what does the complement version do to its subset rule?',
+      'The types are the letters of the alphabet rather than a short list. Why does inclusion-exclusion stop being an option and the window stop being the interesting part?',
+      'Count the substrings that contain at least one type instead of all of them. Which of the two formulations becomes a single run length?',
+    ],
+    solution:
+      'function substringsWithAllTypes(text, types) {\n' +
+      '  const required = new Set(types);\n' +
+      '  if (required.size === 0) return 0;\n' +
+      '  const counts = new Map();\n' +
+      '  let satisfied = 0;\n' +
+      '  let start = 0;\n' +
+      '  let count = 0;\n' +
+      '  for (let end = 0; end < text.length; end += 1) {\n' +
+      '    const character = text[end];\n' +
+      '    if (required.has(character)) {\n' +
+      '      const held = counts.get(character);\n' +
+      '      const next = held === undefined ? 1 : held + 1;\n' +
+      '      counts.set(character, next);\n' +
+      '      if (next === 1) satisfied += 1;\n' +
+      '    }\n' +
+      '    while (satisfied === required.size) {\n' +
+      '      count += text.length - end;\n' +
+      '      const leaving = text[start];\n' +
+      '      if (required.has(leaving)) {\n' +
+      '        const remaining = counts.get(leaving) - 1;\n' +
+      '        if (remaining === 0) {\n' +
+      '          counts.delete(leaving);\n' +
+      '          satisfied -= 1;\n' +
+      '        } else counts.set(leaving, remaining);\n' +
+      '      }\n' +
+      '      start += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}\n' +
+      '\n' +
+      'function substringsWithAllTypesComplement(text, types) {\n' +
+      '  const list = Array.from(new Set(types));\n' +
+      '  if (list.length === 0) return 0;\n' +
+      '  const total = (text.length * (text.length + 1)) / 2;\n' +
+      '  let union = 0;\n' +
+      '  for (let mask = 1; mask < (1 << list.length); mask += 1) {\n' +
+      '    const banned = new Set();\n' +
+      '    let bits = 0;\n' +
+      '    for (let index = 0; index < list.length; index += 1) {\n' +
+      '      if (((mask >> index) & 1) === 1) {\n' +
+      '        banned.add(list[index]);\n' +
+      '        bits += 1;\n' +
+      '      }\n' +
+      '    }\n' +
+      '    let run = 0;\n' +
+      '    let avoided = 0;\n' +
+      '    for (const character of text) {\n' +
+      '      if (banned.has(character)) {\n' +
+      '        avoided += (run * (run + 1)) / 2;\n' +
+      '        run = 0;\n' +
+      '      } else run += 1;\n' +
+      '    }\n' +
+      '    avoided += (run * (run + 1)) / 2;\n' +
+      '    union += bits % 2 === 1 ? avoided : -avoided;\n' +
+      '  }\n' +
+      '  return total - union;\n' +
+      '}',
+    modify: 'Require at least one of every type but forbid a fourth type from appearing at all. Which of the two formulations absorbs the extra rule without changing shape?',
+  },
+  {
+    step: 10,
+    name: 'Minimum Window Substring',
+    difficulty: 'Hard',
+    topicSlug: WINDOW,
+    stem: 'Return the shortest substring of a string that contains every character of a pattern, duplicates included, or the empty string when there is none.',
+    brief: 'Input: two strings, text and pattern. Output: the least substring of text holding all of pattern the required number of times; if no window can, the empty string. Matching is case sensitive.',
+    concepts: ['dsa-satisfied-requirement-counter', 'dsa-window-invariant-shrink-to-repair', 'dsa-hash-frequency', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Count the distinct demands the window has fully met. While that equals the number of distinct demands, record the ' +
+      'width and release from the left - the smallest recorded width that still formed is the answer.',
+    idealAnswer:
+      'The pattern is a multiset, so legality is per character rather than global: the window is formed when every distinct ' +
+      'character of the pattern appears at least as often as the pattern asks. Comparing two global counters would need a ' +
+      'scan of the window, so the trick is one integer - formed - that counts the distinct characters whose window count has ' +
+      'reached their demand, and it is incremented only when a count steps onto the demand and decremented only when a count ' +
+      'steps back below it. That is why the two comparisons are equality rather than greater-or-equal: a character arriving ' +
+      'past its demand must not raise formed a second time, and the leaving character has to be tested against its demand ' +
+      'before its count is lowered, or the window is judged while its record is already one step behind the truth. The order ' +
+      'of the two loops is the other half of the argument: extend to the right until formed, then shrink from the left while ' +
+      'formed, because a minimal window cannot be found by only shrinking - the left edge has to be allowed to break ' +
+      'legality so the next legal window can start further right and be shorter. Slice takes a half-open range, so the ' +
+      'recorded start plus the width is the correct end, and the demand map is built from the pattern once rather than ' +
+      'permitted per character inside the scan.',
+    walkthrough:
+      'On ADOBECODEBANC with pattern ABC, the first formed window is ADOBEC at width 6, and releasing its A breaks formation ' +
+      'at once, so 6 is recorded. The right edge carries on to the final C and forms ODEBANC, which shrinks through O, D and ' +
+      'E - none of them a demand - until it reaches BANC at width 4. Releasing that B would drop the only copy left in the ' +
+      'window, so formation breaks there and 4 is the answer.',
+    commonMistake:
+      'Comparing formed against the length of the pattern instead of the number of its distinct characters, or lowering the ' +
+      'leaving count before testing it.',
+    whyWrong:
+      'The two are equal only when the pattern has no repeated letter, so the bug hides on ABC and shows on a pattern like ' +
+      'AAB: formed can never reach three there, and the function returns the empty string even though the text contains AAB. ' +
+      'Decrementing first drops a demand that was exactly met before the comparison sees it, so the window keeps sliding ' +
+      'while it is short of a character, and the recorded minimum can be a window that does not contain the pattern.',
+    followUps: [
+      'Return every minimal window rather than the first. What does the recording step have to keep?',
+      'The pattern may hold a character the text never contains. Where is the cheapest place to notice, and what should the function do about it?',
+      'Make matching case insensitive. Which two maps have to agree on the normalisation, and what does the returned slice look like afterwards?',
+    ],
+    solution:
+      'function minWindow(text, pattern) {\n' +
+      '  if (pattern.length === 0 || text.length === 0) return "";\n' +
+      '  const needed = new Map();\n' +
+      '  for (const character of pattern) {\n' +
+      '    const held = needed.get(character);\n' +
+      '    needed.set(character, held === undefined ? 1 : held + 1);\n' +
+      '  }\n' +
+      '  const required = needed.size;\n' +
+      '  const counts = new Map();\n' +
+      '  let formed = 0;\n' +
+      '  let start = 0;\n' +
+      '  let bestLength = Infinity;\n' +
+      '  let bestStart = -1;\n' +
+      '  for (let end = 0; end < text.length; end += 1) {\n' +
+      '    const character = text[end];\n' +
+      '    const held = counts.get(character);\n' +
+      '    counts.set(character, held === undefined ? 1 : held + 1);\n' +
+      '    const demand = needed.get(character);\n' +
+      '    if (demand !== undefined && counts.get(character) === demand) formed += 1;\n' +
+      '    while (formed === required) {\n' +
+      '      const width = end - start + 1;\n' +
+      '      if (width < bestLength) {\n' +
+      '        bestLength = width;\n' +
+      '        bestStart = start;\n' +
+      '      }\n' +
+      '      const leaving = text[start];\n' +
+      '      const leavingDemand = needed.get(leaving);\n' +
+      '      if (leavingDemand !== undefined && counts.get(leaving) === leavingDemand) formed -= 1;\n' +
+      '      counts.set(leaving, counts.get(leaving) - 1);\n' +
+      '      start += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return bestStart === -1 ? "" : text.slice(bestStart, bestStart + bestLength);\n' +
+      '}\n' +
+      '\n' +
+      'function minWindowBrute(text, pattern) {\n' +
+      '  const need = new Map();\n' +
+      '  for (const character of pattern) {\n' +
+      '    const held = need.get(character);\n' +
+      '    need.set(character, held === undefined ? 1 : held + 1);\n' +
+      '  }\n' +
+      '  if (need.size === 0) return "";\n' +
+      '  let best = null;\n' +
+      '  for (let start = 0; start < text.length; start += 1) {\n' +
+      '    const have = new Map();\n' +
+      '    let formed = 0;\n' +
+      '    for (let end = start; end < text.length; end += 1) {\n' +
+      '      const character = text[end];\n' +
+      '      if (need.has(character)) {\n' +
+      '        const held = have.get(character);\n' +
+      '        const next = held === undefined ? 1 : held + 1;\n' +
+      '        have.set(character, next);\n' +
+      '        if (next === need.get(character)) formed += 1;\n' +
+      '      }\n' +
+      '      if (formed === need.size) {\n' +
+      '        const candidate = text.slice(start, end + 1);\n' +
+      '        if (best === null || candidate.length < best.length) best = candidate;\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return best === null ? "" : best;\n' +
+      '}',
+    modify: 'Return the length of the smallest window and -1 when none exists, then say which single character of the code carries the difference between the two sentinels.',
   },
 ];
 
