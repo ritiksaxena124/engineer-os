@@ -1510,8 +1510,29 @@ export const DSA_CONCEPTS = {
     slug: 'dsa-consecutive-greedy-from-the-smallest',
     name: 'The smallest remaining card has to start a group',
     detail: 'Nothing can precede it, so consuming its run of groupSize consecutive values is forced rather than chosen; a value that is absent or already handed out is the only way the walk can fail, which makes a single pass over a count table sufficient.',
-    terms: ['forced first move', 'count table decrements', 'absent or exhausted', 'length must divide', 'lazy deletion from a heap'],
+    terms: ['forced first move', 'count table decrements', 'absent or exhausted', 'length must divide', 'revisit a start with copies left'],
     weight: 3,
+  },
+  'dsa-monotonic-counter-orders-events': {
+    slug: 'dsa-monotonic-counter-orders-events',
+    name: 'A counter taken at write time orders events the clock cannot',
+    detail: 'Incrementing one global integer at the moment a record is created gives every record a distinct place in arrival order, so merging timelines needs no tie-break and no clock resolution; two writes in the same millisecond collide under a wall-clock timestamp and reorder by whichever write landed first.',
+    terms: ['increment at write time', 'unique ordering key', 'no tie-break needed', 'clock collisions', 'append-only per author'],
+    weight: 3,
+  },
+  'dsa-set-iterates-in-insertion-order': {
+    slug: 'dsa-set-iterates-in-insertion-order',
+    name: 'Iterating a Set gives back the order you added things in',
+    detail: 'A Set or Map walks insertion order, which records how the calls arrived rather than what the data means, so anything assembled by iterating a follow set is ordered by follow history - the ordering has to come from an explicit key, because a Set has no sort.',
+    terms: ['insertion order', 'not sorted', 'follow history leaks in', 'order by an explicit key', 'no sort on a Set'],
+    weight: 3,
+  },
+  'dsa-greedy-merge-cheapest-first': {
+    slug: 'dsa-greedy-merge-cheapest-first',
+    name: 'Merge the two cheapest first, because cost is depth',
+    detail: 'Every merge re-charges the pieces it joins, so a piece pays for each merge above it - its depth in the merge tree - and taking the two smallest available keeps the expensive pieces shallowest; any other pair swaps a cheap leaf for an expensive one at the same depth and can only cost more.',
+    terms: ['cost is length times depth', 'two smallest first', 'one piece left', 'merge tree', 'every other pair is worse'],
+    weight: 4,
   },
 } satisfies Record<string, ConceptSpec>;
 
@@ -17104,6 +17125,416 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return values.slice().sort()[k - 1];\n' +
       '}',
     modify: 'Return the k smallest elements as an ascending array instead of only the kth. Which container stops paying for a sift, and what does the final ordering cost?',
+  },
+  {
+    step: 11,
+    name: 'Design Twitter',
+    difficulty: 'Medium',
+    topicSlug: HEAPS,
+    stem: 'Design the storage and the four operations behind a miniature Twitter: post a tweet, read the ten most recent tweets of a user and everyone they follow, follow an account, unfollow an account.',
+    brief: 'Input: a call sequence of postTweet, getNewsFeed, follow and unfollow. Output: getNewsFeed returns at most ten tweet ids, newest first. Deliver the cursor merge over timelines, the bounded top-ten heap, and the read-everything-and-sort answer.',
+    concepts: ['dsa-monotonic-counter-orders-events', 'dsa-heap-merges-k-sequences', 'dsa-set-iterates-in-insertion-order', 'dsa-heap-of-size-k-keeps-the-top-k', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Append each tweet to its author with a private counter as the timestamp, keep one Set of followees per follower that always ' +
+      'contains the follower, and answer a feed as a merge over one cursor per timeline: a max heap keyed on the timestamp holds the ' +
+      'newest unread tweet of each timeline, and each pop emits a tweet and steps that timeline back by one.',
+    idealAnswer:
+      'Two shape facts carry the whole design. First, every author stores their tweets in append order, so each timeline is already ' +
+      'sorted by recency and its last entry is its newest - which is the k-way merge over m sorted sequences with the walk pointed ' +
+      'backwards. A heap over the newest unread tweet of each of the f timelines holds at most f entries, one pop emits one tweet ' +
+      'and one push rewinds that timeline, so ten tweets cost f seeds plus ten pops at log f each, and a user with a million old ' +
+      'tweets still pays that. Second, the ordering key has to come from the data, not from the container: a Set iterates in ' +
+      'insertion order, which is a transcript of the order the follow calls arrived in, so a feed built by walking a Set and ' +
+      'collecting tweets is ordered by follow history rather than by recency. Taking one private counter at the moment of the write ' +
+      'fixes that twice over - it is unique, so no two tweets are ever tied and the merge needs no tie-break, and it is monotonic, ' +
+      'so the counter is a total order over the whole system rather than per author. A wall-clock millisecond timestamp gets you ' +
+      'neither: two posts in the same millisecond collapse to one key and the heap then decides by whichever entry landed in the ' +
+      'array first. The three implementations differ only in how much of the candidate set they read: the cursor merge stops after ' +
+      'ten pops and never touches tweet eleven, the bounded top-ten heap reads every candidate tweet to keep a heap of ten, and the ' +
+      'sort reads everything and pays log n per tweet to reorder a list it will throw away. On a short feed all three are the same ' +
+      'answer, and the sort is the one to write in a code review unless the timelines are long. The rest is invariants. A user who ' +
+      'has never appeared in the system has no record, so both lookups must be get-or-create rather than get-and-use, because Map ' +
+      'hands back undefined for an unseen key and pushing onto undefined throws on the first call for a new account. The follower ' +
+      'belongs in their own follow set from the moment the set is created, which is what lets the feed read one collection instead ' +
+      'of unioning two - and the price of that convenience is a guard in unfollow, because an unguarded delete on the pair (x, x) ' +
+      'silently removes a user from their own feed, a bug no test finds unless someone writes the case. Comparing the cursor ' +
+      'objects themselves with the less-than operator is never true in JavaScript, so the heap comparator reads the timestamp field; ' +
+      'and follow of an account that has never posted is legal, so the seed loop has to skip empty timelines rather than reading ' +
+      'index minus one of an empty array.',
+    walkthrough:
+      'User 1 posts tweet 5, which takes clock 1, and follows user 2, so the follow set of 1 is {1, 2} and only user 1 has a ' +
+      'timeline. The feed seeds one cursor at time 1 and returns 5. User 2 then posts tweet 6 at clock 2, so the heap holds two ' +
+      'cursors - times 1 and 2 - pops 2 first, emits 6, finds nothing older for user 2, then pops 1 and emits 5, giving 6, 5. ' +
+      'Unfollowing user 2 leaves the set {1} and the feed returns 5. Separately, one account posting fifteen tweets in order has a ' +
+      'feed of the last ten, newest first: 15 down to 6, which is ten pops against a timeline of fifteen and no read of the first ' +
+      'five.',
+    commonMistake:
+      'Rebuilding the feed by collecting and sorting every tweet of every followee on each read, and letting unfollow remove the ' +
+      'follower from their own follow set.',
+    whyWrong:
+      'The full sort is correct and its cost grows with the whole history rather than with the ten tweets asked for: it re-sorts ' +
+      'every tweet the feed has already returned on every read, so a year-old account pays for a year of posting to show ten lines. ' +
+      'Dropping self from the follow set is worse than slow. unfollow(x, x) then empties the feed of x entirely, and because the ' +
+      'spec accepts any follower-followee pair, that call is legal - the guard is one line and the missing guard is a feed with no ' +
+      'own posts, which the ten other tests will not see. A third slip is seeding the merge without checking for an empty ' +
+      'timeline: reading length minus one of a followee who has never posted indexes past the end and hands the heap an undefined ' +
+      'timestamp, and every comparison against undefined is false, so the heap keeps an entry that has no tweet behind it.',
+    followUps:
+      [
+        'Tweets can be deleted after posting. Which record has to hold a tombstone, and how does each of the three feed answers skip it?',
+        'A user follows ten thousand accounts, each with one tweet, and asks for a feed. Which of the three reads is worst here, and which is best?',
+        'Replace the private counter with two fields: a millisecond timestamp plus the tweet id as the tie-break. What has to change in the comparator and in the seed loop?',
+        'State the invariant that makes the cursor merge emit in nonincreasing time order, and use it to show that stopping at ten pops cannot miss an eleventh-newer tweet.',
+      ],
+    solution:
+      'class Twitter {\n' +
+      '  constructor() {\n' +
+      '    this.clock = 0;\n' +
+      '    this.posts = new Map();\n' +
+      '    this.following = new Map();\n' +
+      '  }\n' +
+      '\n' +
+      '  postsOf(userId) {\n' +
+      '    let list = this.posts.get(userId);\n' +
+      '    if (list === undefined) {\n' +
+      '      list = [];\n' +
+      '      this.posts.set(userId, list);\n' +
+      '    }\n' +
+      '    return list;\n' +
+      '  }\n' +
+      '\n' +
+      '  followsOf(userId) {\n' +
+      '    let set = this.following.get(userId);\n' +
+      '    if (set === undefined) {\n' +
+      '      set = new Set();\n' +
+      '      set.add(userId);\n' +
+      '      this.following.set(userId, set);\n' +
+      '    }\n' +
+      '    return set;\n' +
+      '  }\n' +
+      '\n' +
+      '  postTweet(userId, tweetId) {\n' +
+      '    this.clock += 1;\n' +
+      '    this.postsOf(userId).push({ tweetId: tweetId, time: this.clock });\n' +
+      '  }\n' +
+      '\n' +
+      '  getNewsFeed(userId) {\n' +
+      '    const heap = [];\n' +
+      '    for (const person of this.followsOf(userId)) {\n' +
+      '      const list = this.postsOf(person);\n' +
+      '      if (list.length > 0) {\n' +
+      '        heapPushNewest(heap, { user: person, index: list.length - 1, time: list[list.length - 1].time });\n' +
+      '      }\n' +
+      '    }\n' +
+      '    const out = [];\n' +
+      '    while (heap.length > 0 && out.length < 10) {\n' +
+      '      const cursor = heapPopNewest(heap);\n' +
+      '      out.push(this.postsOf(cursor.user)[cursor.index].tweetId);\n' +
+      '      if (cursor.index > 0) {\n' +
+      '        const older = this.postsOf(cursor.user)[cursor.index - 1];\n' +
+      '        heapPushNewest(heap, { user: cursor.user, index: cursor.index - 1, time: older.time });\n' +
+      '      }\n' +
+      '    }\n' +
+      '    return out;\n' +
+      '  }\n' +
+      '\n' +
+      '  getNewsFeedByTopTen(userId) {\n' +
+      '    const keep = [];\n' +
+      '    for (const person of this.followsOf(userId)) {\n' +
+      '      for (const record of this.postsOf(person)) {\n' +
+      '        heapPushOldest(keep, record);\n' +
+      '        if (keep.length > 10) heapPopOldest(keep);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    const out = [];\n' +
+      '    while (keep.length > 0) out.push(heapPopOldest(keep).tweetId);\n' +
+      '    return out.reverse();\n' +
+      '  }\n' +
+      '\n' +
+      '  getNewsFeedBySort(userId) {\n' +
+      '    const candidates = [];\n' +
+      '    for (const person of this.followsOf(userId)) {\n' +
+      '      for (const record of this.postsOf(person)) candidates.push(record);\n' +
+      '    }\n' +
+      '    candidates.sort((first, second) => second.time - first.time);\n' +
+      '    return candidates.slice(0, 10).map((record) => record.tweetId);\n' +
+      '  }\n' +
+      '\n' +
+      '  follow(followerId, followeeId) {\n' +
+      '    this.followsOf(followerId).add(followeeId);\n' +
+      '  }\n' +
+      '\n' +
+      '  unfollow(followerId, followeeId) {\n' +
+      '    if (followerId === followeeId) return false;\n' +
+      '    const set = this.following.get(followerId);\n' +
+      '    if (set === undefined) return false;\n' +
+      '    const wasFollowing = set.has(followeeId);\n' +
+      '    set.delete(followeeId);\n' +
+      '    return wasFollowing;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapPushNewest(items, cursor) {\n' +
+      '  items.push(cursor);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent].time >= items[index].time) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapPopNewest(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left].time > items[best].time) best = left;\n' +
+      '      if (right < items.length && items[right].time > items[best].time) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'function heapPushOldest(items, record) {\n' +
+      '  items.push(record);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent].time <= items[index].time) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapPopOldest(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left].time < items[best].time) best = left;\n' +
+      '      if (right < items.length && items[right].time < items[best].time) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}',
+    modify: 'Make the feed return the twelve most recent tweets with at most two per author. Which record has to carry a per-author count, and does the merge still stop at twelve pops?',
+  },
+  {
+    step: 11,
+    name: 'Connect `n` ropes with minimum cost',
+    difficulty: 'Medium',
+    topicSlug: HEAPS,
+    stem: 'Given the lengths of the ropes, join them into a single rope for the least total cost, where joining two ropes costs the sum of their lengths.',
+    brief: 'Input: an array of positive lengths. Output: the minimum total cost of reducing the array to one piece. Deliver the two-smallest-first heap pass, the sorted two-queue version that needs no heap at all, and an arrival-order baseline that answers higher.',
+    concepts: ['dsa-greedy-merge-cheapest-first', 'dsa-heap-guarantees-only-the-root', 'dsa-sorted-merge', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Push every length into a min heap and repeat n minus 1 times: pop the two smallest, add their sum to the running cost and ' +
+      'push the sum back as the new piece. The last piece left is the rope and the accumulated total is the minimum cost.',
+    idealAnswer:
+      'Read the cost model before choosing the container. A piece is not charged once - it is charged for every join it takes part ' +
+      'in, and every join above it re-charges it, so the total is the sum over pieces of length times depth in the merge tree. That ' +
+      'reframes the problem as putting the long pieces shallow and the short pieces deep, which is exactly what joining the two ' +
+      'cheapest available does: the two pieces picked first sit at the bottom of the tree and are the two smallest, and the ' +
+      'exchange argument is that any optimal tree can swap a deeper pair for two pieces no larger without increasing the sum, so a ' +
+      'tree that joins anything else first is never better. The container follows from the query pattern - each round asks only for ' +
+      'the two minima and then inserts one fresh candidate back, which is a heap in one push and two pops per round, n log n in ' +
+      'total. Re-sorting the array each round answers the same question but pays for the whole order every time, which is n squared ' +
+      'log n to get the identical number. The second implementation drops the heap: sort once ascending, then run two queues, one ' +
+      'over the original lengths and one over the joins, and always take the smaller of the two heads. That is correct because the ' +
+      'joined sums come out nondecreasing on their own - each round pops pieces at least as large as the previous round popped, so ' +
+      'the sums it produces are at least the previous sum - which makes the second queue sorted by construction and turns every ' +
+      'pick into the head comparison of a two-way merge. One sort and a linear pass, and it is the faster of the two in practice ' +
+      'because it walks contiguous memory and does no index arithmetic. The arrival-order baseline is the answer an unguarded ' +
+      'implementation gives: keep a running rope and join the next length onto it. It charges the first length once per remaining ' +
+      'piece, which is the worst possible placement for it, and on five lengths it loses by three over the optimum - a small gap on ' +
+      'a small input and a widening one as the lengths spread out. Two edges decide whether the code is finished: fewer than two ' +
+      'ropes costs nothing, since there is no join to make, and the heap must be built over a copy of the input because a heapify ' +
+      'in place hands the caller a scrambled array. Equal lengths are never a problem - either of two cheapest pieces gives the ' +
+      'same total, so the algorithm does not need a tie-break, and unlike every other heap in this step the comparator reads plain ' +
+      'numbers, so a subtraction comparator here would be correct.',
+    walkthrough:
+      'Lengths 2, 3, 5, 6, 7. The heap pops 2 and 3, pays 5 and pushes it back, so the pieces are 5, 5, 6, 7 and the total is 5. It ' +
+      'pops the two fives, pays 10, leaving 6, 7, 10, and the total is 15. It pops 6 and 7, pays 13, leaving 10, 13, and the total ' +
+      'is 28. The last join costs 23 and the total is 51. Read as depths, the sums were pushed in the order 5, 10, 13, 23 - already ' +
+      'nondecreasing - so the two-queue version walks 2, 3 against empty heads, then 5 against 5, and reaches the same 51 with no ' +
+      'heap at all. Joining in arrival order instead pays 5, 10, 16, 23 for a total of 54, because the running rope carries the ' +
+      'early lengths into every later join.',
+    commonMistake:
+      'Joining the two longest ropes first, or the two that appear first, and returning the length of the finished rope rather than ' +
+      'the accumulated cost.',
+    whyWrong:
+      'Joining the longest pair puts the expensive pieces at the bottom of the tree where they are re-charged the most times - the ' +
+      'mirror image of what the cost model asks for. On 2, 3, 5, 6, 7 always joining the two largest pays 13, 18, 21, 23 for 75 ' +
+      'against the optimum of 51, and arrival order gives 54. Returning the final length is a different mistake and a quieter one: ' +
+      'the last piece is always the sum of all lengths, which the input already determines, so it is the same number for every ' +
+      'join order and cannot be the answer to a question about the best order.',
+    followUps: [
+      'A join may take k ropes at a time instead of two. Which quantity in the loop changes, and why can the pass be impossible without padding the heap with zero-length pieces?',
+      'Prove that the sequence of joined sums is nondecreasing. Which two pops does each round compare against the round before it?',
+      'The lengths arrive already sorted. What is the complexity of each of the three answers now, and which one still pays a log factor?',
+      'Return the merge tree as the list of joins made, in order. Which version already has those triples in hand, and does the two-queue version record the same joins?',
+    ],
+    solution:
+      'function heapPush(items, value) {\n' +
+      '  items.push(value);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent] <= items[index]) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapPop(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left] < items[best]) best = left;\n' +
+      '      if (right < items.length && items[right] < items[best]) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'function connectRopes(costs) {\n' +
+      '  const heap = [];\n' +
+      '  for (const cost of costs) heapPush(heap, cost);\n' +
+      '  let total = 0;\n' +
+      '  while (heap.length > 1) {\n' +
+      '    const first = heapPop(heap);\n' +
+      '    const second = heapPop(heap);\n' +
+      '    const joined = first + second;\n' +
+      '    total += joined;\n' +
+      '    heapPush(heap, joined);\n' +
+      '  }\n' +
+      '  return total;\n' +
+      '}\n' +
+      '\n' +
+      'function connectRopesRecorded(costs) {\n' +
+      '  const heap = costs.slice();\n' +
+      '  for (let index = (heap.length >> 1) - 1; index >= 0; index -= 1) {\n' +
+      '    let at = index;\n' +
+      '    for (;;) {\n' +
+      '      const left = at * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = at;\n' +
+      '      if (left < heap.length && heap[left] < heap[best]) best = left;\n' +
+      '      if (right < heap.length && heap[right] < heap[best]) best = right;\n' +
+      '      if (best === at) break;\n' +
+      '      const hold = heap[at];\n' +
+      '      heap[at] = heap[best];\n' +
+      '      heap[best] = hold;\n' +
+      '      at = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  const joins = [];\n' +
+      '  let total = 0;\n' +
+      '  while (heap.length > 1) {\n' +
+      '    const first = heapPop(heap);\n' +
+      '    const second = heapPop(heap);\n' +
+      '    const joined = first + second;\n' +
+      '    total += joined;\n' +
+      '    joins.push([first, second, joined]);\n' +
+      '    heapPush(heap, joined);\n' +
+      '  }\n' +
+      '  return { total: total, joins: joins };\n' +
+      '}\n' +
+      '\n' +
+      'function connectRopesByTwoQueues(costs) {\n' +
+      '  if (costs.length < 2) return 0;\n' +
+      '  const sorted = costs.slice().sort((first, second) => first - second);\n' +
+      '  const joined = [];\n' +
+      '  let fromSorted = 0;\n' +
+      '  let fromJoined = 0;\n' +
+      '  let remaining = sorted.length;\n' +
+      '  const take = () => {\n' +
+      '    if (fromSorted < sorted.length && (fromJoined >= joined.length || sorted[fromSorted] <= joined[fromJoined])) {\n' +
+      '      const value = sorted[fromSorted];\n' +
+      '      fromSorted += 1;\n' +
+      '      return value;\n' +
+      '    }\n' +
+      '    const value = joined[fromJoined];\n' +
+      '    fromJoined += 1;\n' +
+      '    return value;\n' +
+      '  };\n' +
+      '  let total = 0;\n' +
+      '  while (remaining > 1) {\n' +
+      '    const first = take();\n' +
+      '    const second = take();\n' +
+      '    const sum = first + second;\n' +
+      '    total += sum;\n' +
+      '    joined.push(sum);\n' +
+      '    remaining -= 1;\n' +
+      '  }\n' +
+      '  return total;\n' +
+      '}\n' +
+      '\n' +
+      'function connectRopesInArrivalOrder(costs) {\n' +
+      '  if (costs.length < 2) return 0;\n' +
+      '  let running = costs[0];\n' +
+      '  let total = 0;\n' +
+      '  for (let index = 1; index < costs.length; index += 1) {\n' +
+      '    running += costs[index];\n' +
+      '    total += running;\n' +
+      '  }\n' +
+      '  return total;\n' +
+      '}\n' +
+      '\n' +
+      'function connectRopesLongestFirst(costs) {\n' +
+      '  const items = costs.slice().sort((first, second) => second - first);\n' +
+      '  let total = 0;\n' +
+      '  while (items.length > 1) {\n' +
+      '    const joined = items.shift() + items.shift();\n' +
+      '    total += joined;\n' +
+      '    items.push(joined);\n' +
+      '    items.sort((first, second) => second - first);\n' +
+      '  }\n' +
+      '  return total;\n' +
+      '}',
+    modify: 'Allow a join of k ropes at a time instead of two. Which line pops differently, and why does the pass need padding when the length minus one is not divisible by k minus one?',
   },
 ];
 
