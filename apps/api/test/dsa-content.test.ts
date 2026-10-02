@@ -343,6 +343,14 @@ const EXPECTS: Record<string, string> = {
     '(() => { const a = letterCombinations("23"); const b = letterCombinations("79"); return a.join("|") === "ad|ae|af|bd|be|bf|cd|ce|cf" && b.length === 16 && b[0] === "pw" && letterCombinations("2").join("") === "abc" && letterCombinations("").length === 0 && new Set(a).size === 9; })()',
   'Palindrome Partitioning':
     '(() => { const a = palindromePartitions("aab").map((p) => p.join("/")).join("|"); const b = palindromePartitions("abb").map((p) => p.join("/")).join("|"); return a === "a/a/b|aa/b" && b === "a/b/b|a/bb" && palindromePartitions("a").map((p) => p.join("/")).join("|") === "a" && palindromePartitions("").length === 1 && palindromePartitions("aaa").length === 4; })()',
+  'Word Search':
+    '(() => { const board = [["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]]; const before = board.map((r) => r.join("")).join("|"); const hit = wordExists(board, "ABCCED"); const edge = wordExists(board, "SEE"); const repeat = wordExists(board, "ABCB"); return hit && edge && !repeat && board.map((r) => r.join("")).join("|") === before && wordExists([["A"]], "A") && !wordExists([["A"]], "AA") && !wordExists([], "A"); })()',
+  'N Queens':
+    '(() => { const four = placeQueens(4).map((c) => c.join("")).join("|"); return four === "1302|2031" && placeQueens(1).map((c) => c.join("")).join("|") === "0" && placeQueens(2).length === 0 && placeQueens(3).length === 0 && placeQueens(6).length === 4 && placeQueens(8).length === 92; })()',
+  'Rat in a Maze':
+    '(() => { const m = [[1,0,0,0],[1,1,0,1],[1,1,0,0],[0,1,1,1]]; const before = m.map((r) => r.join("")).join("|"); const p = mazePaths(m); return p.join("|") === "DDRDRR|DRDDRR" && m.map((r) => r.join("")).join("|") === before && mazePaths([[1]]).length === 1 && mazePaths([[0]]).length === 0 && mazePaths([]).length === 0 && mazePaths([[1,1],[1,1]]).join("|") === "DR|RD"; })()',
+  'M Coloring Problem':
+    '(() => { const triangle = [[1,1,1],[1,0,1],[1,1,0]]; const three = colorGraph(triangle, 3); const two = colorGraph(triangle, 2); const line = colorGraph([[0,1,0],[1,0,1],[0,1,0]], 2); const proper = three !== null && three.length === 3 && three[0] !== three[1] && three[1] !== three[2] && three[0] !== three[2]; return proper && two === null && line !== null && line.join("") === "010" && colorGraph([[0]], 1).join("") === "0" && colorGraph([[0]], 0) === null; })()',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */

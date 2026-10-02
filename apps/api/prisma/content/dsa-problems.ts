@@ -980,6 +980,20 @@ export const DSA_CONCEPTS = {
     terms: ['cartesian product', 'per position', 'product of sizes', 'index over positions', 'generalised nested loop'],
     weight: 3,
   },
+  'dsa-mark-unmark-occupancy': {
+    slug: 'dsa-mark-unmark-occupancy',
+    name: 'A cell can be marked on the way in and unmarked on the way out',
+    detail: 'Writing a sentinel into the grid in front of the recursive call and restoring the old value behind it gives per-path visited state without allocating a set per branch.',
+    terms: ['sentinel write', 'restore after the call', 'per-path visited', 'no copied set', 'undo in place'],
+    weight: 3,
+  },
+  'dsa-conflict-set-per-placement': {
+    slug: 'dsa-conflict-set-per-placement',
+    name: 'A placement is legal against a set of attacked lines, not against other placements',
+    detail: 'Rows, columns, diagonals and boxes each get their own membership test, so checking a candidate is a lookup per line rather than a scan of everything already placed.',
+    terms: ['attacked lines', 'membership test', 'row and column sets', 'diagonal key', 'legal by lookup'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -10228,6 +10242,251 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return results;\n' +
       '}',
     modify: 'Precompute a palindrome table for all slices in O(n^2), then use it inside the walk. Which repeated test disappears, and how many times was each slice being checked?',
+  },
+  {
+    step: 7,
+    name: 'Word Search',
+    difficulty: 'Medium',
+    topicSlug: 'graph-traversal',
+    stem: 'Decide whether a word lies along a path of orthogonally adjacent board cells, with no cell used twice, and say what the restore at the end of the frame is for.',
+    brief: 'Input: a grid of uppercase letters and a word. Output: whether consecutive letters of the word can be read by stepping to an orthogonal neighbour, never reusing a cell. Say which state the walk has to undo.',
+    concepts: ['dsa-mark-unmark-occupancy', 'dsa-coordinate-loops', 'dsa-recursive-decomposition'],
+    shortAnswer:
+      'Depth-first search from every cell that matches the first letter, marking the current cell before descending and ' +
+      'restoring it afterwards, so the visited rule is per path rather than global.',
+    idealAnswer:
+      'walk(row, column, index) checks the bound, then the letter, then writes a sentinel over the cell so no deeper ' +
+      'frame can reuse it, tries the four neighbours for index + 1, and puts the letter back. The restore is the whole ' +
+      'point: a shared visited matrix that is never unwound turns the search into one path from the start cell and ' +
+      'rejects words that need a branch the first attempt consumed. Cost is O(rows * columns * 4 to the word length) in ' +
+      'the worst case, reduced hard by the letter check, which fails most branches at depth one; the recursion is ' +
+      'bounded by the word length, so stack depth is never the problem here.',
+    walkthrough:
+      'Marking by overwriting the cell is the in-place version of the visited set, and it only works because the letter ' +
+      'being replaced is saved and put back - the sentinel also doubles as the mismatch test, since no letter equals it. ' +
+      'The failure everyone writes once is a visited matrix kept across branches: the first neighbour consumes a cell the ' +
+      'second neighbour needed, and the answer becomes no for boards where the word turns back near itself. Restoring is ' +
+      'not cosmetic, it is the difference between searching a graph and searching a tree of paths.',
+    commonMistake:
+      'Keeping one visited matrix for the entire search instead of unmarking the cell when the frame returns.',
+    whyWrong:
+      'Visited state that survives a failed branch forbids cells the sibling branch was free to use, so valid words are ' +
+      'reported absent. The per-path rule is exactly what the restore gives you, and no amount of starting-cell looping ' +
+      'recovers it.',
+    followUps: [
+      'Return every position the word starts at instead of a boolean. What does the outer loop collect now?',
+      'The word may revisit a cell. Which two lines do you delete, and what does the worst case become?',
+      'Precompute which letters appear on the board before searching. When does that check pay for itself?',
+    ],
+    solution:
+      'function wordExists(board, word) {\n' +
+      '  const rows = board.length;\n' +
+      '  const columns = rows === 0 ? 0 : board[0].length;\n' +
+      '  function walk(row, column, index) {\n' +
+      '    if (index === word.length) return true;\n' +
+      '    if (row < 0 || column < 0 || row >= rows || column >= columns) return false;\n' +
+      '    if (board[row][column] !== word[index]) return false;\n' +
+      '    const held = board[row][column];\n' +
+      '    board[row][column] = "#";\n' +
+      '    const found = walk(row + 1, column, index + 1)\n' +
+      '      || walk(row - 1, column, index + 1)\n' +
+      '      || walk(row, column + 1, index + 1)\n' +
+      '      || walk(row, column - 1, index + 1);\n' +
+      '    board[row][column] = held;\n' +
+      '    return found;\n' +
+      '  }\n' +
+      '  for (let row = 0; row < rows; row += 1) {\n' +
+      '    for (let column = 0; column < columns; column += 1) {\n' +
+      '      if (walk(row, column, 0)) return true;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return false;\n' +
+      '}',
+    modify: 'Return the path of coordinates for one matching occurrence. Which state now has to travel with the mark, and what is the cost of copying it instead of undoing it?',
+  },
+  {
+    step: 7,
+    name: 'N Queens',
+    difficulty: 'Hard',
+    topicSlug: 'graph-traversal',
+    stem: 'Place n queens on an n by n board so none attacks another, list every solution, and argue why legality is checked against line sets rather than against other queens.',
+    brief: 'Input: n. Output: every placement of n non-attacking queens, one per row, as the column index chosen for each row. Explain the two arithmetic keys that cover diagonals.',
+    concepts: ['dsa-conflict-set-per-placement', 'dsa-mark-unmark-occupancy', 'dsa-prefix-path-carry'],
+    shortAnswer:
+      'Go row by row and try each column; a column is legal when no earlier queen holds that column, that row-minus-column ' +
+      'diagonal, or that row-plus-column anti-diagonal.',
+    idealAnswer:
+      'Exactly one queen per row is forced by the structure of the problem, so the search is one position per row and the ' +
+      'state is the set of attacked lines. Columns are remembered directly; the two diagonal families are the values ' +
+      'row - column and row + column, which are constant along a diagonal and distinct between different ones, so a ' +
+      'pair of sets replaces scanning the board. Each frame pushes a column, adds its two diagonal keys, recurses to the ' +
+      'next row and undoes all three, so siblings start clean. Cost is the number of partial placements, far below n to ' +
+      'the n because a rejected column kills the whole subtree beneath it.',
+    walkthrough:
+      'The two diagonal identities are the part worth reciting cold: on a descending diagonal row - column never changes, ' +
+      'on an ascending diagonal row + column never changes, so each is a line address in one integer. Storing attacked ' +
+      'lines instead of the board is what makes a legality test O(1) rather than a scan of every placed queen. The ' +
+      'version that stores columns as an array and calls includes on it is still correct but O(n) per test - which is ' +
+      'the kind of detail a reviewer looks for before asking whether n = 12 finishes.',
+    commonMistake:
+      'Testing attacks by comparing the candidate against every placed queen, or forgetting to delete the two diagonal keys when the frame returns.',
+    whyWrong:
+      'A pairwise scan is O(n) per candidate inside an already exponential walk, so the same answer costs a factor of n ' +
+      'more. And diagonal keys left behind after a backtrack keep attacking squares no queen occupies, which makes valid ' +
+      'solutions disappear from the output.',
+    followUps: [
+      'How many solutions are there for n = 8, and how would you get that number without storing the boards?',
+      'Print the boards instead of the column arrays. What does the extra representation cost?',
+      'Symmetry cuts the search: which placements are mirrors of each other, and how do you keep the count right?',
+    ],
+    solution:
+      'function placeQueens(n) {\n' +
+      '  const results = [];\n' +
+      '  const columns = [];\n' +
+      '  const diagonals = new Set();\n' +
+      '  const antiDiagonals = new Set();\n' +
+      '  function walk(row) {\n' +
+      '    if (row === n) {\n' +
+      '      results.push(columns.slice());\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    for (let column = 0; column < n; column += 1) {\n' +
+      '      if (columns.includes(column)) continue;\n' +
+      '      if (diagonals.has(row - column) || antiDiagonals.has(row + column)) continue;\n' +
+      '      columns.push(column);\n' +
+      '      diagonals.add(row - column);\n' +
+      '      antiDiagonals.add(row + column);\n' +
+      '      walk(row + 1);\n' +
+      '      columns.pop();\n' +
+      '      diagonals.delete(row - column);\n' +
+      '      antiDiagonals.delete(row + column);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  walk(0);\n' +
+      '  return results;\n' +
+      '}',
+    modify: 'Report the count of solutions for n up to 14 without keeping any board. Which of the three pieces of state can you drop entirely?',
+  },
+  {
+    step: 7,
+    name: 'Rat in a Maze',
+    difficulty: 'Medium',
+    topicSlug: 'graph-traversal',
+    stem: 'Find every path through a blocked grid from the top-left cell to the bottom-right one and report them as direction strings.',
+    brief: 'Input: a square grid where 1 is open and 0 is a wall. Output: the lexicographically sorted list of direction strings - U, D, L, R - for all paths from (0, 0) to the last cell, never entering a wall or a cell already used on that path.',
+    concepts: ['dsa-mark-unmark-occupancy', 'dsa-coordinate-loops', 'dsa-prefix-path-carry'],
+    shortAnswer:
+      'Depth-first search that marks the current cell as a wall before trying the four moves and restores it after, ' +
+      'recording the direction string when the walk lands on the goal.',
+    idealAnswer:
+      'The maze is a graph with at most four neighbours per node, and the requirement is not reachability but the full ' +
+      'set of simple paths, so the walk has to enumerate rather than stop at the first goal. Blocking the cell in front ' +
+      'of the call and unblocking it behind it is the per-path visited rule again; a global blocked copy would forbid ' +
+      'reusing a cell across different answers, which is wrong here. Cost is O(4 to the cells) in the worst case with ' +
+      'only the wall constraint cutting branches, and sorting the k answers adds O(k log k) on strings of length up to ' +
+      '2n - 2.',
+    walkthrough:
+      'Two details separate this from an ordinary grid DFS. The goal test comes before the wall and bounds tests, ' +
+      'because the goal cell is a legal landing but a visited one for anything deeper - checking it after the wall test ' +
+      'would report nothing once the goal was marked. And restoring the cell to 1 rather than to 0 is what makes the ' +
+      'next answer start from a clean board; the maze is the caller data, so the function has to leave it exactly as it ' +
+      'found it. Enumerating simple paths is inherently exponential: the right sentence is that no algorithm can be much ' +
+      'better than the number of paths it prints.',
+    commonMistake:
+      'Leaving visited cells marked after a branch fails, or testing the goal only after the bounds and wall checks.',
+    whyWrong:
+      'A cell left blocked poisons every later path, so answers that share a corridor with a failed attempt are lost. ' +
+      'And if the goal is checked after the wall test, the goal cell is treated as consumed by the walk that reached it, ' +
+      'which either rejects the answer or reports it depending on the order of the tests.',
+    followUps: [
+      'Return only the shortest path. Which walk do you switch to, and what does it stop storing?',
+      'Count the paths without printing them. What is the smallest state the frame needs?',
+      'Walls may be broken at most once. How much extra state does that add per frame?',
+    ],
+    solution:
+      'function mazePaths(grid) {\n' +
+      '  const size = grid.length;\n' +
+      '  const results = [];\n' +
+      '  if (size === 0 || grid[0][0] === 0) return results;\n' +
+      '  const path = [];\n' +
+      '  function walk(row, column) {\n' +
+      '    if (row === size - 1 && column === size - 1) {\n' +
+      '      results.push(path.join(""));\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    if (row < 0 || column < 0 || row >= size || column >= size) return;\n' +
+      '    if (grid[row][column] === 0) return;\n' +
+      '    grid[row][column] = 0;\n' +
+      '    path.push("D"); walk(row + 1, column); path.pop();\n' +
+      '    path.push("L"); walk(row, column - 1); path.pop();\n' +
+      '    path.push("R"); walk(row, column + 1); path.pop();\n' +
+      '    path.push("U"); walk(row - 1, column); path.pop();\n' +
+      '    grid[row][column] = 1;\n' +
+      '  }\n' +
+      '  walk(0, 0);\n' +
+      '  return results.sort();\n' +
+      '}',
+    modify: 'Report only one shortest path instead of all of them. Which walk replaces the depth-first one, and what does it have to store per cell?',
+  },
+  {
+    step: 7,
+    name: 'M Coloring Problem',
+    difficulty: 'Medium',
+    topicSlug: 'graph-traversal',
+    stem: 'Decide whether a graph is proper colourable with m colours, return one colouring, and explain why the first success short-circuits.',
+    brief: 'Input: an adjacency matrix, and m colours. Output: an assignment array of colour indices when a proper colouring exists, null when it does not. Say what a colouring is asking the walk to prove.',
+    concepts: ['dsa-conflict-set-per-placement', 'dsa-recursive-decomposition', 'dsa-sum-so-far-pruning'],
+    shortAnswer:
+      'Assign vertices in order, try each colour that no neighbour already wears, and return the first complete ' +
+      'assignment - the walk stops at the first leaf because the question is existence.',
+    idealAnswer:
+      'vertex walks the assignment array, and usable(vertex, colour) scans the adjacency row for a neighbour already ' +
+      'holding that colour. Because one proper colouring is the answer, a successful recursive call is returned ' +
+      'immediately instead of being undone and continued, which is the difference between deciding and enumerating. ' +
+      'Legality is per edge, so the check is O(vertices) against the row; the search itself is O(m to the vertices) ' +
+      'with only neighbour conflicts cutting branches. Existence of a colouring is what makes the problem a decision ' +
+      'over a constraint set rather than an optimisation, and the answer should say that no polynomial is known once m ' +
+      'is part of the input.',
+    walkthrough:
+      'The interesting part of this row is the short-circuit. In the enumeration rows of the same step every leaf is ' +
+      'collected and the walk always finishes; here the first true answer returns upward and the untouched frames leave ' +
+      'their assignments in place, which is exactly why the array is handed back after the win rather than cleared. ' +
+      'Colouring the vertices in index order is only one search order, and the honest footnote is that ordering by ' +
+      'degree usually finds a colouring faster because the most constrained vertex is refused first.',
+    commonMistake:
+      'Clearing the assignment array when the deepest frame succeeds, or treating the adjacency matrix as an edge list and scanning it for every candidate colour.',
+    whyWrong:
+      'Undoing the winning frame returns an array of -1 values that claims a colouring was found while showing none. And ' +
+      'scanning a flat edge list per candidate loses the per-vertex locality the matrix gives, so the legality test ' +
+      'stops being a row walk.',
+    followUps: [
+      'Now count the colourings instead of finding one. Which two lines change?',
+      'Order the vertices by degree. Why does the most constrained vertex prune more of the tree?',
+      'Fix m at 2. What does the problem collapse into, and what can you use instead of backtracking?',
+    ],
+    solution:
+      'function colorGraph(adjacency, colors) {\n' +
+      '  const vertices = adjacency.length;\n' +
+      '  const assignment = new Array(vertices).fill(-1);\n' +
+      '  function usable(vertex, color) {\n' +
+      '    for (let other = 0; other < vertices; other += 1) {\n' +
+      '      if (adjacency[vertex][other] === 1 && assignment[other] === color) return false;\n' +
+      '    }\n' +
+      '    return true;\n' +
+      '  }\n' +
+      '  function walk(vertex) {\n' +
+      '    if (vertex === vertices) return true;\n' +
+      '    for (let color = 0; color < colors; color += 1) {\n' +
+      '      if (!usable(vertex, color)) continue;\n' +
+      '      assignment[vertex] = color;\n' +
+      '      if (walk(vertex + 1)) return true;\n' +
+      '      assignment[vertex] = -1;\n' +
+      '    }\n' +
+      '    return false;\n' +
+      '  }\n' +
+      '  return walk(0) ? assignment : null;\n' +
+      '}',
+    modify: 'Count every proper colouring rather than returning the first. What changes in the frame, and why does the short-circuit have to go?',
   },
 ];
 
