@@ -1393,6 +1393,27 @@ export const DSA_CONCEPTS = {
     terms: ['formed equals required', 'distinct demands', 'cross the need exactly', 'lower before the test and the state lies', 'multiset not set'],
     weight: 3,
   },
+  'dsa-forward-match-backward-tighten': {
+    slug: 'dsa-forward-match-backward-tighten',
+    name: 'Match forward to find the end, then walk back to find the start',
+    detail: 'A greedy forward pass takes the earliest possible position for each pattern character, which minimises the right end of any window starting there; a reverse pass over the matched span then maximises the left end, and the pair bounds the tightest window in two sweeps instead of a search over starts.',
+    terms: ['greedy earliest match', 'reverse tighten', 'one past the match', 'restart just past the start', 'subsequence not substring'],
+    weight: 3,
+  },
+  'dsa-subsequence-not-substring': {
+    slug: 'dsa-subsequence-not-substring',
+    name: 'In order, not adjacent - a subsequence is a matching, not a slice',
+    detail: 'Whether a needle appears inside a host as a subsequence is answered by walking the host and consuming the needle one character at a time, and the positions consumed are what a window has to span - which is why a frequency count can prove the letters are present but never that they arrived in order.',
+    terms: ['in order', 'gap allowed', 'greedy consume', 'positions spanned', 'counts cannot order'],
+    weight: 3,
+  },
+  'dsa-demand-multiset-versus-set': {
+    slug: 'dsa-demand-multiset-versus-set',
+    name: 'A pattern is either a set of characters or a count per character',
+    detail: 'Requiring every character of a pattern at least once and requiring it as many times as it appears are different questions with different shrink tests, and the two only agree when the pattern has no repeated letter.',
+    terms: ['set of demands', 'count per demand', 'repeated letter', 'covered versus formed', 'same words, different rule'],
+    weight: 3,
+  },
   'dsa-inclusion-exclusion-over-types': {
     slug: 'dsa-inclusion-exclusion-over-types',
     name: 'Count what is missing by adding and subtracting the subsets',
@@ -15376,6 +15397,209 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return best === null ? "" : best;\n' +
       '}',
     modify: 'Return the length of the smallest window and -1 when none exists, then say which single character of the code carries the difference between the two sentinels.',
+  },
+  {
+    step: 10,
+    name: 'Minimum Window Subsequence',
+    difficulty: 'Hard',
+    topicSlug: WINDOW,
+    stem: 'Return the shortest substring of a text that contains a pattern as a subsequence, or the empty string when none does.',
+    brief: 'Input: two strings, text and pattern. Output: the least contiguous window of text inside which the characters of pattern appear in order - adjacent is not required, so abc contains ac.',
+    concepts: ['dsa-forward-match-backward-tighten', 'dsa-subsequence-not-substring', 'dsa-window-invariant-shrink-to-repair', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Two sweeps per window: match the pattern greedily forward from the current start to fix the earliest possible right ' +
+      'end, then match it backwards across that span to push the left end as far right as it can go, and restart just past ' +
+      'the start found.',
+    idealAnswer:
+      'Legality here is not a counting property - a frequency map cannot say whether the letters came in order - so the ' +
+      'window has to be built by matching. The forward pass is greedy and that is what makes it correct: for a fixed start, ' +
+      'taking the earliest occurrence of each pattern character gives the shortest prefix that still matches, because any ' +
+      'other alignment spends its characters at positions at or after those. The right end is now minimal but the left end is ' +
+      'not maximal, and that is a second, separate tightening: walking the matched span backwards, matching the pattern in ' +
+      'reverse, finds the latest positions that still explain the same end, so the window opens as far right as it can. Two ' +
+      'candidates per restart and a restart one step past the tightened start cover every window, because a start before ' +
+      'that point was already tried and gave a longer window with the same end. When a forward pass cannot finish the ' +
+      'pattern, nothing further right can either - the unmatched tail is a subsequence question over a shorter suffix - so ' +
+      'the scan stops rather than walking the rest of the text. The bound is the text length times the pattern length, and ' +
+      'the dynamic program over pattern positions reaches the same bound with a table to fill and no tightening pass to ' +
+      'reason about. The JavaScript detail worth knowing is that text[-1] reads undefined instead of throwing, so an ' +
+      'off-by-one in the backward pass silently fails to match rather than reporting the crash.',
+    walkthrough:
+      'On abcdebdde with pattern bde, the forward pass from index 0 walks a, b, c, d, e and completes at the e at index 4. ' +
+      'Matching backwards from there takes e at 4, d at 3 and b at 1, so the tightest window from this restart is bcde, of ' +
+      'length 4. The next restart begins at index 2, completes at the final e, and tightens to bdde - b at 5, d at 7, e at 8 ' +
+      '- which is the same length, so the earlier window is kept.',
+    commonMistake:
+      'Stopping the forward pass at the last character of the text without checking that the pattern finished, or restarting ' +
+      'the scan at the tightened start instead of one past it.',
+    whyWrong:
+      'An unfinished forward pass leaves the pointer at the end of the text with part of the pattern unmatched, and the ' +
+      'backward sweep then hunts for a character that is not in the string at all - walking off the front, where text at a ' +
+      'negative index is undefined rather than an error, so the comparison is always false and the loop never terminates. ' +
+      'Restarting at the tightened start instead of one past it is the same trap in a different guise: the next forward pass ' +
+      'from that position finds the identical window, the start never moves, and the scan repeats forever.',
+    followUps: [
+      'How many distinct minimal windows are there? Which change to the recording step turns the answer into a count?',
+      'The pattern is empty. Should the answer be the empty string, and is that the same contract as an empty window of the text?',
+      'Rewrite the forward pass so it starts where the previous window ended rather than one past its start. What does that save, and which case does it miss?',
+    ],
+    solution:
+      'function minWindowSubsequence(text, pattern) {\n' +
+      '  if (pattern.length === 0) return "";\n' +
+      '  let bestStart = -1;\n' +
+      '  let bestEnd = -1;\n' +
+      '  let start = 0;\n' +
+      '  while (start < text.length) {\n' +
+      '    let walk = start;\n' +
+      '    let step = 0;\n' +
+      '    while (walk < text.length && step < pattern.length) {\n' +
+      '      if (text[walk] === pattern[step]) step += 1;\n' +
+      '      walk += 1;\n' +
+      '    }\n' +
+      '    if (step < pattern.length) break;\n' +
+      '    let back = walk - 1;\n' +
+      '    let queue = pattern.length - 1;\n' +
+      '    while (queue >= 0) {\n' +
+      '      if (text[back] === pattern[queue]) queue -= 1;\n' +
+      '      back -= 1;\n' +
+      '    }\n' +
+      '    const foundStart = back + 1;\n' +
+      '    const foundEnd = walk - 1;\n' +
+      '    if (bestStart === -1 || foundEnd - foundStart < bestEnd - bestStart) {\n' +
+      '      bestStart = foundStart;\n' +
+      '      bestEnd = foundEnd;\n' +
+      '    }\n' +
+      '    start = foundStart + 1;\n' +
+      '  }\n' +
+      '  return bestStart === -1 ? "" : text.slice(bestStart, bestEnd + 1);\n' +
+      '}\n' +
+      '\n' +
+      'function minWindowSubsequenceBrute(text, pattern) {\n' +
+      '  if (pattern.length === 0) return "";\n' +
+      '  let best = null;\n' +
+      '  for (let start = 0; start < text.length; start += 1) {\n' +
+      '    for (let end = start; end < text.length; end += 1) {\n' +
+      '      let step = 0;\n' +
+      '      for (let index = start; index <= end && step < pattern.length; index += 1) {\n' +
+      '        if (text[index] === pattern[step]) step += 1;\n' +
+      '      }\n' +
+      '      if (step === pattern.length) {\n' +
+      '        const candidate = text.slice(start, end + 1);\n' +
+      '        if (best === null || candidate.length < best.length) best = candidate;\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return best === null ? "" : best;\n' +
+      '}',
+    modify: 'Return the number of windows tied for the shortest, not one of them. Which comparison changes, and what does the backward pass have to report to make the count honest?',
+  },
+  {
+    step: 10,
+    name: 'Minimum Window Substring Problem',
+    difficulty: 'Hard',
+    topicSlug: WINDOW,
+    stem: 'Return the shortest window of a text that covers every distinct character of a pattern at least once.',
+    brief: 'Input: two strings, text and pattern. Output: the least substring containing each character that appears in the pattern - a letter repeated in the pattern is still one requirement, which is where this reading differs from the version that counts duplicates.',
+    concepts: ['dsa-demand-multiset-versus-set', 'dsa-satisfied-requirement-counter', 'dsa-window-invariant-shrink-to-repair', 'dsa-hash-frequency', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'A Set of required characters plus a covered counter: raise it when a required character enters the window for the ' +
+      'first time, lower it when its count reaches zero on the way out, and shrink while the counter equals the size of the ' +
+      'set.',
+    idealAnswer:
+      'Two sentences in English cover this problem and they mean different things. Contains every character of the pattern ' +
+      'is a coverage question and wants each letter at least once; contains the pattern is a demand question and wants a ' +
+      'letter as often as the pattern spells it. They agree exactly when the pattern has no repeated letter, and the ' +
+      'implementation difference is small but real: coverage compares a covered counter against the size of a Set, while ' +
+      'demand compares a per-character count against a per-character need and only moves the counter when a count crosses ' +
+      'its own demand. Coverage still needs the counts, not just the set - a letter is covered while at least one copy is ' +
+      'inside the window, and the only way to know when the last copy has left is to decrement as the left edge passes over ' +
+      'it. That is the reason a solution built from a Set of characters already seen can never shrink correctly: membership ' +
+      'is historical, the window is not. The shrink test is the mirror of the extend test, so the counter drops only when a ' +
+      'count falls to zero, and every legal width in between is recorded as the left edge advances - which is the part that ' +
+      'makes the pass linear where the brute force over substrings is quadratic.',
+    walkthrough:
+      'On this is a test string with pattern tstr, the requirement is the three letters t, s and r, because the second t in ' +
+      'the pattern asks for nothing extra. The first window to cover all three ends at the r of string, and the left edge ' +
+      'then releases the characters before it one by one until it stands on the s two places earlier, giving str at width 3 ' +
+      '- the minimum possible for three distinct letters. Read the same pattern as a multiset and the answer is a window of 5 ' +
+      'characters, because it now has to hold two t letters.',
+    commonMistake:
+      'Tracking which characters have ever been seen rather than which are inside the window, or comparing the covered ' +
+      'counter with the length of the pattern.',
+    whyWrong:
+      'A character that has left is still a member of a set you never remove from, so the counter only ever rises: the ' +
+      'shrink loop then runs the left edge past the right one and the recorded window does not contain the pattern at all. ' +
+      'Comparing against the pattern length is the multiset test in a coverage solution - it works on abc and silently ' +
+      'refuses to answer on a pattern like aab, where the distinct requirement is two and the length is three.',
+    followUps: [
+      'Switch the rule to the multiset reading without rewriting the loop. Which two comparisons move?',
+      'Require the window to cover the pattern and nothing else - no character outside the pattern may appear. What does the extend step have to refuse?',
+      'Report every window of the minimum length rather than the first. Does the shrink loop see all of them, or does it need a second pass?',
+    ],
+    solution:
+      'function minWindowCoveringAllCharacters(text, pattern) {\n' +
+      '  const needed = new Set();\n' +
+      '  for (const character of pattern) needed.add(character);\n' +
+      '  if (needed.size === 0 || text.length === 0) return "";\n' +
+      '  const counts = new Map();\n' +
+      '  let covered = 0;\n' +
+      '  let start = 0;\n' +
+      '  let bestLength = Infinity;\n' +
+      '  let bestStart = -1;\n' +
+      '  for (let end = 0; end < text.length; end += 1) {\n' +
+      '    const character = text[end];\n' +
+      '    if (needed.has(character)) {\n' +
+      '      const held = counts.get(character);\n' +
+      '      const next = held === undefined ? 1 : held + 1;\n' +
+      '      counts.set(character, next);\n' +
+      '      if (next === 1) covered += 1;\n' +
+      '    }\n' +
+      '    while (covered === needed.size) {\n' +
+      '      const width = end - start + 1;\n' +
+      '      if (width < bestLength) {\n' +
+      '        bestLength = width;\n' +
+      '        bestStart = start;\n' +
+      '      }\n' +
+      '      const leaving = text[start];\n' +
+      '      if (needed.has(leaving)) {\n' +
+      '        const remaining = counts.get(leaving) - 1;\n' +
+      '        if (remaining === 0) {\n' +
+      '          counts.delete(leaving);\n' +
+      '          covered -= 1;\n' +
+      '        } else counts.set(leaving, remaining);\n' +
+      '      }\n' +
+      '      start += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return bestStart === -1 ? "" : text.slice(bestStart, bestStart + bestLength);\n' +
+      '}\n' +
+      '\n' +
+      'function minWindowCoveringAllCharactersBrute(text, pattern) {\n' +
+      '  const needed = new Set();\n' +
+      '  for (const character of pattern) needed.add(character);\n' +
+      '  if (needed.size === 0) return "";\n' +
+      '  let best = null;\n' +
+      '  for (let start = 0; start < text.length; start += 1) {\n' +
+      '    for (let end = start; end < text.length; end += 1) {\n' +
+      '      const candidate = text.slice(start, end + 1);\n' +
+      '      if (best !== null && candidate.length >= best.length) break;\n' +
+      '      let complete = true;\n' +
+      '      for (const character of needed) {\n' +
+      '        if (candidate.indexOf(character) === -1) {\n' +
+      '          complete = false;\n' +
+      '          break;\n' +
+      '        }\n' +
+      '      }\n' +
+      '      if (complete) {\n' +
+      '        best = candidate;\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return best === null ? "" : best;\n' +
+      '}',
+    modify: 'Change the rule so a character covered only counts while every copy of it in the text inside the window is consecutive. Which record stops being a count, and what replaces it?',
   },
 ];
 
