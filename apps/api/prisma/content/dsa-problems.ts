@@ -1309,6 +1309,27 @@ export const DSA_CONCEPTS = {
     terms: ['linearity of summation', 'split the aggregate', 'two independent passes', 'no pairing needed', 'per-element contribution'],
     weight: 2,
   },
+  'dsa-drop-the-first-climb': {
+    slug: 'dsa-drop-the-first-climb',
+    name: 'The leftmost digit decides the size, so a deletion is spent on the first climb',
+    detail: 'Removing a digit that is followed by a smaller one shifts the smaller one left into a more significant place, which is worth more than any deletion further right - so the greedy move is the last ascent the stack can still afford.',
+    terms: ['leftmost digit dominates', 'delete the peak', 'bounded deletions', 'lexicographic minimum', 'spend the budget early'],
+    weight: 3,
+  },
+  'dsa-histogram-per-row': {
+    slug: 'dsa-histogram-per-row',
+    name: 'A binary matrix is one histogram per row',
+    detail: 'Carrying the run of ones above each cell turns every row into bar heights, and the largest all-ones rectangle is then the largest rectangle over the n row histograms.',
+    terms: ['height per column', 'reset on a zero', 'row by row histogram', 'reuse the stack routine', 'n passes one dimension'],
+    weight: 3,
+  },
+  'dsa-deque-window-expiry': {
+    slug: 'dsa-deque-window-expiry',
+    name: 'A sliding window retires candidates from the back and expires them from the front',
+    detail: 'A monotonic deque drops a candidate when a better one arrives and drops it again when it leaves the window, so the front is always the current answer - and expiring by stored index is what makes the second rule exact.',
+    terms: ['monotonic deque', 'expire by index', 'front is the answer', 'dominated from the back', 'shift is linear in arrays'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -13840,6 +13861,199 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return total;\n' +
       '}',
     modify: 'Sum the squares of the subarray ranges instead. Which single term of the expansion still splits into contributions and which one does not?',
+  },
+  {
+    step: 9,
+    name: 'Remove K Digits',
+    difficulty: 'Medium',
+    topicSlug: MONO,
+    stem: 'Delete exactly k digits from a numeric string so that what remains is the smallest possible number.',
+    brief: 'Input: a string of digits and an integer k with k at most the length. Output: the smallest number obtainable by removing k digits, with leading zeros dropped and an empty result reported as 0.',
+    concepts: ['dsa-drop-the-first-climb', 'dsa-monotone-discard-never-answer', 'dsa-character-codes', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Build the answer on a stack and spend a deletion whenever an arriving digit is smaller than the top: removing the ' +
+      'digit before it moves the smaller one into a more significant place.',
+    idealAnswer:
+      'Choosing which k digits to keep is exponential to enumerate, so the greedy question is which single digit to drop ' +
+      'first. A digit is worth dropping exactly when a smaller digit sits to its right, because that is when the deletion ' +
+      'promotes the smaller digit one place left; the leftmost such pair is the most significant improvement available, and ' +
+      'scanning left to right with a stack finds it, then repeats with the remaining budget. When no digit left on the ' +
+      'stack is larger than the incoming one, the sequence is already non-decreasing and the only useful deletions are the ' +
+      'trailing ones, which is the second loop. Three details carry the edge cases: an unused budget must be drained from ' +
+      'the end, leading zeros are trimmed rather than kept, and everything deleted can leave the empty string, which ' +
+      'reports as 0. O(n) time with each digit pushed and popped at most once.',
+    walkthrough:
+      'For 1432219 with k equal to 3: the 4 is dropped when 3 arrives, the 3 is dropped when the following 2 arrives, and ' +
+      'the next 2 is dropped when the 1 arrives, leaving 1219 with the budget spent. For 10200 with k equal to 1 the 1 is ' +
+      'dropped for the 0, and the resulting 0200 is trimmed to 200. For 10 with k equal to 2 both digits go and the answer ' +
+      'is 0, not the empty string.',
+    commonMistake:
+      'Removing the k largest digits anywhere in the string, or dropping the leading zeros by parsing to a number and back.',
+    whyWrong:
+      'Deletion is about position, not magnitude: on 1432219 the three largest digits are 9, 4 and 3, and removing them ' +
+      'gives 12221, which is far larger than the true answer 1219. Parsing back is the quieter bug - a 100-digit input is ' +
+      'beyond Number.MAX_SAFE_INTEGER, so the round trip changes the answer it was meant to clean up.',
+    followUps: [
+      'What changes if the task is the largest number instead of the smallest, and the string may contain zeros?',
+      'Prove the greedy exchange: why is dropping the leftmost peak at least as good as dropping any other digit?',
+      'Keep exactly k digits rather than dropping k, so the answer is the lexicographically smallest subsequence of that length.',
+    ],
+    solution:
+      'function removeKDigits(num, k) {\n' +
+      '  const digits = [];\n' +
+      '  let remaining = k;\n' +
+      '  for (const character of num) {\n' +
+      '    while (remaining > 0 && digits.length > 0 && digits[digits.length - 1] > character) {\n' +
+      '      digits.pop();\n' +
+      '      remaining--;\n' +
+      '    }\n' +
+      '    digits.push(character);\n' +
+      '  }\n' +
+      '  while (remaining > 0) {\n' +
+      '    digits.pop();\n' +
+      '    remaining--;\n' +
+      '  }\n' +
+      '  let start = 0;\n' +
+      '  while (start < digits.length && digits[start] === "0") start++;\n' +
+      '  const trimmed = digits.slice(start);\n' +
+      '  return trimmed.length === 0 ? "0" : trimmed.join("");\n' +
+      '}',
+    modify: 'Make it the largest number instead of the smallest, and forbid dropping digits that would leave a leading zero. Which two comparisons and which trim change?',
+  },
+  {
+    step: 9,
+    name: 'Maximal Rectangle (Matrix)',
+    difficulty: 'Hard',
+    topicSlug: MONO,
+    stem: 'In a binary matrix, find the largest rectangle containing only 1s and report its area.',
+    brief: 'Input: a matrix of 0 and 1 rows. Output: the area of the axis-aligned rectangle of ones with the largest area, or 0 when there is no one.',
+    concepts: ['dsa-histogram-per-row', 'dsa-bar-owns-the-span-until-shorter', 'dsa-index-stack-not-value-stack', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Turn each row into a histogram of how many consecutive ones stand above it, and run the largest rectangle in a ' +
+      'histogram over those n row histograms.',
+    idealAnswer:
+      'The reduction is the answer: a rectangle of ones has some bottom row, and its height at each column is exactly the ' +
+      'run of ones ending at that row, so the rectangle is a full-height block inside the histogram built for its bottom ' +
+      'edge. Sweeping rows downwards and maintaining one heights array - increment where the cell is 1, reset to 0 where it ' +
+      'is 0 - gives every such histogram in O(columns) work each, and the histogram routine settles the best rectangle ' +
+      'whose bottom is on the current row. Taking the maximum over the rows covers every possible bottom edge, which is the ' +
+      'completeness argument to state. Total O(rows times columns) time and O(columns) space; the trap is trying to grow ' +
+      'width and height per cell independently, which cannot see a rectangle whose corners are not anchored to the cell ' +
+      'being scanned.',
+    walkthrough:
+      'For the four-by-five matrix whose rows are 10100, 10111, 11111 and 10010, the height arrays are 10100, then 20211, ' +
+      'then 31322, then 40030. The tallest all-ones rectangle appears in the third row: the columns 2 through 4 have ' +
+      'heights 3, 2, 2, and the width of three bars at height 2 gives area 6, which is the answer.',
+    commonMistake:
+      'Resetting the heights array on every row instead of only where the cell is 0, or taking the largest rectangle of the ' +
+      'final histogram only.',
+    whyWrong:
+      'A zero breaks the run above it, so the reset must be per column; clearing the whole array at the first zero of a row ' +
+      'discards valid heights in the other columns and loses rectangles that straddle the middle. Reading only the last ' +
+      'histogram is worse: in the example above the answer lives in the third row, and the fourth histogram, 40030, has ' +
+      'maximum area 4 - the reduction needs the maximum over all rows because the bottom edge is what is being enumerated.',
+    followUps: [
+      'Report the rectangle corners, not just the area. Which two extra values must the histogram pass carry?',
+      'Count all-ones squares instead. Why does min of the three neighbour runs decide the square at a cell?',
+      'Do it for a matrix given as strings rather than arrays of digits. Which comparison silently changes meaning?',
+    ],
+    solution:
+      'function largestRectangle(heights) {\n' +
+      '  const stack = [];\n' +
+      '  let best = 0;\n' +
+      '  for (let index = 0; index <= heights.length; index++) {\n' +
+      '    const height = index === heights.length ? 0 : heights[index];\n' +
+      '    while (stack.length > 0 && heights[stack[stack.length - 1]] >= height) {\n' +
+      '      const top = stack.pop();\n' +
+      '      const left = stack.length === 0 ? -1 : stack[stack.length - 1];\n' +
+      '      const area = heights[top] * (index - left - 1);\n' +
+      '      if (area > best) best = area;\n' +
+      '    }\n' +
+      '    stack.push(index);\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}\n' +
+      '\n' +
+      'function maximalRectangle(matrix) {\n' +
+      '  if (matrix.length === 0) return 0;\n' +
+      '  const columns = matrix[0].length;\n' +
+      '  const heights = new Array(columns).fill(0);\n' +
+      '  let best = 0;\n' +
+      '  for (const row of matrix) {\n' +
+      '    for (let index = 0; index < columns; index++) {\n' +
+      '      heights[index] = row[index] === 1 ? heights[index] + 1 : 0;\n' +
+      '    }\n' +
+      '    const area = largestRectangle(heights);\n' +
+      '    if (area > best) best = area;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Switch the input to a matrix of digit strings and count all-ones squares instead of rectangles. Which two changes does that force in the row pass?',
+  },
+  {
+    step: 9,
+    name: 'Sliding Window Maximum',
+    difficulty: 'Hard',
+    topicSlug: MONO,
+    stem: 'For every window of k consecutive elements, report the maximum inside it, in one pass.',
+    brief: 'Input: an integer array and a window size k. Output: the maximum of each window as it slides from left to right, one value per window position.',
+    concepts: ['dsa-deque-window-expiry', 'dsa-index-stack-not-value-stack', 'dsa-monotone-discard-never-answer', 'dsa-complexity-counting', 'dsa-amortised-pop-accounting'],
+    shortAnswer:
+      'Keep indices in a deque whose values decrease from front to back. Expire the front once it leaves the window, pop the ' +
+      'back while the arriving value dominates it, and the front is the answer.',
+    idealAnswer:
+      'A heap answers this in O(n log n) and never lets go of a value that is only superseded, so the linear answer has to ' +
+      'be a queue: two elements of the array can be compared, and the older, smaller one can never again be a window ' +
+      'maximum, so it is removed from the back. What survives is a decreasing sequence of candidates, and its front is the ' +
+      'current maximum because nothing else in the window is both larger and still present. The second half of the rule is ' +
+      'expiry - the front leaves when its index falls behind the window - which is why the deque stores indices rather than ' +
+      'values. Each element enters once and leaves at most once, so the total is O(n). In JavaScript a further detail ' +
+      'matters: Array.prototype.shift moves every remaining element, so a deque built with push and shift is quadratic; ' +
+      'this version walks a front cursor over the same array instead.',
+    walkthrough:
+      'For [1, 3, -1, -3, 5, 3, 6, 7] with a window of three, the third position completes the first window and reports 3; ' +
+      'the -3 that arrives next is dominated by nothing yet, so the deque holds 3 and -1 and -3 with 3 at the front for the ' +
+      'second window. When the 5 arrives it pops all three - each is smaller and older - and the front cursor has already ' +
+      'passed the expired 1, so the reported maxima are 3, 3, 5, 5, 6, 7.',
+    commonMistake:
+      'Using shift to expire the front and calling it linear, or popping from the back with a strict comparison that keeps ' +
+      'equal candidates.',
+    whyWrong:
+      'shift on an array of length m is itself O(m), so the amortised claim is false on a monotonically decreasing input ' +
+      'such as [9, 8, 7, 6] with a window of three - the deque rarely empties and every expiry re-indexes the rest. Keeping ' +
+      'equal values does not break the answer but does break the size bound: the deque can hold the whole array on [2, 2, 2] ' +
+      'instead of one candidate per run, which is the difference between a window and a memory leak.',
+    followUps: [
+      'Report the sliding window minimum from the same pass. What has to change and can one deque do both?',
+      'Sliding window with medians: which structure now holds the candidates and why is a monotonic deque not enough?',
+      'Return the indices of the window maxima rather than the values. Which line changes, and what does the expiry test become?',
+    ],
+    solution:
+      'function slidingWindowMaximum(values, size) {\n' +
+      '  const deque = [];\n' +
+      '  const answer = [];\n' +
+      '  let front = 0;\n' +
+      '  for (let index = 0; index < values.length; index++) {\n' +
+      '    while (front < deque.length && deque[front] <= index - size) front++;\n' +
+      '    while (front < deque.length && values[deque[deque.length - 1]] <= values[index]) deque.pop();\n' +
+      '    deque.push(index);\n' +
+      '    if (index >= size - 1) answer.push(values[deque[front]]);\n' +
+      '  }\n' +
+      '  return answer;\n' +
+      '}\n' +
+      '\n' +
+      'function slidingWindowMaximumNaive(values, size) {\n' +
+      '  const answer = [];\n' +
+      '  for (let start = 0; start + size <= values.length; start++) {\n' +
+      '    let high = values[start];\n' +
+      '    for (let index = start + 1; index < start + size; index++) {\n' +
+      '      if (values[index] > high) high = values[index];\n' +
+      '    }\n' +
+      '    answer.push(high);\n' +
+      '  }\n' +
+      '  return answer;\n' +
+      '}',
+    modify: 'Report the maximum of every window of size at most k, or switch to the minimum over a window given by its end index. Which of the two cursor rules has to move?',
   },
 ];
 
