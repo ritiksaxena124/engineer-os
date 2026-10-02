@@ -889,6 +889,76 @@ export const DSA_CONCEPTS = {
     terms: ['recurse to the tail', 'compare on the way out', 'forward pointer', 'call stack holds the reverse', 'pair the ends'],
     weight: 3,
   },
+  'dsa-include-exclude-branch': {
+    slug: 'dsa-include-exclude-branch',
+    name: 'Every subsequence is one include-or-skip decision per index',
+    detail: 'At each position the walk forks into taking the element and leaving it, and the tree has two to the power of the length leaves because each leaf is one complete assignment of those choices.',
+    terms: ['take it or leave it', 'two branches', 'binary decision tree', 'index advances either way', 'two to the n'],
+    weight: 3,
+  },
+  'dsa-prefix-path-carry': {
+    slug: 'dsa-prefix-path-carry',
+    name: 'A path carried down the recursion has to be undone on the way back',
+    detail: 'The partial answer is one shared array: push before the call and pop after it, so the sibling branch starts from the state its parent left rather than from the state its sibling reached.',
+    terms: ['shared path', 'push before', 'pop after', 'undo the choice', 'sibling branch'],
+    weight: 3,
+  },
+  'dsa-same-index-reuse': {
+    slug: 'dsa-same-index-reuse',
+    name: 'Staying on the same index is what allows reuse',
+    detail: 'A search that recurses with the index unchanged lets an element be picked again; advancing past it forbids reuse. One argument in the call decides the whole rule.',
+    terms: ['same index again', 'advance past it', 'reuse allowed', 'each element once', 'one argument decides'],
+    weight: 3,
+  },
+  'dsa-duplicate-sibling-skip': {
+    slug: 'dsa-duplicate-sibling-skip',
+    name: 'Sorting then skipping equal siblings removes duplicate combinations',
+    detail: 'Once equal values sit next to each other, taking the second one at the same depth of the tree produces a combination the first one already produced, so the loop continues past it.',
+    terms: ['sort first', 'same depth', 'skip equal siblings', 'duplicate combination', 'loop from the start index'],
+    weight: 3,
+  },
+  'dsa-sum-so-far-pruning': {
+    slug: 'dsa-sum-so-far-pruning',
+    name: 'A running total lets the walk refuse a branch before taking it',
+    detail: 'Carrying the accumulated value makes the decision to stop a comparison rather than an exploration: past the target, nothing added later can bring the sum back.',
+    terms: ['running sum', 'past the target', 'branch never taken', 'stop condition', 'prune'],
+    weight: 2,
+  },
+  'dsa-memo-decision-table': {
+    slug: 'dsa-memo-decision-table',
+    name: 'A yes-or-no question over a shrinking input is memoisable',
+    detail: 'When several paths reach the same index with the same remaining need, one table of booleans turns an exponential decision into the product of the two parameters.',
+    terms: ['overlapping subproblems', 'keyed by index and remaining', 'boolean result', 'table of answers', 'polynomial after memo'],
+    weight: 3,
+  },
+  'dsa-exhaustive-search-no-formula': {
+    slug: 'dsa-exhaustive-search-no-formula',
+    name: 'Counting by enumeration when there is no closed form',
+    detail: 'Some answers are only defined by walking the tree, so the recursion counts leaves instead of computing a formula, and the shape of the branches is what has to be argued.',
+    terms: ['walk the tree', 'count the leaves', 'no closed form', 'enumeration', 'branch shape'],
+    weight: 2,
+  },
+  'dsa-count-by-adding-branches': {
+    slug: 'dsa-count-by-adding-branches',
+    name: 'A count is the sum of its branch counts, so nothing has to be collected',
+    detail: 'When only the number of valid leaves is asked, each frame returns the count from its two children and adds them, which builds no list and lets the same shape become a table.',
+    terms: ['count not collect', 'add the children', 'no path array', 'integer return', 'counts compose'],
+    weight: 3,
+  },
+  'dsa-accumulator-parameter': {
+    slug: 'dsa-accumulator-parameter',
+    name: 'An accumulated value can travel as an argument instead of being pushed and popped',
+    detail: 'Passing the running total into the call means nothing has to be undone on the way back, so each frame owns its own state and the sibling branch starts from the parents value for free.',
+    terms: ['state as argument', 'no undo needed', 'running total', 'one value per frame', 'shared path versus parameter'],
+    weight: 3,
+  },
+  'dsa-reachability-set': {
+    slug: 'dsa-reachability-set',
+    name: 'A set of achieved values answers which, not how many',
+    detail: 'Recording the values a walk can produce as membership instead of a list collapses duplicates for free and turns the question into which sums are possible; the cost is the width of what is reachable, not the number of ways to reach it.',
+    terms: ['membership', 'which values', 'duplicates collapse', 'reachable set', 'width not count'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -902,6 +972,7 @@ const SPACE = 'search-space';
 const STRINGS = 'string-techniques';
 const NUMERIC = 'numeric-strings';
 const LINKED = 'linked-lists';
+const DP = 'dp-greedy';
 
 export const DSA_PROBLEMS: DsaProblem[] = [
   {
@@ -9343,6 +9414,384 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return pairNodes(head);\n' +
       '}',
     modify: 'Use the recursion to report the first pair that fails, node values and depth included. Which argument has to travel back up the stack now?',
+  },
+  {
+    step: 7,
+    name: 'Print all Subsequences / Power Set',
+    difficulty: 'Medium',
+    topicSlug: 'recursion',
+    stem: 'Enumerate every subsequence of an array, the empty one included, and argue that the answer is exactly 2 to the n long.',
+    brief: 'Input: an array of n items, distinct or not. Output: all 2^n subsequences, in whatever order you can defend. Write the include-and-skip recursion and the bitmask loop, then say what each one costs.',
+    concepts: ['dsa-include-exclude-branch', 'dsa-prefix-path-carry', 'dsa-recursive-decomposition'],
+    shortAnswer:
+      'At each index fork into taking the element and skipping it. Both branches end at a leaf, n positions each hold ' +
+      'one of two choices, so the tree has 2^n leaves and every leaf is one subsequence.',
+    idealAnswer:
+      'The walk carries one shared path array plus an index. Push items[index], recurse on index + 1, pop, then recurse on ' +
+      'index + 1 again. Each of the n positions gets one take-or-leave decision, so there are 2^n root-to-leaf paths and ' +
+      'each ends at a distinct subsequence. Cloning the path at the leaf is O(n) work, so the true cost is O(n * 2^n) ' +
+      'time with O(n) stack depth, and the output itself is 2^n entries. The bitmask form is the same enumeration written ' +
+      'as a loop: bit i of the mask is the take-or-leave choice for index i, which is why the two orders differ but the ' +
+      'sets match exactly.',
+    walkthrough:
+      'Order falls out of which branch runs first: taking before skipping emits the full set first and the empty ' +
+      'subsequence last, while the mask loop emits the empty one first, so the two implementations disagree about ' +
+      'sequence and agree about content. That is fine only because the answer is a collection. The point worth stating ' +
+      'before being asked is that positions fork here, not values: [1, 1] has four subsequences by index and only three ' +
+      'by content, which is exactly the distinction every later variant in this step fights over. The push/pop pair is ' +
+      'the other half of the answer - the path is one array shared by the whole tree, so the undo is what makes the ' +
+      'sibling correct.',
+    commonMistake:
+      'Advancing the index only on the take branch, or pushing onto the path and never popping it.',
+    whyWrong:
+      'If the skip branch does not advance, the same element is offered again and the recursion never reaches the base ' +
+      'case. If the path is not popped, the sibling branch inherits the element its sibling took, so every subsequence ' +
+      'after the first one is too long.',
+    followUps: [
+      'How many of those 2^n entries survive if you require distinct content and the input has repeats?',
+      'Your recursion is O(n) deep and every leaf is materialised. What breaks first at n = 30?',
+      'Rewrite the enumeration so subsequences come out ordered by length, keeping the relative order inside each one.',
+    ],
+    solution:
+      'function subsequences(items) {\n' +
+      '  const results = [];\n' +
+      '  const path = [];\n' +
+      '  function walk(index) {\n' +
+      '    if (index === items.length) {\n' +
+      '      results.push(path.slice());\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    path.push(items[index]);\n' +
+      '    walk(index + 1);\n' +
+      '    path.pop();\n' +
+      '    walk(index + 1);\n' +
+      '  }\n' +
+      '  walk(0);\n' +
+      '  return results;\n' +
+      '}\n' +
+      '\n' +
+      'function subsequencesByBits(items) {\n' +
+      '  const results = [];\n' +
+      '  for (let mask = 0; mask < (1 << items.length); mask += 1) {\n' +
+      '    const current = [];\n' +
+      '    for (let index = 0; index < items.length; index += 1) {\n' +
+      '      if ((mask & (1 << index)) !== 0) current.push(items[index]);\n' +
+      '    }\n' +
+      '    results.push(current);\n' +
+      '  }\n' +
+      '  return results;\n' +
+      '}',
+    modify: 'Order the output by subsequence length, keeping the relative order of elements inside each subsequence. Which structure does the reordering cost you?',
+  },
+  {
+    step: 7,
+    name: 'Learn All Patterns of Subsequences (Sum = K)',
+    difficulty: 'Medium',
+    topicSlug: 'recursion',
+    stem: 'Print every subsequence whose elements sum to exactly k, and explain why the walk must reach every leaf unless the input is non-negative.',
+    brief: 'Input: an array of integers and a target k. Output: each subsequence whose sum is k, one per line, elements space separated. Name the assumption that lets you cut a branch and what breaking it costs.',
+    concepts: ['dsa-include-exclude-branch', 'dsa-sum-so-far-pruning', 'dsa-prefix-path-carry'],
+    shortAnswer:
+      'The same fork as the power set, but only the leaves whose running sum equals k get printed. A branch can be cut ' +
+      'when its sum already passes k only if every element is non-negative.',
+    idealAnswer:
+      'Carry the path and the running sum while the index advances, and restore both on the way back. The base case is the ' +
+      'index reaching the end, where the accumulated sum is compared with the target once per leaf. Printing early - the ' +
+      'moment the sum equals k - is safe only when every remaining element is positive, because a zero further along ' +
+      'makes a different subsequence with the same total. Without that promise the walk is the full 2^n tree; cutting on ' +
+      'sum > target for non-negative input is an optimisation on the same tree, not a different algorithm. Space is O(n) ' +
+      'stack and O(n) path.',
+    walkthrough:
+      'This is the row where the interviewer stops checking whether you can enumerate and starts checking your ' +
+      'assumptions. Ask whether the input is non-negative before claiming any pruning: one negative element and a branch ' +
+      'that already passed the target can come back down, which is why the shipped code contains no cut at all. The ' +
+      'restore is the other half of the answer - the sum and the path are one state, so rolling back the path but not ' +
+      'the total measures the sibling branch against the wrong target. Note also that the check belongs at the leaf: a ' +
+      'mid-walk equality test with a zero in the input loses half the output silently.',
+    commonMistake:
+      'Returning as soon as the running sum reaches the target, or pruning on sum > target when the input may hold zeros or negatives.',
+    whyWrong:
+      'An early return drops every subsequence that reaches the same total with trailing zeros, and the comparison ' +
+      'against the target discards valid answers the moment one element is negative. Both failures are missing output ' +
+      'rather than a crash, which is what makes them expensive to find.',
+    followUps: [
+      'The input contains a zero. Does printing as soon as the sum equals k still give the right answer?',
+      'Now count the subsequences instead of printing them. What do you stop carrying?',
+      'Negatives are allowed after all. Where does your pruning go, and does the leaf check change?',
+    ],
+    solution:
+      'function printSumK(items, target) {\n' +
+      '  const path = [];\n' +
+      '  let total = 0;\n' +
+      '  function walk(index) {\n' +
+      '    if (index === items.length) {\n' +
+      '      if (total === target) console.log(path.join(" "));\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    path.push(items[index]);\n' +
+      '    total += items[index];\n' +
+      '    walk(index + 1);\n' +
+      '    total -= items[index];\n' +
+      '    path.pop();\n' +
+      '    walk(index + 1);\n' +
+      '  }\n' +
+      '  walk(0);\n' +
+      '}',
+    modify: 'Print the qualifying subsequences ordered by their element values instead of the order the walk reaches them. What do you have to do to the input first, and does that change which subsequences exist?',
+  },
+  {
+    step: 7,
+    name: 'Count all subsequences with sum K',
+    difficulty: 'Medium',
+    topicSlug: 'recursion',
+    stem: 'Count the subsequences that sum to exactly k without collecting any of them, and say when a table beats the walk.',
+    brief: 'Input: an array of integers that may include zero and negatives, and a target k. Output: the number of index-subsets summing to k, counting the empty one when k is 0. Give the recursive count, then the memoised one.',
+    concepts: ['dsa-count-by-adding-branches', 'dsa-include-exclude-branch', 'dsa-memoization'],
+    shortAnswer:
+      'Return 1 at a leaf whose remaining need is 0 and 0 otherwise; every frame adds its two branch counts. The answer ' +
+      'is an integer, so no path is ever built.',
+    idealAnswer:
+      'The walk is over (index, remaining) rather than over a path. Taking items[index] lowers the need by that value, ' +
+      'skipping leaves it alone, and the frame returns the sum of the two branch results: O(2^n) calls, O(n) stack, no ' +
+      'extra space beyond the counters. Two different orders of the same index set reach the same (index, remaining) ' +
+      'pair, so a table keyed by that pair collapses the work to O(n * range) - pseudo-polynomial and not O(n * k), ' +
+      'because a negative element makes the remaining need grow and widens the reachable keys. Without the table there ' +
+      'is no way to count that is not a walk.',
+    walkthrough:
+      'Counting takes the output size out of the cost story, which is why this row sits right after the printing one: the ' +
+      'tree is identical, but there is no path to clone at the leaf, so per-frame work drops to an addition. The ' +
+      'subtlety most people negotiate past is the empty subsequence - with k = 0 the skip-all leaf is a real answer, and ' +
+      'an element equal to zero doubles the count of every branch that already worked, since taking it and leaving it ' +
+      'both keep the total. That is also why the table is measured against the range of reachable remainings and not ' +
+      'against k: the key is the pair, and negatives move the second half of it.',
+    commonMistake:
+      'Reporting the number of distinct value-sets instead of the number of subsequences, or keying the memo table on the index alone.',
+    whyWrong:
+      'Two different index choices with the same values are two subsequences in this question, so a set of sorted ' +
+      'contents under-counts. An index-only key answers a different question too: the same index with a different ' +
+      'remaining need is a different subproblem, and the table hands back a stale count.',
+    followUps: [
+      'Count distinct value-sets instead. What do you add, and what does it cost?',
+      'The input holds values down to -10^3. How wide is the remaining range and does the table still win?',
+      'k = 0 and every element is 0. What should the answer be, and does your code say that?',
+    ],
+    solution:
+      'function countWays(items, target) {\n' +
+      '  function walk(index, remaining) {\n' +
+      '    if (index === items.length) return remaining === 0 ? 1 : 0;\n' +
+      '    return walk(index + 1, remaining - items[index]) + walk(index + 1, remaining);\n' +
+      '  }\n' +
+      '  return walk(0, target);\n' +
+      '}\n' +
+      '\n' +
+      'function countWaysMemo(items, target) {\n' +
+      '  const seen = new Map();\n' +
+      '  function walk(index, remaining) {\n' +
+      '    if (index === items.length) return remaining === 0 ? 1 : 0;\n' +
+      '    const key = index + ":" + remaining;\n' +
+      '    const stored = seen.get(key);\n' +
+      '    if (stored !== undefined) return stored;\n' +
+      '    const total = walk(index + 1, remaining - items[index]) + walk(index + 1, remaining);\n' +
+      '    seen.set(key, total);\n' +
+      '    return total;\n' +
+      '  }\n' +
+      '  return walk(0, target);\n' +
+      '}',
+    modify: 'Return the count modulo a large prime for n = 40 and a target of 10^5. Which version survives, and what does the table cost in memory?',
+  },
+  {
+    step: 7,
+    name: 'Subset Sum I',
+    difficulty: 'Medium',
+    topicSlug: 'recursion',
+    stem: 'Produce all 2^n subset sums of an array in sorted order, and compare the recursion that carries one number with the construction that doubles.',
+    brief: 'Input: n non-negative integers, no repeats needed. Output: every subset sum sorted ascending, the empty subset contributing 0. Give the recursive form and the iterative doubling form, then say where the sorting cost sits.',
+    concepts: ['dsa-include-exclude-branch', 'dsa-accumulator-parameter', 'dsa-sorted-merge'],
+    shortAnswer:
+      'Recurse on the index with the running total as an argument and push it at the leaf - only the sum travels, so ' +
+      'nothing is pushed or popped. Sorting the 2^n results is the last cost.',
+    idealAnswer:
+      'walk(index, total) with two calls, one adding items[index] and one not, is the same 2^n tree as the power set, but ' +
+      'because the answer is one number per leaf the state travels as a parameter and no undo is needed. Cost is O(2^n) ' +
+      'frames plus O(2^n log 2^n) for the sort, which is O(n * 2^n) - the sort is not cheaper than the enumeration. The ' +
+      'doubling construction starts from [0] and, per element, appends the old list with that value added; if the list ' +
+      'is kept sorted, the grown half is sorted too and the two halves merge in linear time, so the final sort can be ' +
+      'replaced by n merges.',
+    walkthrough:
+      'Read the two implementations as the same tree written twice: the recursion decides at each index, the loop ' +
+      'decides for all previous indexes at once. The accumulator version is the cleaner one to ship when the leaf value ' +
+      'is a single number, and the shared-path version becomes necessary as soon as the leaf has to reproduce which ' +
+      'elements were taken - which is the difference between this row and the printing row. The merge observation is the ' +
+      'part that separates a working answer from a good one: adding a constant to a sorted list leaves it sorted, so ' +
+      'the grown half and the original half are two ordered runs, and a merge produces the next sorted list without a ' +
+      'comparison sort.',
+    commonMistake:
+      'Cloning a path array to compute each sum, or claiming the enumeration is the dominant cost when the sort is the same order.',
+    whyWrong:
+      'Carrying a path here buys nothing and costs an O(n) clone per leaf, which multiplies the enumeration by n for no ' +
+      'information. And saying the sort is cheap is wrong in this direction: 2^n entries sorted is exactly the same ' +
+      'O(n * 2^n) as the walk, so the two costs have to be added, not compared.',
+    followUps: [
+      'Which of your two versions gives sorted output for free, and what does it give up to do it?',
+      'You only need the k-th smallest subset sum. Does the full list still make sense?',
+      'Every value is even. What does that do to the range of sums, and can you exploit it?',
+    ],
+    solution:
+      'function subsetSums(items) {\n' +
+      '  const results = [];\n' +
+      '  function walk(index, total) {\n' +
+      '    if (index === items.length) {\n' +
+      '      results.push(total);\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    walk(index + 1, total + items[index]);\n' +
+      '    walk(index + 1, total);\n' +
+      '  }\n' +
+      '  walk(0, 0);\n' +
+      '  results.sort((a, b) => a - b);\n' +
+      '  return results;\n' +
+      '}\n' +
+      '\n' +
+      'function subsetSumsByDoubling(items) {\n' +
+      '  let sums = [0];\n' +
+      '  for (const value of items) {\n' +
+      '    const grown = [];\n' +
+      '    for (const previous of sums) grown.push(previous + value);\n' +
+      '    sums = sums.concat(grown);\n' +
+      '  }\n' +
+      '  return sums.sort((a, b) => a - b);\n' +
+      '}',
+    modify: 'Keep the list sorted by merging the original run with the grown run at every element instead of sorting once at the end. What does that change about the total cost?',
+  },
+  {
+    step: 7,
+    name: 'Subset Sum II',
+    difficulty: 'Medium',
+    topicSlug: 'recursion',
+    stem: 'List each distinct subset sum exactly once, sorted, and argue the two routes to uniqueness: a set of reachable values or a sort with a neighbour test.',
+    brief: 'Input: n integers that may repeat. Output: the sorted array of distinct subset sums. Say which implementation wins when n is large and the values are small.',
+    concepts: ['dsa-include-exclude-branch', 'dsa-duplicate-skip', 'dsa-reachability-set'],
+    shortAnswer:
+      'Either generate all 2^n sums, sort them and keep a value only when it differs from the one just kept, or record ' +
+      'reachable sums in a set as you go, which collapses duplicates immediately.',
+    idealAnswer:
+      'The set construction is the same doubling as Subset Sum I with membership instead of a list: each element adds ' +
+      'value to every sum already reachable, and duplicates land on a key that is already there. Its size is the number ' +
+      'of distinct sums, bounded by the range of the values, so it wins hard when n is large and the values are small. ' +
+      'The enumerate-then-skip version is O(2^n) time and space regardless of duplicates, but it needs no hashing and ' +
+      'it keeps the sums in an array, so it is the better answer when the range is enormous and n is small. Uniqueness ' +
+      'after sorting is one comparison against the previous output value - an index test, not a second set.',
+    walkthrough:
+      'Two rows in a row that look identical until you notice what they remember. A list remembers how many ways a sum ' +
+      'arises; a set remembers only that it arises, which is exactly the trade this row is asking you to make on ' +
+      'purpose. The one implementation trap is mutating the set being iterated: the new values have to be collected ' +
+      'first and merged after, otherwise the element is being added to sums that already include it, and one value gets ' +
+      'spent many times over. The neighbour test after sorting is the cheaper trick to state out loud, because it also ' +
+      'works for the distinct-subsequence question later in the step.',
+    commonMistake:
+      'Adding each grown value into the set while still iterating over that same set.',
+    whyWrong:
+      'A set being walked sees entries inserted during the walk, so the current element is added to sums that already ' +
+      'contain it and one value is spent repeatedly. Collecting the grown values into an array first and merging them ' +
+      'afterwards keeps every element to a single use.',
+    followUps: [
+      'Which of your two versions is right when n = 40 and every value is under 100? And when values reach 10^9?',
+      'Now count the distinct sums without materialising them. Does the set still help?',
+      'Return the distinct sums together with how many subsequences produce each one. Which structure changes?',
+    ],
+    solution:
+      'function uniqueSumsBySet(items) {\n' +
+      '  const reachable = new Set([0]);\n' +
+      '  for (const value of items) {\n' +
+      '    const grown = [];\n' +
+      '    for (const previous of reachable) grown.push(previous + value);\n' +
+      '    for (const next of grown) reachable.add(next);\n' +
+      '  }\n' +
+      '  return [...reachable].sort((a, b) => a - b);\n' +
+      '}\n' +
+      '\n' +
+      'function uniqueSumsBySkipping(items) {\n' +
+      '  const sums = [];\n' +
+      '  function walk(index, total) {\n' +
+      '    if (index === items.length) {\n' +
+      '      sums.push(total);\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    walk(index + 1, total + items[index]);\n' +
+      '    walk(index + 1, total);\n' +
+      '  }\n' +
+      '  walk(0, 0);\n' +
+      '  sums.sort((a, b) => a - b);\n' +
+      '  const distinct = [];\n' +
+      '  for (const value of sums) {\n' +
+      '    if (distinct.length === 0 || distinct[distinct.length - 1] !== value) distinct.push(value);\n' +
+      '  }\n' +
+      '  return distinct;\n' +
+      '}',
+    modify: 'Return each distinct sum together with the number of subsequences that produce it. Which of your two structures keeps that count without a second pass?',
+  },
+  {
+    step: 7,
+    name: 'Subset Sum with Target',
+    difficulty: 'Medium',
+    topicSlug: DP,
+    stem: 'Decide whether some subset of an array hits a target sum exactly, and explain why the plain walk is exponential while the table is not.',
+    brief: 'Input: n non-negative integers and a target. Output: true when some subset - the empty one included when the target is 0 - sums exactly to the target. Give the memoised decision and the bottom-up table, and state what each costs.',
+    concepts: ['dsa-memo-decision-table', 'dsa-reachability-set', 'dsa-sum-so-far-pruning'],
+    shortAnswer:
+      'One boolean per (index, remaining) pair: take the element or skip it, and remember the answer. Bottom-up, a table ' +
+      'of reachable sums filled downward per element answers the same question in O(n * target).',
+    idealAnswer:
+      'The decision is the counting problem with the counts thrown away, so the memo table has n * (target + 1) cells and ' +
+      'each is filled once - O(n * target) time, and that is pseudo-polynomial, not polynomial, because the target is ' +
+      'written in log(target) bits. Bottom-up, possible[s] means some subset of the elements seen so far reaches s, and ' +
+      'each element updates the table from the target downward so that it is spent at most once. Returning true as soon ' +
+      'as the remaining need hits 0 is safe here, unlike the printing row: one witness is the whole answer, so trailing ' +
+      'zeros do not create a second thing to report.',
+    walkthrough:
+      'The direction of the inner loop is this row, not the recursion. Filling from the target down means a cell is ' +
+      'updated only from values that came from earlier elements, so each element is used once; filling upward lets the ' +
+      'cell just written feed the next comparison, and the bounded question turns into the unbounded one where an ' +
+      'element may be reused. That single line difference is the boundary between subset sum and coin change, and it is ' +
+      'worth volunteering before being asked. The other honest limitation is scale: a target of 10^9 gives a table of ' +
+      '10^9 cells, at which point the memoised walk over n * reachable remainings or a meet-in-the-middle split is the ' +
+      'answer, not the table.',
+    commonMistake:
+      'Running the table loop upward from the element value instead of downward from the target.',
+    whyWrong:
+      'An upward sweep reads cells the current element just wrote, so one element can be spent twice: with items = [5] ' +
+      'and target = 10 the table reports true, which is the unbounded coin question answered by mistake.',
+    followUps: [
+      'Your loop runs downward. What problem does the upward loop solve instead?',
+      'n = 20 and target = 10^9. Which version do you ship, and what does the other one cost?',
+      'Return one subset that hits the target, not a boolean. What extra structure does the table need?',
+    ],
+    solution:
+      'function hasSumMemo(items, target) {\n' +
+      '  const seen = new Map();\n' +
+      '  function walk(index, remaining) {\n' +
+      '    if (remaining === 0) return true;\n' +
+      '    if (index === items.length || remaining < 0) return false;\n' +
+      '    const key = index + ":" + remaining;\n' +
+      '    if (seen.has(key)) return seen.get(key);\n' +
+      '    const ok = walk(index + 1, remaining - items[index]) || walk(index + 1, remaining);\n' +
+      '    seen.set(key, ok);\n' +
+      '    return ok;\n' +
+      '  }\n' +
+      '  return walk(0, target);\n' +
+      '}\n' +
+      '\n' +
+      'function hasSumTable(items, target) {\n' +
+      '  const possible = new Array(target + 1).fill(false);\n' +
+      '  possible[0] = true;\n' +
+      '  for (const value of items) {\n' +
+      '    for (let sum = target; sum >= value; sum -= 1) {\n' +
+      '      if (possible[sum - value]) possible[sum] = true;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return possible[target];\n' +
+      '}',
+    modify: 'Report one witness subset for the target instead of true. Which table cells have to remember where they came from?',
   },
 ];
 

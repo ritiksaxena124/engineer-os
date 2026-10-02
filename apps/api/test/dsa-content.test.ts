@@ -317,6 +317,18 @@ const EXPECTS: Record<string, string> = {
     'loopLengthByRecord(fromArrayWithCycle([1, 2, 3, 4], 1)) === 3 && loopLengthByRecord(fromArrayWithCycle([1, 2, 3, 4], 3)) === 1 && loopLengthByRecord(fromArrayWithCycle([5, 5, 5], 0)) === 3 && loopLengthByRecord(fromArrayWithCycle([1, 2, 3, 4, 5, 6], 2)) === 4 && loopLengthByRecord(fromArrayWithCycle([1, 2, 3], -1)) === 0 && loopLengthByRecord(null) === 0 && loopEntryByRecord(fromArrayWithCycle([1, 2, 3, 4], 1)).value === 2 && loopEntryByRecord(fromArrayWithCycle([1, 2, 3], -1)) === null',
   'Palindrome Linked List':
     'isPalindromeByRecursion(fromArray([1, 2, 1])) && isPalindromeByRecursion(fromArray([1, 2, 2, 1])) && isPalindromeByRecursion(fromArray([7, 7, 7])) && !isPalindromeByRecursion(fromArray([1, 2, 3])) && !isPalindromeByRecursion(fromArray([1, 2])) && isPalindromeByRecursion(fromArray([7])) && isPalindromeByRecursion(null) && isPalindromeByRecursion(fromArray([]))',
+  'Print all Subsequences / Power Set':
+    '(() => { const byIndex = subsequences([1, 2, 3]); const byBits = subsequencesByBits([1, 2, 3]); const a = byIndex.map((s) => s.join()).sort(); const b = byBits.map((s) => s.join()).sort(); return byIndex.length === 8 && a.join("|") === b.join("|") && byIndex[0].join() === "1,2,3" && subsequences([]).length === 1 && subsequences([7]).map((s) => s.join()).join("|") === "7|"; })()',
+  'Learn All Patterns of Subsequences (Sum = K)':
+    '(() => { printSumK([1, 2, 3], 3); const first = logged.join("|") === "1 2|3"; logged.length = 0; printSumK([1, 2, 1, 3], 3); const second = logged.join("|") === "1 2|2 1|3"; logged.length = 0; printSumK([0, 0], 0); return first && second && logged.length === 4; })()',
+  'Count all subsequences with sum K':
+    'countWays([1, 2, 1, 3], 3) === 3 && countWaysMemo([1, 2, 1, 3], 3) === 3 && countWays([1, 1, 1], 2) === 3 && countWays([1, 2, 3], 0) === 1 && countWays([0], 0) === 2 && countWays([], 0) === 1 && countWays([0, 0], 0) === 4 && countWays([2, -1, 1], 1) === 2 && countWaysMemo([2, -1, 1], 1) === 2',
+  'Subset Sum I':
+    '(() => { const want = "0,1,2,3,3,4,4,5,5,6,6,7,7,8,9,10"; return subsetSums([1, 2, 3, 4]).join() === want && subsetSumsByDoubling([1, 2, 3, 4]).join() === want && subsetSums([]).join() === "0" && subsetSums([5]).join() === "0,5" && subsetSums([2, 2]).join() === "0,2,2,4"; })()',
+  'Subset Sum II':
+    '(() => { const want = "0,1,2,3,4,5,6,7,8,9,10"; return uniqueSumsBySet([1, 2, 3, 4]).join() === want && uniqueSumsBySkipping([1, 2, 3, 4]).join() === want && uniqueSumsBySet([1, 2, 1]).join() === "0,1,2,3,4" && uniqueSumsBySkipping([1, 2, 1]).join() === "0,1,2,3,4" && uniqueSumsBySet([]).join() === "0" && uniqueSumsBySet([0, 0, 0]).join() === "0" && uniqueSumsBySet([5, 5]).join() === "0,5,10"; })()',
+  'Subset Sum with Target':
+    'hasSumMemo([3, 4, 5], 7) && hasSumTable([3, 4, 5], 7) && !hasSumMemo([1, 2, 3], 7) && !hasSumTable([1, 2, 3], 7) && hasSumMemo([3, 4], 0) && hasSumTable([3, 4], 0) && hasSumMemo([5, 5], 10) && hasSumTable([5, 5], 10) && !hasSumTable([5, 5], 7) && hasSumTable([], 0) && hasSumMemo([], 0) && hasSumTable([0], 0) && hasSumMemo([2, 7, 1], 9)',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */
