@@ -847,6 +847,48 @@ export const DSA_CONCEPTS = {
     terms: ['rightmost non-nine', 'zero the trailing nines', 'leading one', 'no reversal needed', 'big-endian digits'],
     weight: 3,
   },
+  'dsa-split-then-merge': {
+    slug: 'dsa-split-then-merge',
+    name: 'Sorting a list is cutting it in half and merging the halves back',
+    detail: 'Merge sort needs no index arithmetic on a list: cut at the middle, sort each side recursively, then merge. The cut is what costs a walk, and the recursion is what costs the depth.',
+    terms: ['cut at the middle', 'sort each half', 'merge back', 'log depth', 'no random access needed'],
+    weight: 3,
+  },
+  'dsa-merge-with-sentinel-tail': {
+    slug: 'dsa-merge-with-sentinel-tail',
+    name: 'A merge is a tail pointer advancing over two sorted chains',
+    detail: 'One sentinel, one writer: each step attaches the smaller head and advances only that chain, and the leftover chain is hung on in a single assignment when one side runs out.',
+    terms: ['sentinel', 'tail writer', 'smaller head first', 'attach the remainder', 'stable comparison'],
+    weight: 3,
+  },
+  'dsa-down-pointer-flatten': {
+    slug: 'dsa-down-pointer-flatten',
+    name: 'A chain hanging below each node flattens by merging, not by sorting',
+    detail: 'When every node owns a sorted sub-list through a second pointer, the whole structure is one list once each sub-list has been merged into its neighbour — the columns are already ordered, so no comparison sort is needed.',
+    terms: ['down pointer', 'sorted column', 'merge instead of sort', 'one level at a time', 'global order from local order'],
+    weight: 3,
+  },
+  'dsa-random-jump-interleaving': {
+    slug: 'dsa-random-jump-interleaving',
+    name: 'Weaving each copy behind its original makes the random target one hop away',
+    detail: 'Inserting the duplicate immediately after its source means the copy of any node is always the next link away, so the random pointer can be resolved without a hash map and the two chains can be pulled apart afterwards.',
+    terms: ['interleave copies', 'copy is one next away', 'random via next hop', 'unweave at the end', 'no map'],
+    weight: 3,
+  },
+  'dsa-visited-set-distance': {
+    slug: 'dsa-visited-set-distance',
+    name: 'A record of where each node was first seen turns a repeat into a measurement',
+    detail: 'Walking with a step counter and a set of node references gives the ring length as the difference between now and the step at which that node appeared, at the cost of one entry per node visited.',
+    terms: ['set of visited nodes', 'step counter', 'first seen', 'difference is the ring', 'linear extra space'],
+    weight: 2,
+  },
+  'dsa-forward-backward-recursion': {
+    slug: 'dsa-forward-backward-recursion',
+    name: 'Recursion reads a list backwards while a pointer reads it forwards',
+    detail: 'A call that recurses to the tail and then compares its own node against a forward pointer advancing on the way out pairs the two ends without reversing anything, and the call stack is the extra space it pays for.',
+    terms: ['recurse to the tail', 'compare on the way out', 'forward pointer', 'call stack holds the reverse', 'pair the ends'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -8838,6 +8880,469 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return head;\n' +
       '}',
     modify: 'Add an arbitrary digit d at the tail instead of one. Which part of the nine argument survives, and what does the carry stop at now?',
+  },
+  {
+    step: 6,
+    name: 'Sort LL',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Sort a linked list in linearithmic time using constant extra space beyond the recursion.',
+    brief: 'Input: a list of numbers in arbitrary order. Output: the same nodes in non-decreasing order. Index-based sorts are unavailable; the nodes may not be copied.',
+    concepts: ['dsa-split-then-merge', 'dsa-merge-with-sentinel-tail', 'dsa-fast-slow-pointers', 'dsa-call-stack-cost'],
+    shortAnswer:
+      'Cut the list at its middle, sort each half recursively, then merge the two sorted halves by re-linking the nodes with a sentinel and a tail pointer.',
+    idealAnswer:
+      'Merge sort is the sort that fits a list because it never asks where the kth element is: it only ever asks which of two heads is smaller, and both heads are already in hand. The split is the part that costs a walk, since cutting at the middle needs the fast-and-slow pair rather than an index, and the cut has to be made by writing null through the predecessor — a half that still points into the other half is not a half. The merge attaches existing nodes through a sentinel and one tail writer, which is what keeps the answer free of new allocation, and the comparison has to take from the left on equality for the sort to be stable: on a list, stability is the only reason two equal keys would ever come out in their original order. Cost is the length times its logarithm in comparisons and links moved, with a recursion depth of the logarithm rather than a copy of the input.',
+    walkthrough:
+      'Three functions, each with one job the reviewer can check: split returns two independent heads, merge returns one sorted head and never mutates a value, and sortList is the recursion with its base case written as a length test rather than a null test. The base case matters more than it looks — a single node is sorted, and a null half is sorted, so returning either unchanged is what lets the merge be written without guards on empty input beyond the one assignment that hangs the remainder on. Quick sort on a list is the tempting alternative and is worth naming as the worse answer: it needs the tail of each partition, which costs a walk per partition, and its worst case is quadratic on input that is already sorted.',
+    commonMistake:
+      'Splitting without cutting the link, or comparing with a strict less-than so equal keys swap.',
+    whyWrong:
+      'A half that still links into the other half makes the recursion revisit nodes it has already sorted, which either loops or merges a list with the tail duplicated. A strict comparison that takes from the right when the values tie is not wrong about order but is wrong about stability, and it is the reason a sort of records loses the input sequence it was supposed to preserve.',
+    followUps: [
+      'Why does merge sort suit a list while quick sort suits an array?',
+      'What is the recursion depth for a list of a million nodes, and what replaces it if the stack is the limit?',
+      'Give the bottom-up merge version that sorts by width. What does it stop needing?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function mergeSorted(a, b) {\n' +
+      '  const sentinel = new Node(0);\n' +
+      '  let write = sentinel;\n' +
+      '  let x = a;\n' +
+      '  let y = b;\n' +
+      '  while (x !== null && y !== null) {\n' +
+      '    if (x.value <= y.value) {\n' +
+      '      write.next = x;\n' +
+      '      x = x.next;\n' +
+      '    } else {\n' +
+      '      write.next = y;\n' +
+      '      y = y.next;\n' +
+      '    }\n' +
+      '    write = write.next;\n' +
+      '  }\n' +
+      '  write.next = x === null ? y : x;\n' +
+      '  return sentinel.next;\n' +
+      '}\n' +
+      '\n' +
+      'function splitAtMiddle(head) {\n' +
+      '  if (head === null || head.next === null) return [head, null];\n' +
+      '  let slow = head;\n' +
+      '  let fast = head;\n' +
+      '  let before = null;\n' +
+      '  while (fast !== null && fast.next !== null) {\n' +
+      '    before = slow;\n' +
+      '    slow = slow.next;\n' +
+      '    fast = fast.next.next;\n' +
+      '  }\n' +
+      '  before.next = null;\n' +
+      '  return [head, slow];\n' +
+      '}\n' +
+      '\n' +
+      'function sortList(head) {\n' +
+      '  if (head === null || head.next === null) return head;\n' +
+      '  const halves = splitAtMiddle(head);\n' +
+      '  return mergeSorted(sortList(halves[0]), sortList(halves[1]));\n' +
+      '}',
+    modify: 'Sort by value descending, and keep equal values in input order. Which one character in the merge is the whole change?',
+  },
+  {
+    step: 6,
+    name: 'Flattening of a LinkedList',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Flatten a list where every node also owns a sorted sub-list below it into one sorted chain.',
+    brief: 'Input: nodes with two pointers — next along the row and down into a sorted column. Output: one chain, linked through down, in non-decreasing order. The columns are already sorted.',
+    concepts: ['dsa-down-pointer-flatten', 'dsa-merge-with-sentinel-tail', 'dsa-null-termination'],
+    shortAnswer:
+      'Merge the row from the back: flatten everything after the current node, then merge that sorted chain into the column hanging below the current node.',
+    idealAnswer:
+      'The structure is already sorted in the only direction that costs anything to establish — each column is ordered — so flattening is a sequence of merges rather than a sort, and that is what makes it linearithmic at worst and usually better. Working from the last row backwards keeps every intermediate result a single sorted chain, so each step merges two known-ordered lists and never has to hold the whole structure in memory at once. Choosing which pointer to rewrite is the substance of the answer: the merged chain travels down, so the row links are the ones being consumed, and a node that has been placed into the result must never be reached again through next. A base case of null or single row is the whole recursion guard — a one-node structure is already flat, and merging into an empty chain returns the other chain untouched.',
+    walkthrough:
+      'The merge recurses on the down pointers rather than looping with a sentinel, which is the right trade here because the columns are short and the code reads as the definition of ordering; a tail-writing loop would cost the same comparisons and would need a place to attach two chains that are each already threaded through down. The recursion depth is the length of the flattened result, which is the honest cost to state in an interview, and the version that avoids it merges pairwise from the front with a priority queue over the row heads.',
+    commonMistake:
+      'Copying values into an array and sorting them, or threading the merged result through next while still walking the row.',
+    whyWrong:
+      'The array version throws away the fact that the columns are ordered, paying a full sort for work that merges can do for free, and it costs the length in extra memory. Writing the result through the same pointer being walked corrupts the row before every column in it has been read, so the tail of the structure is lost partway through the flatten.',
+    followUps: [
+      'What is the cost when there are r rows of k nodes each, and which term dominates?',
+      'Give the front-to-back version that keeps a heap of row heads. What does it buy?',
+      'Which pointer is the output chain now, and why does that decide what may be overwritten?',
+    ],
+    solution:
+      'class Row {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '    this.down = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function column(values) {\n' +
+      '  let head = null;\n' +
+      '  for (let index = values.length - 1; index >= 0; index -= 1) {\n' +
+      '    const node = new Row(values[index]);\n' +
+      '    node.down = head;\n' +
+      '    head = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function rows(columns) {\n' +
+      '  let head = null;\n' +
+      '  for (let index = columns.length - 1; index >= 0; index -= 1) {\n' +
+      '    columns[index].next = head;\n' +
+      '    head = columns[index];\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function flatValues(root) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.down;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function mergeDown(a, b) {\n' +
+      '  if (a === null) return b;\n' +
+      '  if (b === null) return a;\n' +
+      '  if (a.value <= b.value) {\n' +
+      '    a.down = mergeDown(a.down, b);\n' +
+      '    return a;\n' +
+      '  }\n' +
+      '  b.down = mergeDown(a, b.down);\n' +
+      '  return b;\n' +
+      '}\n' +
+      '\n' +
+      'function flatten(root) {\n' +
+      '  if (root === null || root.next === null) return root;\n' +
+      '  const rest = flatten(root.next);\n' +
+      '  root.next = null;\n' +
+      '  return mergeDown(root, rest);\n' +
+      '}',
+    modify: 'Flatten the same structure through next instead of down. Which pointer does the merge write, and where does the recursion stop?',
+  },
+  {
+    step: 6,
+    name: 'Clone a Linked List with random and next pointer',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Copy a list whose nodes also point at arbitrary nodes in the same list, in linear time and without a hash map.',
+    brief: 'Input: a list where each node has next and random, random possibly null. Output: a new list of new nodes whose random pointers land on nodes of the copy, not of the original.',
+    concepts: ['dsa-random-jump-interleaving', 'dsa-link-splice-order', 'dsa-node-holds-reference', 'dsa-value-versus-reference'],
+    shortAnswer:
+      'Weave a copy of each node directly behind its original, set each copy random pointer through the original random target and one next hop, then pull the two chains apart.',
+    idealAnswer:
+      'A copy of a list is easy; a copy of a graph-shaped pointer is the problem, because the random field names a node and the duplicate of that node does not exist yet when the field has to be filled. The usual answer is a map from original to copy, which costs a hash entry per node. The weaving answer removes the map by making the relationship structural: while each copy sits immediately after its original, the copy of any node is exactly one next hop from that node, so the random pointer can be resolved by reading through two links instead of looking anything up. That is why the pass order is fixed — weave, resolve random, unweave — and why the unweave has to restore the original chain on the way out: the input list is left exactly as the caller had it, and the copy is returned as its own chain. Node identity is the correctness criterion, not value equality: a copy whose random pointer lands on an original node is wrong even when the numbers print the same.',
+    walkthrough:
+      'Three passes, each with one invariant. Weaving leaves the list twice as long and alternating original, copy, original, copy, so every later loop advances by two and never mistakes one chain for the other. Resolving reads cursor.random.next and guards only against a null random, which is the sole branch the construction has. Unweaving writes two links per node — the original back to its original successor, the copy to the copy two further along — and the last copy has to be checked before its successor is read, because that successor does not exist. A recursive version with a map is the version most people write first, and being able to say what it costs in space is the point of the follow-up.',
+    commonMistake:
+      'Pointing the copies at original nodes, or unweaving by advancing one link at a time.',
+    whyWrong:
+      'A copy whose random field references the source list is a shallow clone: it looks right when printed and corrupts the moment either list is mutated. Walking the unweave one link per step mixes the two chains, so the loop either stops after half the copies or leaves the original list pointing into the copy.',
+    followUps: [
+      'Give the hash-map version. What does it store, and why does the weave make it unnecessary?',
+      'How many passes does your answer make, and what is the invariant each one leaves behind?',
+      'If the random pointers could reference a node that does not exist yet in the traversal order, would the weave still work?',
+    ],
+    solution:
+      'class Jump {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '    this.random = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function buildWithRandom(values, randomAt) {\n' +
+      '  const nodes = values.map((value) => new Jump(value));\n' +
+      '  for (let index = 0; index < nodes.length - 1; index += 1) {\n' +
+      '    nodes[index].next = nodes[index + 1];\n' +
+      '  }\n' +
+      '  for (let index = 0; index < nodes.length; index += 1) {\n' +
+      '    nodes[index].random = randomAt[index] === -1 ? null : nodes[randomAt[index]];\n' +
+      '  }\n' +
+      '  return nodes.length === 0 ? null : nodes[0];\n' +
+      '}\n' +
+      '\n' +
+      'function nodeAt(head, index) {\n' +
+      '  let cursor = head;\n' +
+      '  let step = 0;\n' +
+      '  while (cursor !== null && step < index) {\n' +
+      '    cursor = cursor.next;\n' +
+      '    step += 1;\n' +
+      '  }\n' +
+      '  return cursor;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function cloneList(head) {\n' +
+      '  if (head === null) return null;\n' +
+      '  for (let cursor = head; cursor !== null; cursor = cursor.next.next) {\n' +
+      '    const copy = new Jump(cursor.value);\n' +
+      '    copy.next = cursor.next;\n' +
+      '    cursor.next = copy;\n' +
+      '  }\n' +
+      '  for (let cursor = head; cursor !== null; cursor = cursor.next.next) {\n' +
+      '    if (cursor.random !== null) cursor.next.random = cursor.random.next;\n' +
+      '  }\n' +
+      '  const copyHead = head.next;\n' +
+      '  for (let cursor = head; cursor !== null; cursor = cursor.next) {\n' +
+      '    const copy = cursor.next;\n' +
+      '    cursor.next = copy.next;\n' +
+      '    copy.next = copy.next === null ? null : copy.next.next;\n' +
+      '  }\n' +
+      '  return copyHead;\n' +
+      '}',
+    modify: 'Do it with a map instead of the weave, then say which pass each version saves and which one it pays for.',
+  },
+  {
+    step: 6,
+    name: 'Find Middle of Singly Linked List',
+    difficulty: 'Easy',
+    topicSlug: LINKED,
+    stem: 'Report the first of the two middle nodes on an even length, in one walk, and say how that differs from the usual rule.',
+    brief: 'Input: a list. Output: its middle node; when the length is even, the earlier of the two candidates. No length may be computed first.',
+    concepts: ['dsa-fast-slow-pointers', 'dsa-linear-position-walk', 'dsa-null-termination'],
+    shortAnswer:
+      'Start the fast pointer one node ahead of the slow one. The half-step offset is what makes the walk stop on the first middle rather than the second.',
+    idealAnswer:
+      'Both rules come from the same walk, and the difference is entirely in the starting offset. With fast one link ahead, an even length leaves the fast pointer with nothing to step onto exactly one iteration earlier, so slow settles on the lower middle; with fast on the head, the same loop takes one more step and lands on the upper one. Stating that relationship is the answer, because the two conventions are otherwise indistinguishable in the code and the caller is the one who decides which is right. The second way to express the same walk is to compute the length and then step to it divided by two, which costs two passes but makes the rule visible as arithmetic instead of as an offset — and it is the version worth writing when a reviewer is arguing about which middle. Nothing is mutated here, so the walk is safe on a list the caller still holds.',
+    walkthrough:
+      'The loop condition is tested on fast and on fast.next, in that order, which is what makes a one-node list return its only node and a null list return null without a special case. The offset is set by initialising fast to head.next, and that single line is the whole difference between this row and the earlier middle-of-a-list row — a good example of how a pointer problem is decided by where the pointers begin rather than by how they move.',
+    commonMistake:
+      'Starting both pointers at the head and claiming the rule afterwards, or moving fast twice and slow once without checking the second link.',
+    whyWrong:
+      'The same loop with the other starting position returns the upper middle, which is correct for a split-and-reverse and wrong for a rule that says first — the code looks identical, so the mistake survives review. Stepping fast twice without testing fast.next dereferences null on an even length, which is the crash a reviewer writes a test for before anything else.',
+    followUps: [
+      'Change one line to return the second middle instead. Which line, and why is that the only change?',
+      'Write the two-pass version and compare its reads to this one.',
+      'What does the walk return for a list of length zero, and where is that decided?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function firstMiddle(head) {\n' +
+      '  let slow = head;\n' +
+      '  let fast = head === null ? null : head.next;\n' +
+      '  while (fast !== null && fast.next !== null) {\n' +
+      '    slow = slow.next;\n' +
+      '    fast = fast.next.next;\n' +
+      '  }\n' +
+      '  return slow;\n' +
+      '}\n' +
+      '\n' +
+      'function middleByLength(head) {\n' +
+      '  let length = 0;\n' +
+      '  for (let cursor = head; cursor !== null; cursor = cursor.next) length += 1;\n' +
+      '  const target = Math.floor((length - 1) / 2);\n' +
+      '  let cursor = head;\n' +
+      '  for (let step = 0; step < target && cursor !== null; step += 1) cursor = cursor.next;\n' +
+      '  return cursor;\n' +
+      '}',
+    modify: 'Now return both middles as a pair. Which walk has to stop one node earlier, and what does the caller do with two handles?',
+  },
+  {
+    step: 6,
+    name: 'Find the Length of Loop in Linked List',
+    difficulty: 'Easy',
+    topicSlug: LINKED,
+    stem: 'Measure the loop by recording where each node was first seen, and say what that costs against the pointer trick.',
+    brief: 'Input: a list that may loop. Output: the number of nodes on the ring, zero when there is none. This row asks for the recorded-walk version, not for Floyd.',
+    concepts: ['dsa-visited-set-distance', 'dsa-cycle-detection', 'dsa-cursor-reassignment'],
+    shortAnswer:
+      'Walk with a step counter and a map of node to step. The first node you meet twice tells you the ring: its length is the current step minus the step it was recorded at.',
+    idealAnswer:
+      'A repeated node is the only evidence a walk can gather from a forward-only chain, and once that evidence is in hand the ring length is a subtraction rather than a second circuit. Recording the step at which each node was first seen turns the question into a lookup, so the answer does not need to know where the ring begins, how long the prefix was, or how far inside the ring the walk entered — all of which the two-pointer measurement has to reason about. The trade is explicit and worth stating: one entry per node visited, so linear extra space against the constant space of Floyd, in exchange for a loop condition a reader can verify at a glance. An acyclic list ends the walk at null, and the honest report is zero, not an absent value or an exception.',
+    walkthrough:
+      'The condition is written on the node, and the map is keyed on node identity — a Map or Set of references — because two nodes holding the same number are not the same node. Advancing the counter after recording keeps the recorded step equal to the number of links travelled from the head, which is what makes the difference between two recordings of the same node equal to the ring length rather than the ring length plus or minus one. This is also the version that generalises: the same record answers which node repeats first, how long the prefix is, and how many nodes are reachable at all, none of which the pointer-only walk reports for free.',
+    commonMistake:
+      'Keying the record on node values, or counting the ring by walking from the repeated node without subtracting.',
+    whyWrong:
+      'A value-keyed record reports a ring on an acyclic list that contains the same number twice, which is the commonest shape in real inputs. Walking from the repeated node does give the right length, but it throws away the distance already recorded and turns a subtraction into a second traversal — correct, and no longer the answer this row is asking for.',
+    followUps: [
+      'Rewrite it with constant space. Which two facts does the pointer version have to prove instead of remember?',
+      'Which node is the ring entry, straight from the same record?',
+      'What does the walk report for a list of one node pointing at itself?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArrayWithCycle(values, cycleAt) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  const nodes = [];\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    nodes.push(node);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  if (cycleAt >= 0 && cycleAt < nodes.length) {\n' +
+      '    tail.next = nodes[cycleAt];\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function loopLengthByRecord(head) {\n' +
+      '  const firstSeenAt = new Map();\n' +
+      '  let step = 0;\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null && !firstSeenAt.has(cursor)) {\n' +
+      '    firstSeenAt.set(cursor, step);\n' +
+      '    step += 1;\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  if (cursor === null) return 0;\n' +
+      '  return step - firstSeenAt.get(cursor);\n' +
+      '}\n' +
+      '\n' +
+      'function loopEntryByRecord(head) {\n' +
+      '  const seen = new Set();\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    if (seen.has(cursor)) return cursor;\n' +
+      '    seen.add(cursor);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return null;\n' +
+      '}',
+    modify: 'Report the ring length and the prefix length from the same walk. Which of the two numbers does the record give directly, and which needs the entry node?',
+  },
+  {
+    step: 6,
+    name: 'Palindrome Linked List',
+    difficulty: 'Easy',
+    topicSlug: LINKED,
+    stem: 'Test the list for a palindrome by reading it forwards and backwards at the same time, without reversing or copying it.',
+    brief: 'Input: a singly linked list. Output: whether the values read the same both ways. No in-place reversal, no array — recursion is the allowed extra structure.',
+    concepts: ['dsa-forward-backward-recursion', 'dsa-call-stack-cost', 'dsa-reverse-half-comparison'],
+    shortAnswer:
+      'Recurse to the tail, and on the way out compare the node the call holds against a forward pointer that advances one step per return. Every pair must match.',
+    idealAnswer:
+      'A singly list can be read backwards if something remembers the walk, and the call stack is that something: each frame holds the node it arrived with, so returning through the frames hands the nodes back in reverse order for free. Pairing that with one pointer advancing from the head compares the two ends without a reversal, an array, or a second list, and the comparison stops being about the middle because the recursion depth decides when both ends have met — after n returns the forward pointer has crossed the whole list, so every node has been paired exactly once. The cost is the whole argument in an interview: depth equal to the length, which is a real constraint where the half-reversal version is constant space, and a stack overflow on a long list is not a theoretical worry in a language with a fixed frame budget. The mutation-free property is the other half: the list is exactly as it was, so nothing has to be restored.',
+    walkthrough:
+      'The forward pointer has to live outside the recursion, since a parameter would be a copy per frame and the whole point is a single cursor shared by every return. Comparing after the recursive call, and advancing after the comparison, is what makes the pairing come out in order; advancing before the compare shifts every pair by one node and reports false on inputs that are palindromes. Carrying the prefix result into the comparison — so that a mismatch deep in the list is not overwritten by matches on the way out — is the one line that makes the answer correct rather than merely plausible.',
+    commonMistake:
+      'Advancing the forward pointer before the comparison, or returning on the first mismatch and leaving the unwind incomplete.',
+    whyWrong:
+      'A pointer advanced early pairs each node with its neighbour instead of with its mirror, so the test fails on a two-node palindrome like 1,1. An early return is harmless for the boolean here but stops the shared cursor mid-list, which corrupts the same helper if it is reused in the same call, and it hides how much stack the walk actually cost.',
+    followUps: [
+      'Which version do you ship for a list of a million nodes, and why?',
+      'Report the length of the longest palindromic prefix with the same walk. What changes?',
+      'Compare the space cost of this, of the half-reversal, and of copying into an array.',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'let forward = null;\n' +
+      '\n' +
+      'function pairNodes(node) {\n' +
+      '  if (node === null) return true;\n' +
+      '  const insideOk = pairNodes(node.next);\n' +
+      '  const matched = insideOk && forward !== null && forward.value === node.value;\n' +
+      '  if (forward !== null) forward = forward.next;\n' +
+      '  return matched;\n' +
+      '}\n' +
+      '\n' +
+      'function isPalindromeByRecursion(head) {\n' +
+      '  forward = head;\n' +
+      '  return pairNodes(head);\n' +
+      '}',
+    modify: 'Use the recursion to report the first pair that fails, node values and depth included. Which argument has to travel back up the stack now?',
   },
 ];
 
