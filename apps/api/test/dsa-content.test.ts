@@ -293,6 +293,18 @@ const EXPECTS: Record<string, string> = {
     'toArray(deleteMiddle(fromArray([1, 2, 3, 4, 5]))).join() === "1,2,4,5" && toArray(deleteMiddle(fromArray([1, 2, 3, 4]))).join() === "1,2,4" && toArray(deleteMiddle(fromArray([1, 2]))).join() === "1" && toArray(deleteMiddle(fromArray([7]))).join() === "" && deleteMiddle(null) === null',
   'Find the intersection point of Y LL':
     '(() => { const shared = chain([8, 9]); const a = chain([1, 2, 3], shared); const b = chain([4, 5], shared); const same = chain([1, 2]); const disjoint = chain([1, 2]); return intersection(a, b) === shared && intersection(b, a) === shared && toArray(intersection(a, b)).join() === "8,9" && intersection(same, same) === same && intersection(same, disjoint) === null && intersection(chain([1]), disjoint) === null && intersection(null, chain([1])) === null; })()',
+  'Segrregate odd and even nodes in LL':
+    'toArray(oddThenEven(fromArray([1, 2, 3, 4, 5]))).join() === "1,3,5,2,4" && toArray(oddThenEven(fromArray([2, 1, 3, 5, 6, 4, 7]))).join() === "2,3,6,7,1,5,4" && toArray(oddThenEven(fromArray([1, 2]))).join() === "1,2" && toArray(oddThenEven(fromArray([1]))).join() === "1" && toArray(oddThenEven(null)).join() === ""',
+  "Sort a LL of 0's 1's and 2's":
+    '(() => { const l = fromArray([1, 2, 2, 1, 0]); const r = sortZeroOneTwo(l); return toArray(r).join() === "0,1,1,2,2" && r === l && toArray(sortZeroOneTwo(fromArray([2, 2, 2]))).join() === "2,2,2" && toArray(sortZeroOneTwo(fromArray([0, 0, 0]))).join() === "0,0,0" && toArray(sortZeroOneTwo(fromArray([1]))).join() === "1" && toArray(sortZeroOneTwo(fromArray([]))).join() === "" && sortZeroOneTwo(null) === null; })()',
+  'Reverse LL in group of given size K':
+    'toArray(reverseKGroups(fromArray([1, 2, 3, 4, 5]), 2)).join() === "2,1,4,3,5" && toArray(reverseKGroups(fromArray([1, 2, 3, 4, 5]), 3)).join() === "3,2,1,4,5" && toArray(reverseKGroups(fromArray([1, 2]), 2)).join() === "2,1" && toArray(reverseKGroups(fromArray([1, 2, 3]), 1)).join() === "1,2,3" && toArray(reverseKGroups(fromArray([1, 2, 3]), 5)).join() === "1,2,3" && toArray(reverseKGroups(fromArray([5, 6]), 2)).join() === "6,5" && reverseKGroups(null, 3) === null',
+  'Rotate a LL':
+    'toArray(rotateRight(fromArray([1, 2, 3, 4, 5]), 2)).join() === "4,5,1,2,3" && toArray(rotateRight(fromArray([1, 2, 3]), 4)).join() === "3,1,2" && toArray(rotateRight(fromArray([1, 2]), 4)).join() === "1,2" && toArray(rotateRight(fromArray([1, 2, 3]), 3)).join() === "1,2,3" && toArray(rotateRight(fromArray([1, 2, 3]), 0)).join() === "1,2,3" && toArray(rotateRight(fromArray([7]), 9)).join() === "7" && rotateRight(null, 3) === null',
+  'Add 2 numbers in LL':
+    'toArray(addTwoNumbers(fromArray([2, 4, 3]), fromArray([5, 6, 4]))).join() === "7,0,8" && toArray(addTwoNumbers(fromArray([9, 9, 9]), fromArray([1]))).join() === "0,0,0,1" && toArray(addTwoNumbers(fromArray([9, 9]), fromArray([1, 2, 3]))).join() === "0,2,4" && toArray(addTwoNumbers(fromArray([0]), fromArray([0]))).join() === "0" && toArray(addTwoNumbers(null, fromArray([5]))).join() === "5" && toArray(addTwoNumbers(null, null)).join() === ""',
+  'Add 1 to a number represented by LL':
+    'toArray(addOne(fromArray([1, 2, 3]))).join() === "1,2,4" && toArray(addOne(fromArray([9, 9]))).join() === "1,0,0" && toArray(addOne(fromArray([9]))).join() === "1,0" && toArray(addOne(fromArray([1, 9, 9]))).join() === "2,0,0" && toArray(addOne(fromArray([1, 2, 9, 3]))).join() === "1,2,9,4" && toArray(addOne(fromArray([0]))).join() === "1" && toArray(addOne(fromArray([]))).join() === "1"',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */

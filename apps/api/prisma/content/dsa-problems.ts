@@ -805,6 +805,48 @@ export const DSA_CONCEPTS = {
     terms: ['switch to the other head', 'same total distance', 'shared tail', 'difference in length', 'arrive together'],
     weight: 3,
   },
+  'dsa-parity-chains': {
+    slug: 'dsa-parity-chains',
+    name: 'Two chains walked in lockstep, then stitched once',
+    detail: 'Odd positions and even positions are separated into their own chains as they are visited, each keeping its own tail pointer, and joined by one final link so the order inside each chain survives.',
+    terms: ['two chains', 'odd positions', 'even positions', 'stitch once at the end', 'relative order kept'],
+    weight: 3,
+  },
+  'dsa-count-then-overwrite': {
+    slug: 'dsa-count-then-overwrite',
+    name: 'A bounded alphabet lets you rewrite values instead of relinking nodes',
+    detail: 'Count the classes in one pass, then walk again assigning each class its share of nodes: no splicing, no new allocation, and no risk of losing the chain.',
+    terms: ['counting pass', 'three buckets', 'overwrite the value', 'no relinking', 'bounded keys'],
+    weight: 2,
+  },
+  'dsa-group-boundary-rewind': {
+    slug: 'dsa-group-boundary-rewind',
+    name: 'Reversing a fixed-size group means remembering both its ends',
+    detail: 'Find the node before the group and the node after it, flip the links inside, then attach the predecessor to the old last node and the old first node to what follows. A short trailing group is the case that decides whether the walk stops.',
+    terms: ['group head', 'group tail', 'node after the group', 'flip inside', 'short last group'],
+    weight: 3,
+  },
+  'dsa-ring-closure-rotate': {
+    slug: 'dsa-ring-closure-rotate',
+    name: 'Close the ring, count round it, then break it once',
+    detail: 'Joining tail to head turns a rotation into a single cut at a position derived from the length and the shift, which is also where a shift larger than the length is folded back.',
+    terms: ['tail to head', 'one cut', 'length modulo shift', 'new head after the cut', 'ring'],
+    weight: 3,
+  },
+  'dsa-carry-forward-pass': {
+    slug: 'dsa-carry-forward-pass',
+    name: 'A carry can outlive both inputs',
+    detail: 'Digit-wise addition writes one node per step from two walkers and a carry, and the loop has to continue while any of the three is still alive, because a final carry becomes one extra node.',
+    terms: ['least significant first', 'carry', 'two walkers', 'one node per step', 'extra final digit'],
+    weight: 3,
+  },
+  'dsa-carry-stops-at-nine': {
+    slug: 'dsa-carry-stops-at-nine',
+    name: 'An increment only changes the rightmost non-nine and everything after it',
+    detail: 'Adding one to a big-endian digit list leaves every node before the last non-nine untouched, raises that node, and zeroes the run of nines behind it — or grows a new leading node when there was no non-nine at all.',
+    terms: ['rightmost non-nine', 'zero the trailing nines', 'leading one', 'no reversal needed', 'big-endian digits'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -8324,6 +8366,478 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return a;\n' +
       '}',
     modify: 'Report the length of each prefix before the junction as well as the node. Which of the two versions — switch or count — makes that cheaper to state?',
+  },
+  {
+    step: 6,
+    name: 'Segrregate odd and even nodes in LL',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Gather the nodes at odd positions in front of the nodes at even positions, keeping the order inside each group.',
+    brief: 'Input: a list. Output: the same nodes, all 1st, 3rd, 5th positions first, then 2nd, 4th, 6th, each group in its original order. No new nodes and no value reordering.',
+    concepts: ['dsa-parity-chains', 'dsa-link-splice-order', 'dsa-null-termination'],
+    shortAnswer:
+      'Walk the list with one pointer per parity, relinking each node to the next of the same parity, then join the tail of the odd chain to the head of the even chain.',
+    idealAnswer:
+      'Positions, not values, decide the group, so the answer is a partition by index parity that never disturbs the order inside a group — which rules out sorting and rules out moving values around. The mechanism is two chains built in lockstep: each step gives the odd pointer the node after it and the even pointer the node after that, so both advance by two links while the nodes between them are handed to the other chain. Keeping the even head is mandatory, since it is the only handle to the second group once the first chain starts pointing past it. One stitch at the end — the last odd node to the saved even head — finishes the list, and the loop stops when the even pointer runs out of links, which is why the guard is written on even and even.next rather than on both chains.',
+    walkthrough:
+      'Two nodes and one node are the cases that show the code is honest: a two-node list is already segregated, and a one-node list must be returned unchanged rather than dereferenced, so both are answered by the early guard instead of by the loop. The order of the four writes inside the step matters: odd.next is assigned before odd moves, and even.next is then read from the node odd now stands on, which is the node the even chain is about to adopt. Writing the two assignments in the opposite order makes a chain point at a node that has already been handed to the other chain, and the list loses a node in the middle.',
+    commonMistake:
+      'Reordering by value parity, or forgetting the saved even head and stitching to whatever the even pointer ends on.',
+    whyWrong:
+      'Grouping odd-valued nodes in front of even-valued ones is a different problem and fails the first input whose values do not track their positions. Without the saved head the even chain has no front: the even pointer sits on the last node or on null, so the stitched list either loops or drops every node after position two.',
+    followUps: [
+      'Which pointer decides when the walk stops, and why not the other one?',
+      'Give the version that groups by value parity instead. What does it need that this one does not?',
+      'Would a doubly linked list make this cheaper, and if so where exactly?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function oddThenEven(head) {\n' +
+      '  if (head === null || head.next === null) return head;\n' +
+      '  const evenHead = head.next;\n' +
+      '  let odd = head;\n' +
+      '  let even = evenHead;\n' +
+      '  while (even !== null && even.next !== null) {\n' +
+      '    odd.next = even.next;\n' +
+      '    odd = odd.next;\n' +
+      '    even.next = odd.next;\n' +
+      '    even = even.next;\n' +
+      '  }\n' +
+      '  odd.next = evenHead;\n' +
+      '  return head;\n' +
+      '}',
+    modify: 'Segregate by value instead: every even-valued node before every odd-valued one, order kept inside each group. Which chain do you now keep a head for?',
+  },
+  {
+    step: 6,
+    name: "Sort a LL of 0's 1's and 2's",
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Order a list whose nodes carry only 0, 1 and 2 in two passes and without allocating nodes.',
+    brief: 'Input: a list of 0s, 1s and 2s. Output: the same nodes in non-decreasing order. Only three distinct values are present, and that is the whole hint.',
+    concepts: ['dsa-count-then-overwrite', 'dsa-linear-position-walk', 'dsa-null-termination'],
+    shortAnswer:
+      'Count how many of each value there are in one walk, then walk again writing the zeros, then the ones, then the twos into the nodes you already have.',
+    idealAnswer:
+      'A general sort would cost the length times its logarithm and would relink every node, and neither is needed when the key domain is three values wide. Counting gives three numbers in one pass, and the second pass converts those counts into a run length per value, so the work is two walks and a fixed three-slot array. Rewriting values rather than re-threading links is the deliberate trade: the nodes stay exactly where they were, so nothing can be lost mid-splice, and the only invariant to hold is that the number of writes equals the number of nodes. The zero-count case has to be skipped without advancing the cursor, which is what the value counter does when a bucket runs dry.',
+    walkthrough:
+      'The second walk is a fill, not a search: it consumes the counts in order, so a reviewer can read the intended output length directly from the three counters. Advancing the value index on an empty bucket without writing is the one place a naive loop mis-times itself, because the cursor would then run past the end of the list on an input like all-twos. Sorting by relinking into three chains and stitching them is the alternative worth naming: it keeps node identity intact when identity carries meaning, and costs the same two passes plus two saved heads per chain.',
+    commonMistake:
+      'Counting the values and then rebuilding the list with new nodes, or assuming the buckets are all non-empty.',
+    whyWrong:
+      'New allocation is the cost the problem is trying to avoid, and it leaves the old chain to be garbage collected node by node while doubling the peak memory. An empty bucket that is treated as a live one writes a value that was never in the input, and the fill then runs one node long, dereferencing past the tail.',
+    followUps: [
+      'Rewrite it as three chains and one stitch. What does that version buy when node identity matters?',
+      'Why is this linear when merge sort on the same list is linear times logarithmic?',
+      'How many writes does the second pass make for a list of length n, exactly?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function sortZeroOneTwo(head) {\n' +
+      '  const counts = [0, 0, 0];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    counts[cursor.value] += 1;\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  cursor = head;\n' +
+      '  let value = 0;\n' +
+      '  while (cursor !== null) {\n' +
+      '    if (counts[value] === 0) {\n' +
+      '      value += 1;\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    cursor.value = value;\n' +
+      '    counts[value] -= 1;\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}',
+    modify: 'Now the keys are 0 through 255. Which part of this answer stops being constant, and at what point would you relink instead?',
+  },
+  {
+    step: 6,
+    name: 'Reverse LL in group of given size K',
+    difficulty: 'Hard',
+    topicSlug: LINKED,
+    stem: 'Reverse the list in fixed-size groups and reconnect every group to the next without losing the front of the list.',
+    brief: 'Input: a list and a group size k. Output: each block of k nodes reversed, in place, with the blocks still in order. A final block shorter than k stays reversed-to-the-end as the recursion decides.',
+    concepts: ['dsa-group-boundary-rewind', 'dsa-sentinel-head', 'dsa-link-splice-order', 'dsa-pointer-swap-mirror'],
+    shortAnswer:
+      'For each group, find the kth node, reverse the k links inside it against the node after the group, then attach the node before the group to the old last node and step the walk forward to the old first node.',
+    idealAnswer:
+      'Reversing one group is the ordinary three-pointer flip with a twist: the flip is seeded with the node after the group instead of with null, which is what keeps the reversed block joined to the rest of the list rather than cut off from it. That alone is not enough, because two references survive the flip and both are needed afterwards — the kth node, which becomes the front of the block, and the original first node, which becomes its back — so the group is defined by its boundaries before its interior is touched. A sentinel in front of the head makes the first block use the same reconnect code as every later one, and it is what lets the function return one value for the new head. Deciding what to do with a short final block is a specification choice, not a detail: either it is left in place, which is the cheaper rule and the one taken here, or the walk reverses whatever fewer than k nodes remain, which costs a second boundary test.',
+    walkthrough:
+      'The four writes per group have a strict order. The kth node is located first, because after the flip the links inside the block no longer lead forward to it. Then after, previous and cursor are set so the flip never has to null-terminate a block by hand. groupBefore.next is only reassigned once the old front is captured, and capturing it afterwards is the classic corruption: the old front is now the tail of the reversed block and the walk would restart one node too late, reversing the same nodes twice. Cost is one pass with a k-step probe per group — every node is visited a constant number of times, so linear, with only pointers held.',
+    commonMistake:
+      'Seeding the reversal with null, or reading the old front of the group after the flip instead of before it.',
+    whyWrong:
+      'Reversing against null detaches the block from everything after it, so the returned list ends at the first group boundary and the rest is unreachable. Reading the front after the flip gives the tail of the reversed block, which sends the next iteration back into nodes it has already reversed and either loops or leaves the list in a half-ordered state.',
+    followUps: [
+      'Give the recursive version. What does it return, and what does the call stack cost?',
+      'Change the rule so only full groups are reversed. Which line is the decision?',
+      'Reverse every group from the end instead of the front. Why does that need a second pass?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function reverseKGroups(head, k) {\n' +
+      '  if (k < 2) return head;\n' +
+      '  const sentinel = new Node(0);\n' +
+      '  sentinel.next = head;\n' +
+      '  let groupBefore = sentinel;\n' +
+      '  for (;;) {\n' +
+      '    let kth = groupBefore;\n' +
+      '    for (let step = 0; step < k; step += 1) {\n' +
+      '      if (kth.next === null) return sentinel.next;\n' +
+      '      kth = kth.next;\n' +
+      '    }\n' +
+      '    const after = kth.next;\n' +
+      '    const oldFront = groupBefore.next;\n' +
+      '    let previous = after;\n' +
+      '    let cursor = oldFront;\n' +
+      '    for (let step = 0; step < k; step += 1) {\n' +
+      '      const ahead = cursor.next;\n' +
+      '      cursor.next = previous;\n' +
+      '      previous = cursor;\n' +
+      '      cursor = ahead;\n' +
+      '    }\n' +
+      '    groupBefore.next = kth;\n' +
+      '    groupBefore = oldFront;\n' +
+      '  }\n' +
+      '}',
+    modify: 'Reverse only complete groups and leave a short tail alone, then reverse only when the remaining nodes are at least k. Which check moves, and which one disappears?',
+  },
+  {
+    step: 6,
+    name: 'Rotate a LL',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Move the last k nodes to the front of the list in one pass over the links.',
+    brief: 'Input: a list and a non-negative k. Output: the list rotated right by k, where k larger than the length wraps and a multiple of the length changes nothing.',
+    concepts: ['dsa-ring-closure-rotate', 'dsa-linear-position-walk', 'dsa-link-splice-order'],
+    shortAnswer:
+      'Find the tail and the length, join tail to head, then walk to node length minus k minus one from the front and cut there. The node after the cut is the new head.',
+    idealAnswer:
+      'Rotation preserves every link except one, so the cheapest honest description is: make the list circular, choose the new break point, break it there. Turning a right rotation of k into a left walk of length minus k is the arithmetic that decides where the cut lands, and taking k modulo the length first is what makes a shift larger than the list cost the same walk as a small one. The length is unavoidable in a singly list — the break point is defined from the end — so the pass that finds the tail is doing two jobs at once, and that is the reason this is two walks rather than one. Returning the original head when the reduced shift is zero is the case where a cut would be made at the tail itself, which is a legal operation but leaves the list identical and costs a dereference of a node that may not exist.',
+    walkthrough:
+      'Writing the cut as walk-to-predecessor then three assignments — new head saved, cut set to null, old tail set to the old head — is the order that survives a single-node list and a two-node list, the shapes where an off-by-one either loops the list back onto itself or returns nothing. Closing the ring before cutting means the walk can never run off the end, which is why no bounds guard is needed between the length pass and the cut. The alternative of moving the last node to the front k times is correct but costs the length per rotation, and it is the version a reviewer will ask you to explain away.',
+    commonMistake:
+      'Rotating left when the problem counts from the right, or cutting before joining the tail to the head.',
+    whyWrong:
+      'The two directions land on different nodes for every k that is not half the length, so the answer is wrong on the first example a reviewer tries. Cutting before the join leaves the walk holding a list that ends at null where the tail used to be, and the nodes after the cut become unreachable before they are ever attached.',
+    followUps: [
+      'Why is one pass enough once the tail is known, and what does it mean for the cut position?',
+      'Give the k-times version and state its cost against this one.',
+      'Rotate left by k instead. Which expression changes?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function rotateRight(head, k) {\n' +
+      '  if (head === null || head.next === null || k === 0) return head;\n' +
+      '  let tail = head;\n' +
+      '  let length = 1;\n' +
+      '  while (tail.next !== null) {\n' +
+      '    tail = tail.next;\n' +
+      '    length += 1;\n' +
+      '  }\n' +
+      '  const shift = k % length;\n' +
+      '  if (shift === 0) return head;\n' +
+      '  let cut = head;\n' +
+      '  for (let step = 1; step < length - shift; step += 1) {\n' +
+      '    cut = cut.next;\n' +
+      '  }\n' +
+      '  const newHead = cut.next;\n' +
+      '  cut.next = null;\n' +
+      '  tail.next = head;\n' +
+      '  return newHead;\n' +
+      '}',
+    modify: 'Rotate left by k with the same two moves. What is the cut position now, and does the ring still need closing first?',
+  },
+  {
+    step: 6,
+    name: 'Add 2 numbers in LL',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Add two numbers stored one digit per node, least significant digit first, without converting to a number.',
+    brief: 'Input: two lists of digits, units node first. Output: a new list holding their sum, same order. The lists differ in length and the sum may gain a digit.',
+    concepts: ['dsa-carry-forward-pass', 'dsa-sentinel-head', 'dsa-null-termination', 'dsa-digit-extraction'],
+    shortAnswer:
+      'Walk both lists together from the heads, add the two digits and the carry, write the remainder as a new node, keep the tens as the carry, and keep going while either list or the carry is still alive.',
+    idealAnswer:
+      'Least-significant-first is the storage order that makes this a single forward pass: the digits that combine are the ones the walkers are already on, and the carry moves in the only direction a singly list can be read. Reading a number as an integer and writing it back is not an option for a list long enough to exceed the exact-integer window, so the arithmetic has to stay digit-wise — and even for short inputs the digit version has no special case at the length limit. The loop condition carries three terms rather than two, because a final carry past both lists is a digit of the answer, not an overflow of it: ninety-nine plus one is a three-node result from two short inputs. A sentinel gives the builder a place to start writing without deciding, mid-loop, whether the first node is special.',
+    walkthrough:
+      'The two walkers advance independently and each is guarded before it is read, which is how an uneven pair of lengths is handled without padding or pre-counting. Keeping the carry out of the node constructor — total first, then the two derived values — is what makes the base of the number visible in the code, so a reviewer can change the radix in one place. The answer is allocated as it is written, one node per digit, and the input lists are never touched; a variant that reuses the longer list in place exists and is worth naming when allocation is the cost being discussed.',
+    commonMistake:
+      'Stopping when both lists run out, or reversing the lists to add from the most significant digit.',
+    whyWrong:
+      'A dropped final carry returns the right digits in the wrong length: the sum of nine-nine-nine and one comes back as three nodes rather than four. Reversing first solves a problem the storage order already solved, and the carry then has to travel backwards, which a singly list cannot do without a second reversal or a stack.',
+    followUps: [
+      'What is the maximum length of the answer for inputs of length m and n?',
+      'Give the version where the digits are stored most significant first. What does it cost?',
+      'Why does this loop need three conditions where the palindrome walk needed two?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function addTwoNumbers(a, b) {\n' +
+      '  const sentinel = new Node(0);\n' +
+      '  let write = sentinel;\n' +
+      '  let carry = 0;\n' +
+      '  let x = a;\n' +
+      '  let y = b;\n' +
+      '  while (x !== null || y !== null || carry !== 0) {\n' +
+      '    const total = (x === null ? 0 : x.value) + (y === null ? 0 : y.value) + carry;\n' +
+      '    carry = Math.floor(total / 10);\n' +
+      '    write.next = new Node(total % 10);\n' +
+      '    write = write.next;\n' +
+      '    if (x !== null) x = x.next;\n' +
+      '    if (y !== null) y = y.next;\n' +
+      '  }\n' +
+      '  return sentinel.next;\n' +
+      '}',
+    modify: 'The digits are stored most significant first and the answer may not reverse either input. Which extra structure does the carry need?',
+  },
+  {
+    step: 6,
+    name: 'Add 1 to a number represented by LL',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Increment a big-endian digit list by one without reversing it and without a second pass over the unchanged prefix.',
+    brief: 'Input: a list holding the digits of a number, most significant first. Output: the same list holding the number plus one, with a new leading node when the length grows.',
+    concepts: ['dsa-carry-stops-at-nine', 'dsa-carry-forward-pass', 'dsa-linear-position-walk'],
+    shortAnswer:
+      'Remember the last node whose digit is not nine while walking to the tail. Raise it, zero everything after it, and if there was no such node the whole list was nines, so return a one followed by that many zeros.',
+    idealAnswer:
+      'Adding one is not adding a number: the carry is a rule about nines rather than an arithmetic loop, because a digit either absorbs the increment or becomes zero and passes it on. That means only the rightmost non-nine and the run of nines behind it can change, and every node before that point is already correct — so the pass that finds the rightmost non-nine is the only pass needed, and it runs forward on a singly list that cannot be walked backwards. Reversing, adding, and reversing back is the obvious three-walk answer and it is worth saying why it loses: it rewrites the whole list to change a suffix, and it mutates the input shape for a caller that may still be holding it. The all-nines case is not an afterthought but the reason the walk records a count as well as a node: nine-nine-nine plus one is a longer list, and the length of the new list is decided by how many nines were seen.',
+    walkthrough:
+      'Recording the candidate node and resetting a run counter on every non-nine is the same information kept two ways, and it is what lets the growth case be built without a second walk. The zeroing loop after the raised node is conditional by construction: on an input ending in a non-nine, the candidate is the tail and nothing is rewritten. A leading one is attached rather than inserted into position zero, which avoids the special case entirely — the old list becomes the suffix, so the new head is one node and one link.',
+    commonMistake:
+      'Carrying from the head because the digits read most significant first, or forgetting that the whole list may be nines.',
+    whyWrong:
+      'A carry cannot be applied before the digits to its right are known: nine followed by nothing looks like a digit that absorbs the increment until the tail is reached, so a front-to-back arithmetic pass either writes a wrong digit or has to be redone. Missing the all-nines branch reports zero as the answer to nine-nine-nine, which is off by exactly the digit that was carried out of the list.',
+    followUps: [
+      'Which nodes does this version write, and how many for an input of length n ending in a three?',
+      'Give the reverse-add-reverse version and compare its writes to this one.',
+      'Add an arbitrary single digit instead of one. Which assumption about the carry breaks?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function addOne(head) {\n' +
+      '  let cursor = head;\n' +
+      '  let candidate = null;\n' +
+      '  let trailingNines = 0;\n' +
+      '  while (cursor !== null) {\n' +
+      '    if (cursor.value === 9) {\n' +
+      '      trailingNines += 1;\n' +
+      '    } else {\n' +
+      '      candidate = cursor;\n' +
+      '      trailingNines = 0;\n' +
+      '    }\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  if (candidate === null) {\n' +
+      '    const grown = new Node(1);\n' +
+      '    let write = grown;\n' +
+      '    for (let index = 0; index < trailingNines; index += 1) {\n' +
+      '      write.next = new Node(0);\n' +
+      '      write = write.next;\n' +
+      '    }\n' +
+      '    return grown;\n' +
+      '  }\n' +
+      '  candidate.value += 1;\n' +
+      '  let suffix = candidate.next;\n' +
+      '  while (suffix !== null) {\n' +
+      '    suffix.value = 0;\n' +
+      '    suffix = suffix.next;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}',
+    modify: 'Add an arbitrary digit d at the tail instead of one. Which part of the nine argument survives, and what does the carry stop at now?',
   },
 ];
 
