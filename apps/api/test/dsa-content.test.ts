@@ -281,6 +281,18 @@ const EXPECTS: Record<string, string> = {
     '(() => { const r = reverseList(fromArray([1, 2, 3, 4])); return toArray(r).join() === "4,3,2,1" && toArray(reverseList(r)).join() === "1,2,3,4" && toArray(reverseList(fromArray([1]))).join() === "1" && toArray(reverseList(null)).join() === ""; })()',
   'Detect a loop in LL':
     '(() => { const h = fromArrayWithCycle([1, 2, 3, 4], 1); return hasCycle(h) && hasCycle(fromArrayWithCycle([1, 2], 0)) && !hasCycle(fromArrayWithCycle([1, 2, 3], -1)) && !hasCycle(null) && !hasCycle(fromArrayWithCycle([], -1)); })()',
+  'Find the starting point of the loop of LinkedList':
+    '(() => { const a = fromArrayWithCycle([1, 2, 3, 4], 1); const b = fromArrayWithCycle([1, 2, 3, 4, 5], 3); return cycleEntry(a).value === 2 && cycleEntry(b).value === 4 && cycleEntry(fromArrayWithCycle([1, 2], 0)).value === 1 && cycleEntry(fromArrayWithCycle([1], 0)).value === 1 && cycleEntry(fromArrayWithCycle([1, 2, 3], -1)) === null && cycleEntry(null) === null; })()',
+  'Length of Loop in LinkedList':
+    'loopLength(fromArrayWithCycle([1, 2, 3, 4], 3)) === 1 && loopLength(fromArrayWithCycle([1, 2, 3, 4], 1)) === 3 && loopLength(fromArrayWithCycle([1, 2, 3, 4, 5, 6], 2)) === 4 && loopLength(fromArrayWithCycle([5, 5, 5], 0)) === 3 && loopLength(fromArrayWithCycle([1, 2, 3], -1)) === 0 && loopLength(null) === 0',
+  'Check if LL is palindrome or not':
+    '(() => { const odd = fromArray([1, 2, 3, 2, 1]); const even = fromArray([1, 2, 2, 1]); const flat = fromArray([7, 7, 7]); const no = fromArray([1, 2, 3]); return isListPalindrome(odd) && isListPalindrome(even) && isListPalindrome(flat) && !isListPalindrome(no) && isListPalindrome(fromArray([7])) && isListPalindrome(null) && toArray(odd).join() === "1,2,3,2,1" && toArray(even).join() === "1,2,2,1" && isListPalindrome(odd); })()',
+  'Remove Nth node from the back of the LL':
+    'toArray(removeNthFromEnd(fromArray([1, 2, 3, 4, 5]), 2)).join() === "1,2,3,5" && toArray(removeNthFromEnd(fromArray([1]), 1)).join() === "" && toArray(removeNthFromEnd(fromArray([1, 2]), 2)).join() === "2" && toArray(removeNthFromEnd(fromArray([1, 2, 3]), 1)).join() === "1,2" && toArray(removeNthFromEnd(fromArray([1, 2, 3]), 9)).join() === "1,2,3" && removeNthFromEnd(null, 1) === null',
+  'Delete the middle node of LL':
+    'toArray(deleteMiddle(fromArray([1, 2, 3, 4, 5]))).join() === "1,2,4,5" && toArray(deleteMiddle(fromArray([1, 2, 3, 4]))).join() === "1,2,4" && toArray(deleteMiddle(fromArray([1, 2]))).join() === "1" && toArray(deleteMiddle(fromArray([7]))).join() === "" && deleteMiddle(null) === null',
+  'Find the intersection point of Y LL':
+    '(() => { const shared = chain([8, 9]); const a = chain([1, 2, 3], shared); const b = chain([4, 5], shared); const same = chain([1, 2]); const disjoint = chain([1, 2]); return intersection(a, b) === shared && intersection(b, a) === shared && toArray(intersection(a, b)).join() === "8,9" && intersection(same, same) === same && intersection(same, disjoint) === null && intersection(chain([1]), disjoint) === null && intersection(null, chain([1])) === null; })()',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */

@@ -770,6 +770,41 @@ export const DSA_CONCEPTS = {
     terms: ['reachable from itself', 'points back', 'Floyd\'s algorithm', 'O(1) space', 'collision proves cycle'],
     weight: 2,
   },
+  'dsa-cycle-entry-proof': {
+    slug: 'dsa-cycle-entry-proof',
+    name: 'Resetting one pointer to the head finds the loop entry',
+    detail: 'After the collision, advance both pointers one step at a time — one from the head, one from the meeting node — and they meet at the first node of the loop, because each is then the same distance from it.',
+    terms: ['reset to head', 'one step each', 'entry node', 'distance before the loop', 'same offset'],
+    weight: 3,
+  },
+  'dsa-ring-measurement': {
+    slug: 'dsa-ring-measurement',
+    name: 'A ring is measured by walking back to where you started',
+    detail: 'Counting next-links from a node until that same node is reached again gives the cycle length, and it needs no knowledge of where the cycle begins.',
+    terms: ['walk until the same node', 'count the links', 'one full turn', 'ring length', 'start from the meeting node'],
+    weight: 2,
+  },
+  'dsa-reverse-half-comparison': {
+    slug: 'dsa-reverse-half-comparison',
+    name: 'Reversing the second half turns a palindrome test into a walk',
+    detail: 'Split at the middle, reverse the tail, then compare node against node: the list is read from both ends without an array, a recursion, or a copy.',
+    terms: ['reverse the second half', 'compare from both ends', 'split at the middle', 'no extra array', 'restore the order'],
+    weight: 3,
+  },
+  'dsa-gap-keeping-runner': {
+    slug: 'dsa-gap-keeping-runner',
+    name: 'A runner kept N nodes ahead turns a back index into a front one',
+    detail: 'Advance the leader N nodes, then move both until the leader holds the last node; the trailer is then exactly N places from the end, without ever counting the length.',
+    terms: ['advance the leader', 'hold the gap', 'leader at the tail', 'count from the back', 'trailer lands on the predecessor'],
+    weight: 3,
+  },
+  'dsa-equalised-distance-walk': {
+    slug: 'dsa-equalised-distance-walk',
+    name: 'Switching heads at the end equalises the distance two pointers travel',
+    detail: 'Let each pointer walk its own list and then continue on the other. Both then cover the same total length, so they arrive at the shared node at the same step or both reach null together.',
+    terms: ['switch to the other head', 'same total distance', 'shared tail', 'difference in length', 'arrive together'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -7837,6 +7872,458 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return false;\n' +
       '}',
     modify: 'Find the starting node of the cycle. Once slow and fast meet, reset one pointer to head and advance both one step at a time — prove why they meet at the entry point.',
+  },
+  {
+    step: 6,
+    name: 'Find the starting point of the loop of LinkedList',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Report the first node the loop begins at, not just that a loop exists.',
+    brief: 'Input: the head of a list whose tail may point back at some earlier node. Output: that node, or null when the list never loops. Do it in constant extra space.',
+    concepts: ['dsa-cycle-entry-proof', 'dsa-fast-slow-pointers', 'dsa-cycle-detection'],
+    shortAnswer:
+      'Let fast and slow collide inside the loop, then reset one pointer to the head and advance both one step at a time. Where they meet again is the entry node.',
+    idealAnswer:
+      'Detection is half the problem and says nothing about where the loop starts, so the answer is a second walk justified by a distance argument. Write the pre-loop length as mu and the ring length as lambda. At the collision the slow pointer has travelled mu plus some whole number of turns, while the fast pointer has travelled exactly twice as far; subtracting shows the distance from the collision node back around to the entry is a multiple of lambda, and it is also exactly mu. That is why resetting one pointer to the head works: the two walkers start mu apart in the only sense that matters, both move one node per step, and so they arrive at the entry on the same step. Cost is one pass to collide and at most one more to walk out, so linear time with two pointers and no visited set.',
+    walkthrough:
+      'The bookkeeping that makes this readable is splitting the walk into two named functions: the collision, which returns any node inside the ring rather than the entry, and the second phase, which walks from the head and from that node together. Returning a ring node from phase one is honest about what Floyd gives you — the meeting point depends on the ring length and on where you entered it, and is almost never the entry. The second loop compares the two pointers before advancing them is the safe order, since if the head itself is the entry — a self-loop on the first node, or a ring that starts at index zero — they already agree and must not be moved past each other.',
+    commonMistake:
+      'Reporting the collision node as the entry, or keeping the two-step speed in the second phase so the pointers pass each other inside the ring.',
+    whyWrong:
+      'The meeting node is a function of the ring length and the entry offset, so on a list like 1,2,3,4 with the tail pointing at 2 it typically reports 3 or 4 rather than 2 and the answer is wrong on the first test. Continuing to move fast by two in phase two leaves the pointers chasing each other around the ring; they may still meet, but the node they meet at has no relationship to the entry, so the result is unstable across shapes.',
+    followUps: [
+      'Why does the second phase need both pointers to move exactly one step, and what breaks if one moves two?',
+      'What are mu and lambda in your own list, and how would you measure them from the code?',
+      'Give the version that uses a visited set. What does it cost, and what does it buy you?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArrayWithCycle(values, cycleAt) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  const nodes = [];\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    nodes.push(node);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  if (cycleAt >= 0 && cycleAt < nodes.length) {\n' +
+      '    tail.next = nodes[cycleAt];\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function meetNode(head) {\n' +
+      '  let slow = head;\n' +
+      '  let fast = head;\n' +
+      '  while (fast !== null && fast.next !== null) {\n' +
+      '    slow = slow.next;\n' +
+      '    fast = fast.next.next;\n' +
+      '    if (slow === fast) return slow;\n' +
+      '  }\n' +
+      '  return null;\n' +
+      '}\n' +
+      '\n' +
+      'function cycleEntry(head) {\n' +
+      '  let meet = meetNode(head);\n' +
+      '  if (meet === null) return null;\n' +
+      '  let fromHead = head;\n' +
+      '  while (fromHead !== meet) {\n' +
+      '    fromHead = fromHead.next;\n' +
+      '    meet = meet.next;\n' +
+      '  }\n' +
+      '  return fromHead;\n' +
+      '}',
+    modify: 'Return the entry node and the ring length together in one pass. Which walk gives you the length without a second traversal of the list?',
+  },
+  {
+    step: 6,
+    name: 'Length of Loop in LinkedList',
+    difficulty: 'Easy',
+    topicSlug: LINKED,
+    stem: 'Count the nodes that are inside the loop, and report zero when there is no loop.',
+    brief: 'Input: the head of a list that may loop. Output: how many nodes are on the ring, so 1 for a self-loop and 0 for an acyclic list. Constant space.',
+    concepts: ['dsa-ring-measurement', 'dsa-cycle-detection', 'dsa-fast-slow-pointers'],
+    shortAnswer:
+      'Find any node on the ring with fast and slow pointers, then walk next from it, counting, until you are back at that same node.',
+    idealAnswer:
+      'The count belongs to the ring itself, not to the list, so the whole problem reduces to two facts: get one node that is certainly on the ring, then make exactly one turn of it. Floyd gives the first for free, and the second is a cursor that starts at the meeting node, steps once per iteration, and stops when it returns — the stop condition is node identity, never a value comparison, because a ring of nodes holding the same number is still one node per link. Starting the count at one and moving before comparing, or comparing after moving, are the same off-by-one decision written twice; the version here counts the meeting node, then walks the links leaving it. A list with no ring has no meeting node, so the honest answer is zero rather than an exception.',
+    walkthrough:
+      'Measuring from a node you already hold is why this does not need to know where the ring begins: any node on the ring gives the same count once you walk back to it. The identity stop condition is what makes a self-loop cost one and a two-node ring cost two, where a value comparison would stop immediately on a ring of equal values and report one. Detecting and measuring are kept as separate functions because the detection walk is the expensive one, and a reader asking for the entry node or the ring length should be able to reuse it unchanged.',
+    commonMistake:
+      'Counting by comparing node values, or starting the walk from the head and hoping to notice the ring.',
+    whyWrong:
+      'A ring built from nodes all holding the same value reports a length of one under a value comparison, which is the input a reviewer writes first. From the head there is no signal that the ring started: the walk never terminates, so the count is not wrong so much as never finished, and an acyclic list silently returns nothing instead of zero.',
+    followUps: [
+      'Why is the stop condition a node identity rather than a value?',
+      'Give the answer for a self-loop on the head node without running the code.',
+      'What would change if the list were doubly linked and you could walk either way around the ring?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArrayWithCycle(values, cycleAt) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  const nodes = [];\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    nodes.push(node);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  if (cycleAt >= 0 && cycleAt < nodes.length) {\n' +
+      '    tail.next = nodes[cycleAt];\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function meetNode(head) {\n' +
+      '  let slow = head;\n' +
+      '  let fast = head;\n' +
+      '  while (fast !== null && fast.next !== null) {\n' +
+      '    slow = slow.next;\n' +
+      '    fast = fast.next.next;\n' +
+      '    if (slow === fast) return slow;\n' +
+      '  }\n' +
+      '  return null;\n' +
+      '}\n' +
+      '\n' +
+      'function loopLength(head) {\n' +
+      '  const meet = meetNode(head);\n' +
+      '  if (meet === null) return 0;\n' +
+      '  let length = 1;\n' +
+      '  let cursor = meet.next;\n' +
+      '  while (cursor !== meet) {\n' +
+      '    length += 1;\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return length;\n' +
+      '}',
+    modify: 'Report the longest acyclic prefix — how many nodes are reachable before the ring is entered. Which walk gives that once you already hold the entry node?',
+  },
+  {
+    step: 6,
+    name: 'Check if LL is palindrome or not',
+    difficulty: 'Easy',
+    topicSlug: LINKED,
+    stem: 'Decide whether the values read the same forwards and backwards, in linear time and constant space.',
+    brief: 'Input: a singly linked list. Output: true or false. You may not copy the values into an array, and the list should still be intact when you return.',
+    concepts: ['dsa-reverse-half-comparison', 'dsa-fast-slow-pointers', 'dsa-null-termination'],
+    shortAnswer:
+      'Find the middle, reverse the second half in place, walk the two halves together comparing values, then reverse the second half back.',
+    idealAnswer:
+      'A palindrome test needs both ends at once, and a singly list only hands you the front, so the trick is to make the back reachable by reversing it rather than by storing it. The middle from the fast-and-slow walk is the second middle on an even list and the exact centre on an odd one, which is precisely the split that makes the two comparison walks equal length: reverse from the node after the middle and the shorter half decides when the walk ends, so an odd centre never has to be special-cased. Comparison runs to the end of the reversed tail, not of the head half, because the head half is at least as long. Reversing back before returning is what makes the function observable-safe: the same list passed twice must give the same answer, and a caller who reads the list after the call must not see it reordered.',
+    walkthrough:
+      'Two details carry the whole solution. The first is that the comparison loop must not stop early on a mismatch: setting a flag and continuing is what allows the restore to run, where an early return would leave the tail permanently reversed. The second is that the restore recomputes the middle rather than remembering it, which costs one walk and avoids holding a pointer whose meaning changed when the tail was flipped. Empty and single-node lists are true by the definition the caller expects, and the guard for them is placed before any pointer is dereferenced rather than relying on the walk to fall through.',
+    commonMistake:
+      'Returning from inside the comparison loop, or reversing the whole list and comparing it against itself.',
+    whyWrong:
+      'The early return leaves the second half reversed, so a caller that prints the list afterwards sees the values in the wrong order and the function is not idempotent. Reversing the entire list destroys the only handle to the first half before it has been compared, so the walk either reports true for every input or ends at null having compared nothing.',
+    followUps: [
+      'Which node does the fast-and-slow walk land on for an even length, and why does that remove the odd-versus-even branch?',
+      'Write the version that copies into an array. What does it cost in space, and is the restore problem gone?',
+      'How would you report the longest palindromic run instead of a yes-no answer?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function middleOf(head) {\n' +
+      '  let slow = head;\n' +
+      '  let fast = head;\n' +
+      '  while (fast !== null && fast.next !== null) {\n' +
+      '    slow = slow.next;\n' +
+      '    fast = fast.next.next;\n' +
+      '  }\n' +
+      '  return slow;\n' +
+      '}\n' +
+      '\n' +
+      'function reverseFrom(node) {\n' +
+      '  let previous = null;\n' +
+      '  let cursor = node;\n' +
+      '  while (cursor !== null) {\n' +
+      '    const ahead = cursor.next;\n' +
+      '    cursor.next = previous;\n' +
+      '    previous = cursor;\n' +
+      '    cursor = ahead;\n' +
+      '  }\n' +
+      '  return previous;\n' +
+      '}\n' +
+      '\n' +
+      'function isListPalindrome(head) {\n' +
+      '  if (head === null || head.next === null) return true;\n' +
+      '  const middle = middleOf(head);\n' +
+      '  const reversedTail = reverseFrom(middle.next);\n' +
+      '  let left = head;\n' +
+      '  let right = reversedTail;\n' +
+      '  let same = true;\n' +
+      '  while (right !== null) {\n' +
+      '    if (left.value !== right.value) same = false;\n' +
+      '    left = left.next;\n' +
+      '    right = right.next;\n' +
+      '  }\n' +
+      '  middle.next = reverseFrom(reversedTail);\n' +
+      '  return same;\n' +
+      '}',
+    modify: 'Now report the length of the longest palindromic run in the list. Which part of this mechanism survives that change?',
+  },
+  {
+    step: 6,
+    name: 'Remove Nth node from the back of the LL',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Delete the node n places from the end in a single pass, including when it is the head.',
+    brief: 'Input: a list and n counted from the tail. Output: the list with that one node gone. One traversal of the links, and n larger than the length must not corrupt it.',
+    concepts: ['dsa-gap-keeping-runner', 'dsa-sentinel-head', 'dsa-link-splice-order'],
+    shortAnswer:
+      'Advance a leader n nodes from a sentinel, then move leader and trailer together until the leader holds the last node. The trailer is the predecessor of the node to unlink.',
+    idealAnswer:
+      'A singly list cannot be walked backwards, so counting from the end has to be paid for either by two passes — length, then length minus n — or by one pass that carries the offset in the gap between two pointers. The one-pass form is the interesting answer: giving the leader a head start of exactly n links means the pair is always n apart, so when the leader is on the final node the trailer is on the node before the victim, which is the only node whose next field has to change. The sentinel is not decoration. Deleting the first node means deleting the head, and the handle the caller holds is what must be rewritten; a trailer standing on a real node could not do that, so the dummy in front makes position zero the same code as every other position and the function returns sentinel.next rather than a special-cased head. An n beyond the length is refused before the second walk begins, leaving the list untouched.',
+    walkthrough:
+      'The order of the three writes in the splice is the part a reviewer checks. trailer.next = trailer.next.next reads the survivor link and then installs it, so the victim is the only node dropped and everything after it is still reachable; writing the victim to null first would detach the tail. The gap loop decrements a counter rather than measuring a length, which is what keeps the pass single: after it the two pointers are held n apart by construction, not by arithmetic on a number that was never computed. Returning sentinel.next unconditionally is the reason the front deletion needs no branch, and it is worth saying out loud that the sentinel is the only node the caller never sees.',
+    commonMistake:
+      'Walking the trailer onto the victim instead of its predecessor, or walking the leader to null rather than to the last node.',
+    whyWrong:
+      'A trailer on the victim has no predecessor, so the only way to remove it is to copy its value forward and splice its successor — wrong for a list where identity matters and visibly wrong when the victim is the last node. Advancing the leader until it is null leaves the trailer one link too far forward, so the returned list is missing the node before the one that was asked for.',
+    followUps: [
+      'Which node is the trailer standing on when the leader is on the last one, and why is that the node you need?',
+      'Write the two-pass version. What does it cost, and what does it make easier to read?',
+      'How does the code change if n can be zero or negative?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function removeNthFromEnd(head, n) {\n' +
+      '  const sentinel = new Node(0);\n' +
+      '  sentinel.next = head;\n' +
+      '  let leader = sentinel;\n' +
+      '  for (let step = 0; step < n; step += 1) {\n' +
+      '    if (leader.next === null) return sentinel.next;\n' +
+      '    leader = leader.next;\n' +
+      '  }\n' +
+      '  let trailer = sentinel;\n' +
+      '  while (leader.next !== null) {\n' +
+      '    leader = leader.next;\n' +
+      '    trailer = trailer.next;\n' +
+      '  }\n' +
+      '  trailer.next = trailer.next.next;\n' +
+      '  return sentinel.next;\n' +
+      '}',
+    modify: 'Remove every node whose value equals a given key, still in one pass. Which pointer now needs the sentinel, and does the leader still get a head start?',
+  },
+  {
+    step: 6,
+    name: 'Delete the middle node of LL',
+    difficulty: 'Medium',
+    topicSlug: LINKED,
+    stem: 'Unlink the middle of a list without counting its length first.',
+    brief: 'Input: a list. Output: the same list with its middle node gone; on an even length, the second of the two middles. A one-node list becomes empty.',
+    concepts: ['dsa-fast-slow-pointers', 'dsa-link-splice-order', 'dsa-linear-position-walk'],
+    shortAnswer:
+      'Walk slow one step and fast two, keeping a pointer to where slow came from. When fast runs out, slow is the middle and the trailer is its predecessor.',
+    idealAnswer:
+      'The middle is a position, and finding a position normally costs a count; the fast-and-slow walk replaces that count with a ratio, so slow is on the middle at exactly the step fast runs off the end. Deleting needs the predecessor rather than the node itself, since only a predecessor owns the link being changed, and that is why the third pointer is carried: assigning before = slow at the top of each iteration leaves before on the node before slow when the loop ends. The even-length rule falls out of where the walk stops. With fast starting at the head, a four-node walk ends with slow on the third node, which is the second of the two middles — the convention the problem states, and the one that makes a two-node list reduce to its first node. The one-node list cannot be walked at all, so the guard returns null as the new head rather than letting the splice dereference a missing node.',
+    walkthrough:
+      'Ordering is the whole risk: before has to be written before slow moves, and the splice has to read slow.next before overwriting it. A list where the middle is the last node before null cannot occur, because slow only advances while fast has two links available. Counting length first and then walking length divided by two is a correct two-pass answer and worth naming as the alternative; the single-walk form is preferred here because it is the same three lines that detect a cycle or split a list, and a reviewer reading for pointer control will look for that pattern.',
+    commonMistake:
+      'Starting slow one node ahead of fast, or splicing with slow.next = slow.next.next after slow has already moved past its predecessor.',
+    whyWrong:
+      'An offset start shifts the landing node by one, so the wrong element is deleted and the error is invisible on odd lengths and obvious on even ones. Without the trailer pointer there is no way to unlink slow at all: writing through slow only rewrites the middle node, which detaches the tail and loses every node after it.',
+    followUps: [
+      'Change the code so the first of the two middles is deleted instead. Which line moves?',
+      'Split the list into two halves at the middle and return both heads. What does the splice become?',
+      'What is the two-pass version, and when is it the better read?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function fromArray(values) {\n' +
+      '  let head = null;\n' +
+      '  let tail = null;\n' +
+      '  for (const value of values) {\n' +
+      '    const node = new Node(value);\n' +
+      '    if (head === null) {\n' +
+      '      head = node;\n' +
+      '    } else {\n' +
+      '      tail.next = node;\n' +
+      '    }\n' +
+      '    tail = node;\n' +
+      '  }\n' +
+      '  return head;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function deleteMiddle(head) {\n' +
+      '  if (head === null || head.next === null) return null;\n' +
+      '  let slow = head;\n' +
+      '  let fast = head;\n' +
+      '  let before = null;\n' +
+      '  while (fast !== null && fast.next !== null) {\n' +
+      '    before = slow;\n' +
+      '    slow = slow.next;\n' +
+      '    fast = fast.next.next;\n' +
+      '  }\n' +
+      '  before.next = slow.next;\n' +
+      '  return head;\n' +
+      '}',
+    modify: 'Return both halves after splitting at the middle instead of deleting anything. Which pointer now has to be cut, and in what order?',
+  },
+  {
+    step: 6,
+    name: 'Find the intersection point of Y LL',
+    difficulty: 'Easy',
+    topicSlug: LINKED,
+    stem: 'Report the node where two lists that share a tail first meet, in one walk and constant space.',
+    brief: 'Input: two list heads that may join at some node and share every node after it. Output: that node, or null. Compare nodes, not values.',
+    concepts: ['dsa-equalised-distance-walk', 'dsa-null-termination', 'dsa-linear-position-walk'],
+    shortAnswer:
+      'Walk both lists; when a pointer runs off the end, send it to the other head. The two then travel the same total distance and meet on the shared node, or both reach null together.',
+    idealAnswer:
+      'The obstacle is that the two prefixes differ in length, so a paired walk starting at both heads drifts and never compares the same position twice. Switching heads fixes it arithmetically: pointer A walks its own prefix, then the other prefix, and pointer B the reverse, so each covers prefixA plus prefixB plus the shared tail before either can run past the junction — equal distance, therefore the same node at the same step. The comparison has to be node identity because a shared value says nothing about a shared node, and it is exactly what makes a Y shape different from two lists that merely look alike. The termination case is the same argument: with no junction, both walks end at null on the same step, so the loop exits having proven nothing was shared rather than spinning forever.',
+    walkthrough:
+      'The version that counts both lengths, advances the longer list by the difference, and then walks in lockstep is the same idea with arithmetic made explicit, and it is worth being able to give — it trades the switch for two passes, and a reader who distrusts the trick prefers it. The null-handling guard exists because the loop condition dereferences nothing but the body would on a bare call: if either head is null the lists cannot share a node, so returning null immediately is both correct and the only case where the switch argument fails to hold. Both builders in the solution exist to make the test honest: the shared nodes are allocated once and hung from both prefixes, so the intersection is a real join rather than equal values.',
+    commonMistake:
+      'Comparing node values instead of node references, or restarting the walk from the original head every time a pointer reaches null.',
+    whyWrong:
+      'Two lists carrying the same numbers in the same order are not the same list, and a value comparison returns a junction that does not exist. Restarting from a saved head without switching to the other list keeps the length difference in play, which is the exact bug the switch removes, and a list pair with no junction then never terminates.',
+    followUps: [
+      'Give the two-pass version that measures both lengths. Why does it need only one switch?',
+      'What does the walk return when both lists are already the same list?',
+      'If the shared tail were a cycle instead of a null end, would this loop stop?',
+    ],
+    solution:
+      'class Node {\n' +
+      '  constructor(value) {\n' +
+      '    this.value = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function chain(values, tail) {\n' +
+      '  let cursor = tail === undefined ? null : tail;\n' +
+      '  for (let index = values.length - 1; index >= 0; index -= 1) {\n' +
+      '    const node = new Node(values[index]);\n' +
+      '    node.next = cursor;\n' +
+      '    cursor = node;\n' +
+      '  }\n' +
+      '  return cursor;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const values = [];\n' +
+      '  let cursor = head;\n' +
+      '  while (cursor !== null) {\n' +
+      '    values.push(cursor.value);\n' +
+      '    cursor = cursor.next;\n' +
+      '  }\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function intersection(headA, headB) {\n' +
+      '  if (headA === null || headB === null) return null;\n' +
+      '  let a = headA;\n' +
+      '  let b = headB;\n' +
+      '  while (a !== b) {\n' +
+      '    a = a === null ? headB : a.next;\n' +
+      '    b = b === null ? headA : b.next;\n' +
+      '  }\n' +
+      '  return a;\n' +
+      '}',
+    modify: 'Report the length of each prefix before the junction as well as the node. Which of the two versions — switch or count — makes that cheaper to state?',
   },
 ];
 
