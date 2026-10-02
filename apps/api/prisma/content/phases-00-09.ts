@@ -63,6 +63,7 @@ export const PHASES_00_09: PhaseSpec[] = [
       t('language-mechanics', 'Language Mechanics for Problem Solving', 'character codes, number ranges, branch tables, loop bounds, and what an argument really carries.', 'javascript', ['js-values-references'], ['how-programs-run']),
       t('pattern-printing', 'Pattern Printing', 'nested loops read as coordinates: padding, symmetry, borders and the row-column rule behind every shape.', 'javascript', ['language-mechanics']),
       t('dsa-maths-foundations', 'Arithmetic Foundations for DSA', 'digits, divisors, primes and GCD — the loop shapes every later technique is built from.', 'javascript', ['complexity-analysis']),
+      t('dsa-bit-manipulation', 'Bit Manipulation', 'masks, shifts and XOR: the arithmetic the processor actually does, and the 32-bit coercion JavaScript puts in front of every operator.', 'javascript', ['dsa-maths-foundations']),
       t('array-techniques', 'Array Techniques', 'single passes, two pointers, write indices, prefix sums: the moves that beat sorting.', 'javascript', ['dsa-maths-foundations']),
       t('hash-tables', 'Hash Tables', 'buckets, collisions, load factor, why hashing is the default O(1) answer.', 'system-design', ['complexity-analysis'], ['js-values-references']),
       t('trees-and-indexes', 'Trees and B-Trees', 'balanced trees, B-tree fanout, why disk structures differ from memory ones.', 'postgresql', ['complexity-analysis'], ['memory-hierarchy']),

@@ -1008,6 +1008,48 @@ export const DSA_CONCEPTS = {
     terms: ['running value', 'last term', 'undo the addition', 'product replaces term', 'precedence without parsing'],
     weight: 3,
   },
+  'dsa-bit-index-shift': {
+    slug: 'dsa-bit-index-shift',
+    name: 'A bit position is a mask built by shifting a one',
+    detail: 'Testing or flipping position i means 1 shifted left by i and one operator, so a position becomes a value rather than a branch, and the choice of shifting the mask or the number is only about direction.',
+    terms: ['mask from one', 'shift left', 'position as a power of two', 'and to test', 'xor to flip'],
+    weight: 3,
+  },
+  'dsa-bitwise-int32-coercion': {
+    slug: 'dsa-bitwise-int32-coercion',
+    name: 'JavaScript bit operators work on 32-bit signed integers',
+    detail: 'Every bitwise operator converts its operands with ToInt32 first, so a value above 2 to the 31 is silently truncated to its low 32 bits and read back as a negative number.',
+    terms: ['ToInt32', 'low 32 bits', 'sign flip', 'silent truncation', 'BigInt for wide values'],
+    weight: 3,
+  },
+  'dsa-parity-from-lsb': {
+    slug: 'dsa-parity-from-lsb',
+    name: 'The lowest bit is the parity',
+    detail: 'Every power of two above one is even, so a number is odd exactly when its last bit is set - which makes and-with-one the cheapest parity test and clearing the last bit a division by two rounded down.',
+    terms: ['and with one', 'last bit', 'odd test', 'even test', 'clear the lowest bit'],
+    weight: 2,
+  },
+  'dsa-lowest-set-bit-isolate': {
+    slug: 'dsa-lowest-set-bit-isolate',
+    name: 'Subtracting one and ANDing clears the lowest set bit',
+    detail: 'value - 1 flips the trailing zeros and the single one below them, so ANDing the two leaves everything above the lowest set bit untouched and removes that bit - the step that makes a popcount run once per set bit.',
+    terms: ['value and value minus one', 'clear lowest set bit', 'trailing ones flip', 'loop per set bit', 'kernighan'],
+    weight: 3,
+  },
+  'dsa-power-of-two-single-bit': {
+    slug: 'dsa-power-of-two-single-bit',
+    name: 'A power of two is exactly one set bit',
+    detail: 'The test value > 0 && (value & (value - 1)) === 0 says the number survives the lowest-bit clear with nothing left, which is possible only when it had one bit to begin with.',
+    terms: ['one set bit', 'and with predecessor', 'zero is excluded', 'exponent from the position', 'positive guard'],
+    weight: 3,
+  },
+  'dsa-count-bits-by-doubling': {
+    slug: 'dsa-count-bits-by-doubling',
+    name: 'The bit count of a number is the count of its half plus its last bit',
+    detail: 'Shifting right removes the bit that the parity test reads, so a table of counts for 0 to n fills from an entry already computed, in constant work per row.',
+    terms: ['shift right as parent', 'plus the last bit', 'table in linear time', 'constant per entry', 'reuse the smaller count'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -1022,6 +1064,7 @@ const STRINGS = 'string-techniques';
 const NUMERIC = 'numeric-strings';
 const LINKED = 'linked-lists';
 const DP = 'dp-greedy';
+const BITS = 'dsa-bit-manipulation';
 
 export const DSA_PROBLEMS: DsaProblem[] = [
   {
@@ -10787,6 +10830,351 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return results;\n' +
       '}',
     modify: 'Report the number of valid expressions instead of the expressions themselves. Which of the four things the frame carries can you drop, and what does the leading-zero rule become?',
+  },
+  {
+    step: 8,
+    name: 'Introduction to Bit Manipulation',
+    difficulty: 'Easy',
+    topicSlug: BITS,
+    stem: 'Show what each bit operator does to one integer, and say what JavaScript converts before any of them runs.',
+    brief: 'Input: an integer in the signed 32-bit range. Output: its parity, its lowest bit, the value with that bit cleared, its double and half by shifting, its complement, and the value with the low two bits flipped. Name the conversion the operators impose.',
+    concepts: ['dsa-bit-index-shift', 'dsa-bitwise-int32-coercion', 'dsa-parity-from-lsb'],
+    shortAnswer:
+      'AND reads and clears bits, OR sets them, XOR flips them, NOT inverts all 32, and the shifts move the whole pattern ' +
+      'left or right. JavaScript applies ToInt32 to the operands first.',
+    idealAnswer:
+      'value & 1 is the lowest bit, value & ~1 clears it, value | mask sets a bit and value ^ mask flips it, so parity, ' +
+      'rounding down to even and toggling are all one expression with no branch. value << 1 is multiplication by two and ' +
+      '>> is division by two rounded toward negative infinity, which is why the arithmetic shift on a negative number is ' +
+      'not Math.floor of the quotient by coincidence but by construction. The conversion underneath is the part to state: ' +
+      'every operator takes ToInt32 of its operands, so a value outside the signed 32-bit range is truncated to its low ' +
+      '32 bits before anything is compared, and the result comes back as a signed int32 too.',
+    walkthrough:
+      'The five operators are the vocabulary, but the coercion rule is the grammar. Once you know that << and >> are ' +
+      'defined on int32 values, the surprising cases stop being surprising: ~0 is -1 because the complement of all zeros ' +
+      'is all ones, which is negative one in two-s complement, and -1 >> 7 stays -1 because the sign bit is copied rather ' +
+      'than shifted in. In JavaScript the practical consequence is that a shift is not a safe doubling for large numbers - ' +
+      'a value above 2^31 wraps into the negative range, and the unsigned shift >>> is the only operator that treats the ' +
+      'bits as bits.',
+    commonMistake:
+      'Reading the shift operators as arithmetic on the full Number, so a double of a large value appears as a negative ' +
+      'number and is treated as a runtime bug.',
+    whyWrong:
+      'The runtime is doing exactly what the operators promise: ToInt32 first, then shift. A doubled value that comes back ' +
+      'negative has lost its high bits, so the arithmetic claim and the bit claim disagree, and the honest fix is either ' +
+      'BigInt or a multiplication rather than a different operator.',
+    followUps: [
+      'What is the difference in behaviour between >> and >>> on a negative value, and why does it exist?',
+      'Why is value & ~1 the same as rounding down to the nearest even number?',
+      'Give an input for which value << 1 is not 2 * value. What does your report say about it?',
+    ],
+    solution:
+      'function bitReport(value) {\n' +
+      '  return {\n' +
+      '    isEven: (value & 1) === 0,\n' +
+      '    lowestBit: value & 1,\n' +
+      '    clearedLowest: value & ~1,\n' +
+      '    doubled: value << 1,\n' +
+      '    halved: value >> 1,\n' +
+      '    unsignedHalf: value >>> 1,\n' +
+      '    complement: ~value,\n' +
+      '    flippedLowBits: value ^ 5,\n' +
+      '  };\n' +
+      '}',
+    modify: 'Add a field reporting the number of bits that differ between the value and its own complement. Which operator is the whole answer, and what is the count always?',
+  },
+  {
+    step: 8,
+    name: 'Check if the i-th bit is set or not',
+    difficulty: 'Easy',
+    topicSlug: BITS,
+    stem: 'Report whether position i of a number is set, and give the two directions of shifting that answer the same question.',
+    brief: 'Input: a non-negative integer and a bit position counted from the least significant end. Output: the bit at that position and a boolean saying whether it is set. Say which of your two forms touches memory of the whole number.',
+    concepts: ['dsa-bit-index-shift', 'dsa-bitwise-int32-coercion'],
+    shortAnswer:
+      'Either build the mask 1 << i and AND it with the value, or shift the value down by i and read its lowest bit with ' +
+      '& 1. Both answer the same question.',
+    idealAnswer:
+      'isBitSet uses (value & (1 << position)) !== 0: the mask is a power of two with a single bit at the position being ' +
+      'asked about, so the AND is non-zero exactly when that bit is set. bitAt uses (value >> position) & 1: the value ' +
+      'moves instead of the mask, and the same parity test now reads the position of interest. The mask form does not ' +
+      'touch the value, which matters when the value is a shared or immutable thing; the shift form needs no second ' +
+      'number and generalises to reading a run of bits. Both are O(1) and both stop being correct past the 31st position, ' +
+      'because 1 << 32 is 1 again under ToInt32.',
+    walkthrough:
+      'Positions are counted from the right because that is where the number gets its value: position i is the coefficient ' +
+      'of 2^i, so asking about a bit is asking about a power of two. The trap in JavaScript is not the direction of the ' +
+      'shift but the width of the operator - 1 << 32 wraps to 1 rather than to 2^32, so a position argument taken from ' +
+      'user input has to be range-checked before it is trusted. Past 31 bits the honest tools are Math.floor(value / 2 ** ' +
+      'i) % 2, which is arithmetic on doubles and safe to 2^53, or BigInt with a real shift.',
+    commonMistake:
+      'Writing value & 1 << position and expecting the AND to bind first.',
+    whyWrong:
+      'Shift binds tighter than AND, so the expression reads as value & (1 << position) by accident in one direction and ' +
+      'as the wrong thing in every other: writing it without parentheses is how a mask built from the wrong position ' +
+      'passes a test on a single example and fails everywhere else.',
+    followUps: [
+      'What does 1 << 32 evaluate to in JavaScript, and what does that say about your position argument?',
+      'Give the expression for the bit at position i without using the shift operator at all.',
+      'Clear the bit at position i instead of reading it. Which operator pair does that?',
+    ],
+    solution:
+      'function bitAt(value, position) {\n' +
+      '  return (value >> position) & 1;\n' +
+      '}\n' +
+      '\n' +
+      'function isBitSet(value, position) {\n' +
+      '  return (value & (1 << position)) !== 0;\n' +
+      '}',
+    modify: 'Make both forms correct for positions up to 52 without using BigInt. Which arithmetic expression replaces the shift, and what does it cost?',
+  },
+  {
+    step: 8,
+    name: 'Check if a number is odd or not',
+    difficulty: 'Easy',
+    topicSlug: BITS,
+    stem: 'Decide parity with a bit test, and explain why it still works on negative numbers in JavaScript.',
+    brief: 'Input: an integer. Output: whether it is odd, and whether it is even. Say what the test is reading and why the modulo is not the same expression.',
+    concepts: ['dsa-parity-from-lsb', 'dsa-bitwise-int32-coercion'],
+    shortAnswer:
+      'A number is odd exactly when its lowest bit is 1, so (value & 1) === 1 is the test and (value & 1) === 0 is the ' +
+      'even case.',
+    idealAnswer:
+      'Every power of two from 2 upward is even, so all of the value except the last bit is a multiple of two and parity ' +
+      'lives entirely in bit zero. AND with one masks off everything else, which is why the test costs one operation and ' +
+      'works unchanged on negatives: ToInt32 gives a two-s complement pattern whose last bit is still the parity. The ' +
+      'modulo form differs in one respect worth knowing - value % 2 is -1 for negative odd numbers, so a comparison ' +
+      'against 1 silently reports false for them while the bit test does not.',
+    walkthrough:
+      'This is the row where a one-character-looking difference decides correctness on half the input domain. In ' +
+      'JavaScript % keeps the sign of the dividend, so an implementation written as value % 2 === 1 is wrong for every ' +
+      'negative odd number unless the sign is normalised first. The bit test has no sign question to answer because the ' +
+      'last bit of a two-s complement pattern is the parity of the value it represents. Both are O(1); the difference is ' +
+      'that one of them has a domain it quietly gets wrong.',
+    commonMistake:
+      'Writing value % 2 === 1 as the parity test and treating negatives as out of scope.',
+    whyWrong:
+      'The remainder carries the sign of the dividend, so -3 % 2 is -1, the comparison fails, and an odd number is ' +
+      'reported even. Either compare against zero instead, or use the bit test, which reads a property of the pattern ' +
+      'rather than a convention of the operator.',
+    followUps: [
+      'Rewrite the test with % so that it is correct for negatives. What does the comparison become?',
+      'Which is faster here, the bit test or the modulo, and is that the right question to ask?',
+      'Use the parity test to write the value divided by two rounded down, with no division.',
+    ],
+    solution:
+      'function isOdd(value) {\n' +
+      '  return (value & 1) === 1;\n' +
+      '}\n' +
+      '\n' +
+      'function isEven(value) {\n' +
+      '  return (value & 1) === 0;\n' +
+      '}',
+    modify: 'Write isOdd for a BigInt input. Which literal has to change, and why can the int32 argument no longer be made?',
+  },
+  {
+    step: 8,
+    name: 'Check if a number is power of 2 or not',
+    difficulty: 'Easy',
+    topicSlug: BITS,
+    stem: 'Decide whether a number is a power of two with one bit operation, and say what the zero and negative cases need.',
+    brief: 'Input: an integer. Output: whether it is 2^k for some k >= 0. Explain the guard that the bit trick cannot do without, and the input size at which the trick itself stops being valid.',
+    concepts: ['dsa-power-of-two-single-bit', 'dsa-lowest-set-bit-isolate', 'dsa-bitwise-int32-coercion'],
+    shortAnswer:
+      'A power of two has exactly one set bit, and value & (value - 1) removes the lowest set bit, so the test is ' +
+      'value > 0 && (value & (value - 1)) === 0.',
+    idealAnswer:
+      'Subtracting one flips the trailing zeros, then the single one below them, leaving the higher bits alone; ANDing ' +
+      'with the original therefore clears exactly the lowest set bit and keeps everything else. That result is zero only ' +
+      'when there was one bit set to begin with, which is the definition of a power of two. The value > 0 guard is not ' +
+      'decoration: 0 & -1 is 0, so zero would be accepted, and negatives carry their own bits in two-s complement, so ' +
+      '-4 & -5 is also 0. Beyond 2^31 the operator only sees the low 32 bits, so multiples of 2^32 collapse to a pattern ' +
+      'of all zeros and pass, which means the honest range of this test is the positive int32 values.',
+    walkthrough:
+      'The bit trick is worth deriving once instead of memorising, because the derivation is the answer to the follow-up ' +
+      'about zero and negatives. It also generalises: the same expression tells you whether a number is a single-bit ' +
+      'mask, which is what allocators ask when rounding a size to a page, and repeatedly applying it counts bits. The ' +
+      'JavaScript limitation is easy to miss precisely because the failing inputs look like the easiest cases - a ' +
+      'multiple of 4294967296 is not a power of two but reduces to zero in int32, so a function written this way should ' +
+      'say in its contract that it is a positive-int32 test.',
+    commonMistake:
+      'Dropping the value > 0 guard, or assuming the test is valid for every Number the language can represent.',
+    whyWrong:
+      'Without the guard, zero passes the bit check and is reported as a power of two. And the operators truncate to ' +
+      'signed 32 bits, so inputs whose low 32 bits happen to hold a single one pass even when the full value is not a ' +
+      'power of two at all.',
+    followUps: [
+      'Return the exponent k for a power of two and null otherwise, without a loop of divisions.',
+      'Extend the test to values up to 2^52. What do you replace the AND with?',
+      'Powers of two are single-bit masks. What does value & (value - 1) tell you about a number that fails the test?',
+    ],
+    solution:
+      'function isPowerOfTwo(value) {\n' +
+      '  return value > 0 && (value & (value - 1)) === 0;\n' +
+      '}',
+    modify: 'Add a version that is correct up to 2^52 by using division and remainder instead of bit operators. Which inputs do the two versions disagree about?',
+  },
+  {
+    step: 8,
+    name: 'Count the number of set bits',
+    difficulty: 'Easy',
+    topicSlug: BITS,
+    stem: 'Count the 1 bits of a number three ways, and say what each one is a loop over.',
+    brief: 'Input: a non-negative integer. Output: its popcount. Give the per-bit loop, the per-set-bit loop and the linear table for every count from 0 to n, and state the range each form is valid for.',
+    concepts: ['dsa-lowest-set-bit-isolate', 'dsa-count-bits-by-doubling', 'dsa-bitwise-int32-coercion', 'dsa-parity-from-lsb'],
+    shortAnswer:
+      'Shift and test each bit for a fixed 31 steps; or clear the lowest set bit with value & (value - 1) and stop when ' +
+      'the value is gone, which loops once per set bit.',
+    idealAnswer:
+      'The per-bit form is a constant-time-looking loop with a fixed iteration count, so it does no better than O(31). ' +
+      'The clear-lowest form runs exactly popcount times, which is the better bound when the value is sparse, and it is ' +
+      'the same expression as the power-of-two test. The table form answers 0 to n together: the count of a value is the ' +
+      'count of its half plus its last bit, so each entry costs O(1) and the whole table is O(n). Only the arithmetic ' +
+      'version - divide by two and add the remainder - is safe beyond 2^31, because the other two apply int32 operators ' +
+      'to the value and lose the high bits.',
+    walkthrough:
+      'Three implementations of one number, chosen to show that the loop is over a different set each time: over ' +
+      'positions, over the set bits themselves, or over the table entries. The recurrence behind the table is the one ' +
+      'worth saying out loud, because it is the same decomposition as a prefix relation - value >> 1 is strictly smaller, ' +
+      'already computed, and differs from the value by exactly the bit the parity test reads. The int32 caveat is the ' +
+      'part most JavaScript answers miss: a value like 2^40 + 1 has two set bits and the shift-and-clear version counts ' +
+      'the low bits of its truncated pattern instead.',
+    commonMistake:
+      'Using value & (value - 1) as the loop step on a value above the signed 32-bit range, or filling the table with ' +
+      'counts of the entry divided by two rounded rather than shifted.',
+    whyWrong:
+      'The AND truncates to int32, so the loop terminates on a pattern that is not the value asked about and returns a ' +
+      'count of the low bits. And a table built from a rounded half plus the last bit double-counts the bit the shift ' +
+      'already removed.',
+    followUps: [
+      'Which of the three loops is fastest for a value with two set bits out of thirty, and which for a value with twenty-eight?',
+      'The table for 0 to n is O(n). Where does that same recurrence show up in a completely different problem?',
+      'Count the set bits of every value in an array. What is the cheapest form now, and why?',
+    ],
+    solution:
+      'function setBits(value) {\n' +
+      '  let count = 0;\n' +
+      '  let remaining = value;\n' +
+      '  while (remaining > 0) {\n' +
+      '    count += remaining % 2;\n' +
+      '    remaining = Math.floor(remaining / 2);\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}\n' +
+      '\n' +
+      'function setBitsKernighan(value) {\n' +
+      '  let count = 0;\n' +
+      '  let remaining = value;\n' +
+      '  while (remaining !== 0) {\n' +
+      '    remaining = remaining & (remaining - 1);\n' +
+      '    count += 1;\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}\n' +
+      '\n' +
+      'function bitCountsUpTo(limit) {\n' +
+      '  const counts = [0];\n' +
+      '  for (let value = 1; value <= limit; value += 1) {\n' +
+      '    counts.push(counts[value >> 1] + (value & 1));\n' +
+      '  }\n' +
+      '  return counts;\n' +
+      '}',
+    modify: 'Fill the same table for 0 to n with the Kernighan step instead of the recurrence. What is the total work now, and when does it beat the table?',
+  },
+  {
+    step: 8,
+    name: 'Set/Unset the rightmost unset bit',
+    difficulty: 'Easy',
+    topicSlug: BITS,
+    stem: 'Set the lowest zero bit of a number and clear its lowest one bit, and explain why the two are mirror operations.',
+    brief: 'Input: a non-negative integer in the signed 32-bit range. Output: the value with its rightmost unset bit set, and the value with its rightmost set bit cleared. Say what each of the two expressions does to the trailing run of bits.',
+    concepts: ['dsa-lowest-set-bit-isolate', 'dsa-bit-index-shift', 'dsa-parity-from-lsb'],
+    shortAnswer:
+      'Setting the lowest zero is value | (value + 1); clearing the lowest one is value & (value - 1). Adding one turns ' +
+      'the trailing run of ones into zeros and the first zero after it into a one.',
+    idealAnswer:
+      'value + 1 flips every trailing 1 to 0 and then flips the first 0 above them to 1, leaving the higher bits alone, so ' +
+      'ORing the original with it sets exactly that one and keeps everything else - which is the mirror of the AND with ' +
+      'the predecessor, which removes exactly the lowest set bit and keeps everything else. Both are O(1) with no loop ' +
+      'and no mask built from a position, and both are the primitive behind rounding a size up to the next multiple of a ' +
+      'power of two. Note that clearing an already-clear bit is a no-op, which is why the pair the sheet names is really ' +
+      'set-the-lowest-zero and clear-the-lowest-one.',
+    walkthrough:
+      'The two expressions are the same trick read twice: adding or subtracting one disturbs only the trailing run and ' +
+      'the first bit above it, so combining the disturbed value with the original through OR or AND edits exactly one ' +
+      'bit. That is why neither needs a position, a mask or a loop. The mirror is also why the names matter - unsetting a ' +
+      'bit that is already unset changes nothing, so a row that asks for both halves of the pair is really asking for the ' +
+      'OR form and the AND form, and saying which is which is the whole answer.',
+    commonMistake:
+      'Building a mask by searching for the first zero bit in a loop, or applying the OR form to clear a bit.',
+    whyWrong:
+      'A search for the first zero is an O(position) loop that the single expression does in one addition and one OR. And ' +
+      'OR can only ever set bits, so using the value | (value + 1) form to clear something returns a number that is ' +
+      'never smaller than the input.',
+    followUps: [
+      'Set the lowest k unset bits in one expression. What does k have to do with the value?',
+      'Round a size up to the next multiple of 2^p by clearing and setting bits. Write both steps.',
+      'What does value | (value + 1) return when every bit is already set, and is that a problem?',
+    ],
+    solution:
+      'function setRightmostUnset(value) {\n' +
+      '  return value | (value + 1);\n' +
+      '}\n' +
+      '\n' +
+      'function clearRightmostSet(value) {\n' +
+      '  return value & (value - 1);\n' +
+      '}',
+    modify: 'Write lowestSetBitMask(value) returning the value of the lowest set bit as its own number, using only one AND and one negation. What is the result for an input of zero?',
+  },
+  {
+    step: 8,
+    name: 'Swap two numbers without third variable',
+    difficulty: 'Easy',
+    topicSlug: BITS,
+    stem: 'Exchange two values with no extra storage, and say what the XOR form assumes about the two slots.',
+    brief: 'Input: a two-element array. Output: the same array with the elements exchanged. Give the XOR form and the form that uses no bit operators, and name the case where the XOR form is not a swap.',
+    concepts: ['dsa-xor-cancellation', 'dsa-bitwise-int32-coercion', 'dsa-value-versus-reference'],
+    shortAnswer:
+      'Three XORs: a becomes a^b, b becomes a^b, a becomes a^b again - each value is XORed twice with the other and ' +
+      'cancels back. The safe version is a temp or a destructure.',
+    idealAnswer:
+      'XOR is its own inverse and is commutative, so after the three assignments each slot has been XORed with the other ' +
+      'twice and holds the partner value. It needs no extra variable, which was the point when a register was the scarce ' +
+      'resource; in JavaScript it also quietly assumes the two slots are distinct storage and that both values fit in a ' +
+      'signed 32-bit integer, because ^ applies ToInt32. Two elements of the same array satisfy the first condition, but ' +
+      'swapping a slot with itself zeroes it, and a value above 2^31 comes back truncated. The destructure form costs one ' +
+      'extra binding, is correct for every value and every alias, and is what ships.',
+    walkthrough:
+      'The three-XOR sequence is a fine piece of arithmetic and a poor production decision, which is the answer to give ' +
+      'before writing it. The failure cases are worth naming exactly: the truncation is silent, so swapXor on large ' +
+      'integers corrupts both values, and self-aliasing is not hypothetical in an algorithm that picks indices from a ' +
+      'partition where lo can equal hi. The arithmetic variant with a + b and a - b has the same alias property and adds ' +
+      'a floating-point overflow the XOR form does not have, since doubles never wrap to a wrong integer the way int32 ' +
+      'operators do.',
+    commonMistake:
+      'Applying the XOR swap to a slot with itself, or to values outside the 32-bit integer range the operator imposes.',
+    whyWrong:
+      'When both sides name the same storage, the first assignment makes it zero and the rest cannot recover the values, ' +
+      'so the swap destroys data instead of moving it. Large operands are converted with ToInt32 first, so both results ' +
+      'come back truncated.',
+    followUps: [
+      'Give the one-line JavaScript swap that needs no third named variable at all. What does it compile to?',
+      'Why does the arithmetic swap fail on a value of Number.MAX_SAFE_INTEGER where the XOR swap fails differently?',
+      'Under what single condition is the XOR swap actually the right answer in modern code?',
+    ],
+    solution:
+      'function swapXor(values) {\n' +
+      '  values[0] = values[0] ^ values[1];\n' +
+      '  values[1] = values[0] ^ values[1];\n' +
+      '  values[0] = values[0] ^ values[1];\n' +
+      '  return values;\n' +
+      '}\n' +
+      '\n' +
+      'function swapDestructured(values) {\n' +
+      '  [values[0], values[1]] = [values[1], values[0]];\n' +
+      '  return values;\n' +
+      '}',
+    modify: 'Make swapXor refuse to corrupt an aliased pair: return the array untouched when both slots name the same value, and say why checking index equality is not the same as checking value equality.',
   },
 ];
 

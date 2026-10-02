@@ -359,6 +359,20 @@ const EXPECTS: Record<string, string> = {
     '(() => { const classic = [[5,3,0,0,7,0,0,0,0],[6,0,0,1,9,5,0,0,0],[0,9,8,0,0,0,0,6,0],[8,0,0,0,6,0,0,0,3],[4,0,0,8,0,3,0,0,1],[7,0,0,0,2,0,0,0,6],[0,6,0,0,0,0,2,8,0],[0,0,0,4,1,9,0,0,5],[0,0,0,0,8,0,0,7,9]]; const before = classic.map((r) => r.join("")).join("|"); const unique = countSolutions(classic, 2); const restored = classic.map((r) => r.join("")).join("|") === before; const dead = [[1,2,3,4,5,6,7,8,0],[0,0,0,0,0,0,0,0,9],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0]]; const open = []; for (let i = 0; i < 9; i += 1) open.push([0,0,0,0,0,0,0,0,0]); return unique === 1 && restored && countSolutions(dead, 2) === 0 && candidatesFor(dead, 0, 8).length === 0 && countSolutions(open, 2) === 2; })()',
   'Expression Add Operators':
     '(() => { const a = addOperators("232", 8).slice().sort().join("|"); const b = addOperators("123", 6).slice().sort().join("|"); return a === "2*3+2|2+3*2" && b === "1*2*3|1+2+3" && addOperators("05", 5).join("|") === "0+5" && addOperators("2147483647", 2147483647).join("|") === "2147483647" && addOperators("0", 0).join("|") === "0" && addOperators("1", 2).length === 0; })()',
+  'Introduction to Bit Manipulation':
+    '(() => { const six = bitReport(6); const neg = bitReport(-4); return six.isEven && six.lowestBit === 0 && six.clearedLowest === 6 && six.doubled === 12 && six.halved === 3 && six.complement === -7 && six.flippedLowBits === 3 && !bitReport(5).isEven && bitReport(5).clearedLowest === 4 && neg.halved === -2 && bitReport(-1).unsignedHalf === 2147483647; })()',
+  'Check if the i-th bit is set or not':
+    'bitAt(5, 0) === 1 && bitAt(5, 1) === 0 && bitAt(5, 2) === 1 && bitAt(8, 3) === 1 && bitAt(8, 4) === 0 && isBitSet(5, 1) === false && isBitSet(5, 2) && isBitSet(0, 0) === false && isBitSet(255, 7) && !isBitSet(255, 8)',
+  'Check if a number is odd or not':
+    'isOdd(7) && !isOdd(8) && isOdd(-3) && !isOdd(-4) && isEven(0) && !isEven(1) && isEven(-2) && !isEven(-3)',
+  'Check if a number is power of 2 or not':
+    'isPowerOfTwo(1) && isPowerOfTwo(2) && isPowerOfTwo(1024) && isPowerOfTwo(2 ** 30) && !isPowerOfTwo(0) && !isPowerOfTwo(-8) && !isPowerOfTwo(6) && !isPowerOfTwo(12) && !isPowerOfTwo(2 ** 30 + 2 ** 29)',
+  'Count the number of set bits':
+    'setBits(0) === 0 && setBits(7) === 3 && setBits(12345) === 6 && setBits(2 ** 40 + 1) === 2 && setBitsKernighan(0) === 0 && setBitsKernighan(255) === 8 && setBitsKernighan(12) === 2 && bitCountsUpTo(5).join() === "0,1,1,2,1,2" && bitCountsUpTo(0).join() === "0" && bitCountsUpTo(8).join() === "0,1,1,2,1,2,2,3,1"',
+  'Set/Unset the rightmost unset bit':
+    'setRightmostUnset(0) === 1 && setRightmostUnset(3) === 7 && setRightmostUnset(11) === 15 && clearRightmostSet(0) === 0 && clearRightmostSet(1) === 0 && clearRightmostSet(12) === 8 && clearRightmostSet(11) === 10',
+  'Swap two numbers without third variable':
+    '(() => { const a = swapXor([3, 8]); const b = swapXor([5, 5]); const c = swapDestructured([3, 8]); return a.join() === "8,3" && b.join() === "5,5" && c.join() === "8,3" && swapXor([0, 0]).join() === "0,0" && swapDestructured([3000000000, 1]).join() === "1,3000000000"; })()',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */
