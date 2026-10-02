@@ -337,6 +337,12 @@ const EXPECTS: Record<string, string> = {
     '(() => { const a = digitCombinations(3, 7).map((c) => c.join("")).join("|"); const b = digitCombinations(3, 9).map((c) => c.join("")).join("|"); return a === "124" && b === "126|135|234" && digitCombinations(2, 7).length === 3 && digitCombinations(9, 45).length === 1 && digitCombinations(1, 5).length === 1 && digitCombinations(2, 20).length === 0 && digitCombinations(3, 6).map((c) => c.join("")).join("|") === "123"; })()',
   'Generate Parentheses':
     '(() => { const three = generateBalanced(3); return three.join("|") === "((()))|(()())|(())()|()(())|()()()" && generateBalanced(1).join() === "()" && generateBalanced(0).length === 1 && generateBalanced(0).join() === "" && generateBalanced(2).length === 2 && generateBalanced(4).length === 14; })()',
+  'Generate all binary strings without consecutive 1s':
+    '(() => { const agrees = [0, 1, 2, 3, 4, 5, 6].every((n) => binaryStrings(n).length === countBinaryStrings(n)); return binaryStrings(3).join("|") === "000|001|010|100|101" && binaryStrings(2).join("|") === "00|01|10" && binaryStrings(3).every((s) => !s.includes("11")) && countBinaryStrings(0) === 1 && countBinaryStrings(1) === 2 && countBinaryStrings(5) === 13 && agrees; })()',
+  'Letter Combinations of a Phone Number':
+    '(() => { const a = letterCombinations("23"); const b = letterCombinations("79"); return a.join("|") === "ad|ae|af|bd|be|bf|cd|ce|cf" && b.length === 16 && b[0] === "pw" && letterCombinations("2").join("") === "abc" && letterCombinations("").length === 0 && new Set(a).size === 9; })()',
+  'Palindrome Partitioning':
+    '(() => { const a = palindromePartitions("aab").map((p) => p.join("/")).join("|"); const b = palindromePartitions("abb").map((p) => p.join("/")).join("|"); return a === "a/a/b|aa/b" && b === "a/b/b|a/bb" && palindromePartitions("a").map((p) => p.join("/")).join("|") === "a" && palindromePartitions("").length === 1 && palindromePartitions("aaa").length === 4; })()',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */

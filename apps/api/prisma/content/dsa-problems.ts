@@ -973,6 +973,13 @@ export const DSA_CONCEPTS = {
     terms: ['legal extension', 'invariant', 'prefix rejected', 'never generated', 'prune by rule'],
     weight: 3,
   },
+  'dsa-position-wise-product': {
+    slug: 'dsa-position-wise-product',
+    name: 'One position at a time is a product of alphabets',
+    detail: 'A combination built position by position has exactly the product of the per-position choices as leaves, so the walk is a nested loop written over an index instead of a fixed number of for statements.',
+    terms: ['cartesian product', 'per position', 'product of sizes', 'index over positions', 'generalised nested loop'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -10035,6 +10042,192 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return results;\n' +
       '}',
     modify: 'Emit the strings in order of the depth they reach - shallowest first. Do you have to regenerate, or can the walk be reordered?',
+  },
+  {
+    step: 7,
+    name: 'Generate all binary strings without consecutive 1s',
+    difficulty: 'Medium',
+    topicSlug: 'recursion',
+    stem: 'Generate every binary string of length n with no two adjacent 1s, then count them without generating any.',
+    brief: 'Input: a length n. Output: all 0/1 strings of exactly n characters in which no 1 has a 1 beside it. Then give a counting version that never builds a string, and say what the two versions agree about.',
+    concepts: ['dsa-construction-by-invariant', 'dsa-accumulator-parameter', 'dsa-recursive-decomposition'],
+    shortAnswer:
+      'Always allow a 0; allow a 1 only when the previous character was not a 1. That single bit of state is the whole ' +
+      'rule, and the count it implies is a Fibonacci recurrence.',
+    idealAnswer:
+      'walk(built, remaining, lastWasOne) appends 0 unconditionally and 1 only when lastWasOne is false, so every leaf is ' +
+      'legal and the tree never contains an illegal prefix. The state is one bit carried as an argument, which is why ' +
+      'there is nothing to undo. Counting is the same rule with the strings thrown away: a legal string of length k ends ' +
+      'in 0 with count(k - 1) prefixes or in 1 with count(k - 2) prefixes, giving Fibonacci rather than a power of two. ' +
+      'Generation costs O(n * count(n)) because each answer is n long; counting costs O(n) time and O(1) space.',
+    walkthrough:
+      'The pair of functions is the point of the row: one enumerates, the other counts the same tree from its shape, and ' +
+      'the two must agree on every n - which is a verification an interviewer will run mentally. Note the asymmetry of ' +
+      'the branches, because it is the reason the recurrence is Fibonacci: 0 is always extendable, so all legal strings ' +
+      'of the shorter length re-extend, while 1 is extendable only from strings ending in 0. Keeping lastWasOne as an ' +
+      'argument rather than as a shared flag is what lets the two branches diverge without interfering with each other.',
+    commonMistake:
+      'Generating all 2^n strings and filtering out the ones with adjacent 1s, or dropping the last-character state and ' +
+      'checking the built string by scanning it at every extension.',
+    whyWrong:
+      'Filtering is correct but visits 2^n leaves to report about 1.6^n of them, so the waste grows exponentially with ' +
+      'n. And rescanning the prefix at each step multiplies the surviving leaves by n for a test that one boolean ' +
+      'remembers exactly.',
+    followUps: [
+      'Your count and your generator must agree. What would a mismatch at n = 1 tell you about the guards?',
+      'Now forbid three consecutive 1s instead of two. How many bits of state does the walk need?',
+      'Give the strings in lexicographic order. Are they already, and why?',
+    ],
+    solution:
+      'function binaryStrings(length) {\n' +
+      '  const results = [];\n' +
+      '  function walk(built, remaining, lastWasOne) {\n' +
+      '    if (remaining === 0) {\n' +
+      '      results.push(built);\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    walk(built + "0", remaining - 1, false);\n' +
+      '    if (!lastWasOne) walk(built + "1", remaining - 1, true);\n' +
+      '  }\n' +
+      '  walk("", length, false);\n' +
+      '  return results;\n' +
+      '}\n' +
+      '\n' +
+      'function countBinaryStrings(length) {\n' +
+      '  if (length === 0) return 1;\n' +
+      '  let endingZero = 1;\n' +
+      '  let endingOne = 1;\n' +
+      '  for (let step = 1; step < length; step += 1) {\n' +
+      '    const nextZero = endingZero + endingOne;\n' +
+      '    endingOne = endingZero;\n' +
+      '    endingZero = nextZero;\n' +
+      '  }\n' +
+      '  return endingZero + endingOne;\n' +
+      '}',
+    modify: 'Forbid runs of three 1s instead of two. How much state does the walk carry now, and what recurrence replaces the Fibonacci count?',
+  },
+  {
+    step: 7,
+    name: 'Letter Combinations of a Phone Number',
+    difficulty: 'Medium',
+    topicSlug: 'recursion',
+    stem: 'Enumerate the letter combinations a digit string can stand for, and explain why the answer is a product of per-position sizes rather than a subset count.',
+    brief: 'Input: a string of digits from 2 to 9, possibly empty. Output: every letter combination the keypad maps the digits to, in the order the digits are read. Say what the walk would look like for three digits versus ten.',
+    concepts: ['dsa-position-wise-product', 'dsa-accumulator-parameter', 'dsa-recursive-decomposition'],
+    shortAnswer:
+      'One position per frame: at index i loop over the letters of digits[i] and recurse on i + 1. The leaf count is the ' +
+      'product of the group sizes, so it is 3^a * 4^b for a threes and b fours.',
+    idealAnswer:
+      'This is a nested loop with a variable depth, which is why it is recursive rather than a subset walk: every ' +
+      'position must be filled exactly once, so there is no skip branch and no start-index rule - the index simply ' +
+      'advances. Total leaves are the product of the per-digit alphabet sizes, 3 or 4 each, and each leaf is a string of ' +
+      'length equal to the digit count, so the cost is O(n * 3^n) to O(n * 4^n) in the worst case and the output is what ' +
+      'dominates. The empty input has no combinations at all - not one empty string - which is the convention the base ' +
+      'case has to encode deliberately.',
+    walkthrough:
+      'The comparison that earns credit is with the subset rows: there, a position may be skipped, so the tree is binary ' +
+      'and 2^n; here, a position must be filled, so the branching factor is the alphabet size and the answer is a ' +
+      'product. Writing the map as data keeps the walk independent of it, which is why the same function would handle ' +
+      'any keypad. The one decision to defend out loud is the empty input: recursing naively reaches the base case ' +
+      'immediately and reports one empty string, so the guard for zero digits is a requirement of the question rather ' +
+      'than a defensive check.',
+    commonMistake:
+      'Returning [""] for the empty digit string, or indexing the map with digits 0 and 1 and reading the crash as a ' +
+      'bug in the recursion.',
+    whyWrong:
+      'One empty combination is a different answer from no combinations, and a caller that counts results gets a length ' +
+      'of one where the question asks for zero. A missing keypad entry is outside the stated input domain, so the fix is ' +
+      'to say the contract out loud rather than to paper over it inside the walk.',
+    followUps: [
+      'Three of the digits are 7 and 9. What is the exact leaf count, without listing anything?',
+      'Replace the keypad walk with an odometer over the same alphabets. What does it lose?',
+      'Now the digit string may contain 0 and 1, which map to nothing. Which behaviour do you choose, and why?',
+    ],
+    solution:
+      'const KEYPAD = {\n' +
+      '  "2": "abc", "3": "def", "4": "ghi", "5": "jkl",\n' +
+      '  "6": "mno", "7": "pqrs", "8": "tuv", "9": "wxyz",\n' +
+      '};\n' +
+      '\n' +
+      'function letterCombinations(digits) {\n' +
+      '  if (digits.length === 0) return [];\n' +
+      '  const results = [];\n' +
+      '  function walk(index, built) {\n' +
+      '    if (index === digits.length) {\n' +
+      '      results.push(built);\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    const letters = KEYPAD[digits[index]];\n' +
+      '    for (const letter of letters) walk(index + 1, built + letter);\n' +
+      '  }\n' +
+      '  walk(0, "");\n' +
+      '  return results;\n' +
+      '}',
+    modify: 'Return the combinations for a digit string that may contain 0 and 1, treating those as a space that still occupies a position. Which line changes and what does the leaf count become?',
+  },
+  {
+    step: 7,
+    name: 'Palindrome Partitioning',
+    difficulty: 'Medium',
+    topicSlug: 'recursion',
+    stem: 'Enumerate every way to cut a string into palindromic pieces, and say what the 2 to the n-1 cut positions have to do with it.',
+    brief: 'Input: a string. Output: every partition of it into contiguous palindromic substrings, each partition as the list of its pieces. Name the decision being made at every gap and the cost of testing a piece.',
+    concepts: ['dsa-include-exclude-branch', 'dsa-construction-by-invariant', 'dsa-prefix-path-carry'],
+    shortAnswer:
+      'At each start index try every end position, extend only when the piece is a palindrome, and recurse on what is ' +
+      'left. The gaps between characters are the cut-or-not decisions.',
+    idealAnswer:
+      'walk(start) loops end from start + 1 to the length, and only when text.slice(start, end) reads the same both ways ' +
+      'does it push that piece and recurse from end. Because every piece must be a palindrome, illegal splits are ' +
+      'never entered, and the leaves are exactly the valid partitions. The space of all partitions is 2 to the n-1 - ' +
+      'each of the n-1 gaps either has a cut or does not - so the worst case for a string of one repeated character ' +
+      'reports all of them, and the cost is O(n * 2^n) counting the O(n) palindrome test and the O(n) copy per answer. ' +
+      'A precomputed palindrome table turns each test into O(1) and makes the walk itself the whole cost.',
+    walkthrough:
+      'Two framings of the same tree, and saying both is the strong answer: cuts at gaps, or start-index recursion. The ' +
+      'gap view explains the 2 to the n-1 bound, the recursive view explains the code. The palindrome test is where the ' +
+      'row actually costs something - testing each slice by scanning is O(n), and the same slice is tested again from a ' +
+      'different branch, which is what a memo table or a centre-expansion precomputation removes. Compare this with the ' +
+      'linked-list palindrome row: there the question was one yes-or-no about one arrangement, here it is an ' +
+      'enumeration of all arrangements that satisfy it.',
+    commonMistake:
+      'Advancing the start to end + 1 after taking a piece, or collecting pieces by character instead of by slice.',
+    whyWrong:
+      'Skipping one character past the end of a piece drops that character from every partition and silently shrinks the ' +
+      'output. And a piece must be contiguous text from the original string, so building it character by character with ' +
+      'gaps produces substrings that are not partitions at all.',
+    followUps: [
+      'Precompute which slices are palindromes. What does that cost, and what does the walk now cost?',
+      'Report the minimum number of cuts instead of every partition. Does the enumeration still make sense?',
+      'For a string of n identical characters, how many partitions do you emit, and is any algorithm able to do better?',
+    ],
+    solution:
+      'function palindromePartitions(text) {\n' +
+      '  const results = [];\n' +
+      '  const path = [];\n' +
+      '  function isPalindrome(slice) {\n' +
+      '    for (let left = 0, right = slice.length - 1; left < right; left += 1, right -= 1) {\n' +
+      '      if (slice[left] !== slice[right]) return false;\n' +
+      '    }\n' +
+      '    return true;\n' +
+      '  }\n' +
+      '  function walk(start) {\n' +
+      '    if (start === text.length) {\n' +
+      '      results.push(path.slice());\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    for (let end = start + 1; end <= text.length; end += 1) {\n' +
+      '      const piece = text.slice(start, end);\n' +
+      '      if (!isPalindrome(piece)) continue;\n' +
+      '      path.push(piece);\n' +
+      '      walk(end);\n' +
+      '      path.pop();\n' +
+      '    }\n' +
+      '  }\n' +
+      '  walk(0);\n' +
+      '  return results;\n' +
+      '}',
+    modify: 'Precompute a palindrome table for all slices in O(n^2), then use it inside the walk. Which repeated test disappears, and how many times was each slice being checked?',
   },
 ];
 
