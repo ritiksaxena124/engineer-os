@@ -1050,6 +1050,62 @@ export const DSA_CONCEPTS = {
     terms: ['shift right as parent', 'plus the last bit', 'table in linear time', 'constant per entry', 'reuse the smaller count'],
     weight: 3,
   },
+  'dsa-doubling-quotient': {
+    slug: 'dsa-doubling-quotient',
+    name: 'Divide by subtracting the biggest doubled divisor that still fits',
+    detail: 'Long division in base two: double the divisor until doubling it would overshoot, subtract that one chunk, and the quotient grows by the same power of two the divisor did.',
+    terms: ['repeated doubling', 'shift the divisor', 'subtract a chunk not a unit', 'log chunks per remainder', 'schoolbook division in binary'],
+    weight: 3,
+  },
+  'dsa-truncation-toward-zero': {
+    slug: 'dsa-truncation-toward-zero',
+    name: 'Integer division truncates toward zero, not down',
+    detail: 'A quotient drops its fractional part whatever the sign, so -7 over 2 is -3 and not -4; working with magnitudes and re-applying the sign at the end gives that for free, while flooring does not.',
+    terms: ['toward zero', 'magnitude then sign', 'floor versus trunc', 'sign from unequal signs', 'clamp at the int32 bound'],
+    weight: 3,
+  },
+  'dsa-xor-as-difference': {
+    slug: 'dsa-xor-as-difference',
+    name: 'XOR marks exactly the positions where two values differ',
+    detail: 'A bit of a^b is set only where the two operands disagree, so counting the set bits of the XOR counts the flips that turn one number into the other - no comparison per bit needed.',
+    terms: ['xor of two values', 'differing positions', 'popcount of the xor', 'hamming distance', 'flip to convert'],
+    weight: 3,
+  },
+  'dsa-xor-fold-parity': {
+    slug: 'dsa-xor-fold-parity',
+    name: 'Folding XOR leaves the values that occur an odd number of times',
+    detail: 'XOR is commutative and every value cancels itself in pairs, so an accumulator over a whole array returns exactly the elements whose multiplicity is odd - one pass, no map.',
+    terms: ['commutative fold', 'pairs cancel', 'odd multiplicity survives', 'no extra storage', 'zero is indistinguishable'],
+    weight: 3,
+  },
+  'dsa-bitmask-subset-selector': {
+    slug: 'dsa-bitmask-subset-selector',
+    name: 'One bit per element turns an integer into a subset',
+    detail: 'Reading mask bit i as include element i makes the integers 0 to 2 to the n minus one enumerate every subset, in a fixed order and with no recursion.',
+    terms: ['mask as subset', 'bit i selects element i', 'integers 0 to 2^n minus 1', 'enumerate without recursion', 'shift limit at 30 bits'],
+    weight: 3,
+  },
+  'dsa-prefix-xor': {
+    slug: 'dsa-prefix-xor',
+    name: 'A range XOR is two prefix XORs combined',
+    detail: 'XOR is its own inverse, so the elements before the range cancel out of prefix(right) ^ prefix(left - 1) the same way a prefix sum subtracts - with no separate inverse operation.',
+    terms: ['prefix xor', 'self inverse', 'cancel the prefix', 'range query in O(1)', 'no subtraction needed'],
+    weight: 3,
+  },
+  'dsa-xor-period-four': {
+    slug: 'dsa-xor-period-four',
+    name: 'The XOR of 0 to n repeats a four-case pattern',
+    detail: 'Pairs of consecutive integers cancel except at the boundaries, so XOR from 0 to n is n, 1, n plus 1 or 0 according to n modulo 4 - a closed form instead of a loop.',
+    terms: ['n modulo 4', 'closed form', 'pairs cancel', 'constant time range xor', 'boundary residue'],
+    weight: 3,
+  },
+  'dsa-xor-split-by-set-bit': {
+    slug: 'dsa-xor-split-by-set-bit',
+    name: 'A bit where the two answers differ separates them',
+    detail: 'The fold of the whole array has a set bit wherever the two unmatched values disagree; using that one bit as a partition key splits the array into two folds, each carrying a single answer.',
+    terms: ['lowest set bit as separator', 'partition by a bit', 'two folds one answer each', 'cancellation inside a group', 'no counting map'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -11175,6 +11231,374 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return values;\n' +
       '}',
     modify: 'Make swapXor refuse to corrupt an aliased pair: return the array untouched when both slots name the same value, and say why checking index equality is not the same as checking value equality.',
+  },
+  {
+    step: 8,
+    name: 'Divide two integers without multiplication or division',
+    difficulty: 'Medium',
+    topicSlug: BITS,
+    stem: 'Compute the integer quotient of two int32 values using only addition, subtraction, shifting and comparison, truncated toward zero.',
+    brief: 'Input: dividend and divisor, either sign, divisor nonzero. Output: the quotient with its fractional part dropped, clamped to the 32-bit signed range. No *, no /, no %. Say what the answer has to be when the true quotient does not fit.',
+    concepts: ['dsa-doubling-quotient', 'dsa-truncation-toward-zero', 'dsa-bitwise-int32-coercion', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Work on magnitudes, subtract the largest doubled divisor that still fits and credit the same power of two to the ' +
+      'quotient: O(log dividend) chunks instead of O(quotient) subtractions. Re-apply the sign at the end and clamp.',
+    idealAnswer:
+      'This is schoolbook long division written in base two. Repeated subtraction of the divisor alone is correct but costs ' +
+      'as many steps as the quotient, which is the whole number the problem is asking for; doubling the divisor - by ' +
+      'addition, since multiplication is banned - shrinks the remainder geometrically, so each chunk of the quotient takes ' +
+      'O(log) work and the total is O(log^2) at worst, O(log) with a bit of care. Truncation comes out right by ' +
+      'construction: magnitudes divide as positive numbers and flooring equals truncating there, so the only place a sign ' +
+      'appears is the final negation, which is why flooring the raw quotient is wrong for mixed signs - -7 over 2 must be ' +
+      '-3, not -4. The edge the sheet does not mention is the one LeetCode does: -2147483648 over -1 is 2147483648, which ' +
+      'is outside the signed int32 range, and the contract says to clamp it to 2147483647 rather than wrap.',
+    walkthrough:
+      'Two loops nest, and both are doubling rather than incrementing: the inner one doubles a value and its multiplicity ' +
+      'together until a further double would overshoot the remainder, the outer one subtracts that chunk and banks the ' +
+      'multiplicity. The invariant is that the original dividend equals divisor times quotient plus the current remainder, ' +
+      'so any chunk subtraction that keeps the remainder non-negative keeps the answer exact. JavaScript adds a wrinkle the ' +
+      'C++ version does not have: shifting a doubled divisor left past bit 31 applies ToInt32 and wraps to a negative ' +
+      'number, which would make the overshoot test pass forever, so the doubling is written as value + value on doubles ' +
+      'and the shift is only ever used on the multiplicity.',
+    commonMistake:
+      'Subtracting the divisor one time per step, or flooring the quotient instead of truncating it toward zero.',
+    whyWrong:
+      'Single subtraction is O(quotient), so a dividend of 2 billion takes 2 billion iterations and the submission times ' +
+      'out on exactly the input the doubling exists to handle. Flooring and truncating differ whenever the signs ' +
+      'disagree: floor(-3.5) is -4 while the required answer is -3, so a Math.floor over signed operands is off by one on ' +
+      'half the input space.',
+    followUps: [
+      'Rewrite the inner doubling with a left shift. At which divisor magnitude does ToInt32 start breaking it, and how do you detect the wrap?',
+      'Give the answer for dividend = -2147483648, divisor = -1 under the clamp contract and under a contract that lets it overflow. Which one is honest in JavaScript?',
+      'Why is the remainder always smaller than the divisor at the end, and what does that prove about the quotient?',
+    ],
+    solution:
+      'function divide(dividend, divisor) {\n' +
+      '  const INT_MAX = 2147483647;\n' +
+      '  const negative = (dividend < 0) !== (divisor < 0);\n' +
+      '  let remainder = Math.abs(dividend);\n' +
+      '  const unit = Math.abs(divisor);\n' +
+      '  let quotient = 0;\n' +
+      '  while (remainder >= unit) {\n' +
+      '    let chunk = unit;\n' +
+      '    let multiples = 1;\n' +
+      '    while (chunk + chunk <= remainder) {\n' +
+      '      chunk += chunk;\n' +
+      '      multiples += multiples;\n' +
+      '    }\n' +
+      '    remainder -= chunk;\n' +
+      '    quotient += multiples;\n' +
+      '  }\n' +
+      '  const signed = negative ? -quotient : quotient;\n' +
+      '  if (signed > INT_MAX) return INT_MAX;\n' +
+      '  if (signed < -INT_MAX - 1) return -INT_MAX - 1;\n' +
+      '  return signed;\n' +
+      '}\n' +
+      '\n' +
+      'function divideBySubtraction(dividend, divisor) {\n' +
+      '  const negative = (dividend < 0) !== (divisor < 0);\n' +
+      '  let remainder = Math.abs(dividend);\n' +
+      '  const unit = Math.abs(divisor);\n' +
+      '  let quotient = 0;\n' +
+      '  while (remainder >= unit) {\n' +
+      '    remainder -= unit;\n' +
+      '    quotient += 1;\n' +
+      '  }\n' +
+      '  return negative ? -quotient : quotient;\n' +
+      '}',
+    modify: 'Make divide report the remainder as well by returning [quotient, remainder] with the remainder carrying the sign of the dividend. Which clamp case has to change once the remainder is part of the answer?',
+  },
+  {
+    step: 8,
+    name: 'Count number of bits to be flipped to convert A to B',
+    difficulty: 'Easy',
+    topicSlug: BITS,
+    stem: 'Given two integers, return how many bit positions disagree, and list those positions.',
+    brief: 'Input: two integers a and b. Output: the number of positions that have to change to turn a into b, plus the positions themselves counted from the least significant bit. Name what the answer means when either input is negative.',
+    concepts: ['dsa-xor-as-difference', 'dsa-lowest-set-bit-isolate', 'dsa-bitwise-int32-coercion', 'dsa-parity-from-lsb'],
+    shortAnswer:
+      'XOR the two and count the set bits - XOR leaves a 1 exactly where the operands differ, so the popcount of the XOR ' +
+      'is the number of flips.',
+    idealAnswer:
+      'Per bit, XOR is the disagreement test: it outputs 1 only for the 01 and 10 pairs, so a^b is a mask of every position ' +
+      'where a and b differ, and the count of flips is that mask popcount. Clearing the lowest set bit in a loop makes the ' +
+      'work proportional to the answer rather than to 32, which is the same Kernighan step used for counting the bits of a ' +
+      'single number. The measure has a name in coding theory - it is the Hamming distance - and it is what a parity bit ' +
+      'or an error-correcting code is actually counting. Negatives are the part worth stating out loud: both operands go ' +
+      'through ToInt32, so -1 and 0 differ in all 32 positions and the answer is 32, not infinity and not 1. Two negative ' +
+      'values still compare correctly against each other because the conversion is the same for both.',
+    walkthrough:
+      'The one-line version is popcount(a ^ b) and everything else in the row is about the two conventions hiding in it: ' +
+      'which width the comparison runs at, and whether the count is done by scanning all positions or only the differing ' +
+      'ones. The scan version is the one that generalises when asked for positions rather than a count, since it can push ' +
+      'the index into a list as it goes; the bit-clearing version is faster and gives only a number because it throws the ' +
+      'positions away.',
+    commonMistake:
+      'Counting bits over each number separately and subtracting, or treating a negative input as having no defined bit width.',
+    whyWrong:
+      'Two numbers can share the same popcount and still differ everywhere, so the difference of counts is not the count ' +
+      'of differences. And leaving the negative case unstated invites an answer of one for -1 versus 0, while the operator ' +
+      'has already converted both to 32-bit patterns that differ in every position.',
+    followUps: [
+      'Return the smallest number that differs from a in exactly k positions. What does that do to the mask?',
+      'Why does the bit-clearing loop terminate on a negative mask instead of running forever?',
+      'Extend the count to two BigInt values wider than 32 bits. Which part of the reasoning changes?',
+    ],
+    solution:
+      'function bitsToFlip(a, b) {\n' +
+      '  let diff = a ^ b;\n' +
+      '  let count = 0;\n' +
+      '  while (diff !== 0) {\n' +
+      '    count += 1;\n' +
+      '    diff &= diff - 1;\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}\n' +
+      '\n' +
+      'function differingPositions(a, b) {\n' +
+      '  const positions = [];\n' +
+      '  let diff = a ^ b;\n' +
+      '  for (let i = 0; i < 32; i += 1) {\n' +
+      '    if ((diff & 1) === 1) positions.push(i);\n' +
+      '    diff >>= 1;\n' +
+      '  }\n' +
+      '  return positions;\n' +
+      '}',
+    modify: 'Add flipsToConvert(a, b, maxFlips) returning whether a can be converted with at most maxFlips changes, without counting more bits than that budget.',
+  },
+  {
+    step: 8,
+    name: 'Find the number that appears odd number of times',
+    difficulty: 'Easy',
+    topicSlug: BITS,
+    stem: 'Every value in an array occurs an even number of times except one. Find it in one pass with no extra storage, and then with a frequency map.',
+    brief: 'Input: an array where exactly one distinct value has an odd multiplicity. Output: that value. Give the XOR fold and the counting version, and name the input where the fold alone cannot tell you the answer is meaningful.',
+    concepts: ['dsa-xor-fold-parity', 'dsa-xor-cancellation', 'dsa-hash-frequency', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'XOR every element into one accumulator: equal values cancel in pairs, so the odd one is what is left. The counting ' +
+      'version keeps a frequency map and reads the first entry whose count is odd.',
+    idealAnswer:
+      'XOR is commutative, associative and its own inverse, so reordering an XOR fold is free and every value that appears ' +
+      '2k times is XORed with itself k times and disappears. The single odd-frequency value is the residue. That gives O(n) ' +
+      'time and O(1) space, which is the point of the row: the counting map is the same time with O(distinct) memory, so ' +
+      'the fold is the answer only when the promise about multiplicities holds. The promise is where the edge case lives - ' +
+      'an array with no odd-multiplicity value folds to 0, and so does an array whose odd value is 0, so the fold cannot ' +
+      'distinguish a valid answer of zero from a violated input. The counting version can, because it looks at the ' +
+      'multiplicity rather than its residue.',
+    walkthrough:
+      'Read the fold as a parity counter per bit position: a bit of the accumulator is 1 exactly when an odd number of ' +
+      'elements have that bit set. Paired values contribute twice to every position and change nothing, which is why the ' +
+      'trick says nothing about the values being small or sorted - only about how many times each appears. It also explains ' +
+      'why an array of pairs plus one odd element works even when the odd element is 0: 0 contributes nothing to any ' +
+      'position, so its odd multiplicity is invisible to the fold.',
+    commonMistake:
+      'Returning the fold without checking the input promise, or assuming a result of 0 means no odd value exists.',
+    whyWrong:
+      'The fold is only the answer under the stated precondition; on an arbitrary array it silently returns the XOR of ' +
+      'everything with odd multiplicity, which is a meaningless number when several values qualify. And since 0 leaves no ' +
+      'trace in an XOR, a legitimate input whose odd value is 0 is indistinguishable from an all-paired input.',
+    followUps: [
+      'What does the same fold return when three distinct values appear an odd number of times? Why is that not useful?',
+      'Adapt the fold to find the one value appearing exactly three times while the rest appear twice. What extra storage does that need?',
+      'Give the O(1)-space, O(n)-time check that the array actually satisfies the promise.',
+    ],
+    solution:
+      'function oddOccurrence(values) {\n' +
+      '  let fold = 0;\n' +
+      '  for (const value of values) fold ^= value;\n' +
+      '  return fold;\n' +
+      '}\n' +
+      '\n' +
+      'function oddOccurrenceByCount(values) {\n' +
+      '  const counts = new Map();\n' +
+      '  for (const value of values) {\n' +
+      '    counts.set(value, (counts.get(value) ?? 0) + 1);\n' +
+      '  }\n' +
+      '  for (const [value, count] of counts) {\n' +
+      '    if (count % 2 === 1) return value;\n' +
+      '  }\n' +
+      '  return null;\n' +
+      '}',
+    modify: 'Return every value whose multiplicity is odd, in first-appearance order, in one pass over a frequency map. Why can the XOR fold not produce that list?',
+  },
+  {
+    step: 8,
+    name: 'Power Set using Bit Manipulation',
+    difficulty: 'Medium',
+    topicSlug: BITS,
+    stem: 'Enumerate every subset of an array by counting in binary instead of recursing.',
+    brief: 'Input: an array of up to a dozen distinct values. Output: all 2^n subsets as comma-joined strings, ordered by the integer whose bits select the subset; the empty subset is the empty string. Name the input size at which the bit trick stops being safe.',
+    concepts: ['dsa-bitmask-subset-selector', 'dsa-bit-index-shift', 'dsa-bitwise-int32-coercion', 'dsa-include-exclude-branch', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Count from 0 to 2^n minus 1 and read each mask as include-element-on-set-bit: bit i picks values[i]. That is the ' +
+      'whole subset lattice in two nested loops, no recursion and no stack.',
+    idealAnswer:
+      'A subset is a yes-or-no decision per element, which is exactly one bit, so the integers 0 to 2^n minus 1 are in ' +
+      'bijection with the subsets and counting them enumerates the power set. The cost is unavoidable: the output itself ' +
+      'is 2^n rows holding up to n elements, so O(n * 2^n) time is optimal for any method, and the bitmask version earns ' +
+      'nothing asymptotically over the include-exclude recursion - what it earns is no call stack, no shared mutable path ' +
+      'and an order that is reproducible, which makes it the version to write when the subsets are being fed to a test. ' +
+      'The bit trick is bounded by the machine: 1 << n goes through ToInt32, so at n = 31 it becomes negative and at 32 it ' +
+      'is 0 again, meaning the enumeration silently produces nothing instead of four billion rows. Past about n = 20 the ' +
+      'real limit is the output size, and past 30 the shift is a correctness bug.',
+    walkthrough:
+      'Two readings of the same loop are worth having: mask-major, which asks for each integer which elements it selects, ' +
+      'and element-major, which asks for each element which masks select it. The first is what is written here and gives ' +
+      'the standard order - empty set first, full set last, and subsets grouped by their largest member. Recursion reaches ' +
+      'the same set in a different order, depth-first, which is why a row that expects a particular sequence must specify ' +
+      'which enumeration produced it.',
+    commonMistake:
+      'Using 1 << n with an n that can reach 31, or expecting the bitmask order to match the recursive order.',
+    whyWrong:
+      'The shift converts its result to a signed 32-bit integer, so a wide array yields a negative or zero count and the ' +
+      'loop body never runs - a wrong answer that looks like an empty input. The two enumerations differ in order: the ' +
+      'mask counter moves by changing the lowest bits first, recursion changes the deepest one, so comparing outputs ' +
+      'element by element fails while the sets themselves agree.',
+    followUps: [
+      'Enumerate only the subsets of size exactly k with bit tricks. What is the popcount test costing per mask?',
+      'Rewrite the inner test so the subset is built from the previous mask instead of from scratch. What does that do to the total work?',
+      'Generate the masks in Gray-code order so each step changes one bit. What problem does that make cheaper?',
+    ],
+    solution:
+      'function bitmaskSubset(values, mask) {\n' +
+      '  const subset = [];\n' +
+      '  for (let i = 0; i < values.length; i += 1) {\n' +
+      '    if ((mask & (1 << i)) !== 0) subset.push(values[i]);\n' +
+      '  }\n' +
+      '  return subset.join(",");\n' +
+      '}\n' +
+      '\n' +
+      'function powerSet(values) {\n' +
+      '  const total = 1 << values.length;\n' +
+      '  const result = [];\n' +
+      '  for (let mask = 0; mask < total; mask += 1) {\n' +
+      '    result.push(bitmaskSubset(values, mask));\n' +
+      '  }\n' +
+      '  return result;\n' +
+      '}',
+    modify: 'Make powerSet return the subsets as arrays of numbers instead of strings, and refuse to enumerate when values.length makes 1 << values.length stop being the true count.',
+  },
+  {
+    step: 8,
+    name: 'Find XOR of numbers from L to R',
+    difficulty: 'Medium',
+    topicSlug: BITS,
+    stem: 'Answer many queries of the form XOR of every integer in a closed range, in constant time each.',
+    brief: 'Input: left and right, 0 <= left <= right. Output: left ^ (left+1) ^ ... ^ right. Give the closed form for a prefix XOR and the range built from two prefixes.',
+    concepts: ['dsa-prefix-xor', 'dsa-xor-period-four', 'dsa-xor-cancellation', 'dsa-complexity-counting'],
+    shortAnswer:
+      'xorUpTo(n) is n, 1, n + 1 or 0 depending on n mod 4, and the range answer is xorUpTo(left - 1) ^ xorUpTo(right) - ' +
+      'the part before left cancels because XOR is its own inverse.',
+    idealAnswer:
+      'Prefix XOR is the same idea as a prefix sum, with the cancellation done by XOR instead of subtraction: since every ' +
+      'value undoes itself, prefix(right) ^ prefix(left - 1) removes exactly the elements below left. The closed form for ' +
+      'the prefix comes from pairing consecutive integers: (2k) ^ (2k + 1) is 1 because they differ only in the last bit, ' +
+      'and the four residues of n mod 4 group those pairs so that xorUpTo is n when the residue is 0, 1 when it is 1, ' +
+      'n + 1 when it is 2, and 0 when it is 3. That turns an O(range) loop into O(1), which is the only reason a hundred ' +
+      'thousand queries of a wide range are answerable at all. The cost of the trick is that it holds for the consecutive ' +
+      'integers 0 to n; an arbitrary array needs the prefix array built explicitly, and the query is then two lookups plus ' +
+      'one XOR.',
+    walkthrough:
+      'Two independent proofs give the same table and it is worth being able to state both: the residue argument above, ' +
+      'and the observation that numbers with the same high bits cancel in blocks of four. Either one shows the pattern is ' +
+      'periodic rather than accidental, which is what makes the constant-time query honest. left - 1 is the edge to check ' +
+      'by hand: when left is 0 it is -1, and the guard returns 0 for it, which is right because the prefix before position ' +
+      '0 contains nothing.',
+    commonMistake:
+      'Looping over the range per query, or using prefix(right) ^ prefix(left) and losing one element.',
+    whyWrong:
+      'A loop costs O(right - left + 1) per query, so q queries over a 10^9-wide range never finish even though the answer ' +
+      'is two arithmetic operations. Off-by-one on the left bound drops or keeps the boundary element depending on the ' +
+      'data: prefix(left) has already folded left in, so the range that starts at left must subtract the prefix ending at ' +
+      'left - 1.',
+    followUps: [
+      'Answer the same queries on an arbitrary array. Where is the prefix array built and what does each query cost then?',
+      'Prove the four-case table by induction on n instead of by pairing. Which case is the induction step?',
+      'Give XOR of 1 to n rather than 0 to n. Does the table change, and why is that suspicious for n = 0?',
+    ],
+    solution:
+      'function xorUpTo(n) {\n' +
+      '  if (n < 0) return 0;\n' +
+      '  const residue = n % 4;\n' +
+      '  if (residue === 0) return n;\n' +
+      '  if (residue === 1) return 1;\n' +
+      '  if (residue === 2) return n + 1;\n' +
+      '  return 0;\n' +
+      '}\n' +
+      '\n' +
+      'function xorRange(left, right) {\n' +
+      '  return xorUpTo(left - 1) ^ xorUpTo(right);\n' +
+      '}\n' +
+      '\n' +
+      'function xorRangeByLoop(left, right) {\n' +
+      '  let fold = 0;\n' +
+      '  for (let value = left; value <= right; value += 1) fold ^= value;\n' +
+      '  return fold;\n' +
+      '}',
+    modify: 'Answer the queries for an arbitrary array using a prefix XOR array built once. What does a query cost, and what does the build cost in space?',
+  },
+  {
+    step: 8,
+    name: 'Find the two numbers appearing odd number of times',
+    difficulty: 'Medium',
+    topicSlug: BITS,
+    stem: 'Exactly two distinct values occur an odd number of times; find both in one pass, O(1) extra space, without a frequency map.',
+    brief: 'Input: an array with exactly two values of odd multiplicity. Output: the two values as an ascending pair. Explain how one XOR fold becomes two.',
+    concepts: ['dsa-xor-split-by-set-bit', 'dsa-xor-fold-parity', 'dsa-lowest-set-bit-isolate', 'dsa-hash-frequency'],
+    shortAnswer:
+      'Fold the whole array to get first ^ second, keep any set bit of that result as a separator - the two answers ' +
+      'disagree there - and fold the array a second time per group, splitting it so each fold has one odd value left.',
+    idealAnswer:
+      'A single fold over an array with two odd-multiplicity values returns their XOR, not either of them: everything ' +
+      'paired cancels and the two residues survive combined. The fix is to find a position where the two differ, which is ' +
+      'any set bit of the fold, because XOR puts a 1 exactly where its operands disagree. Partitioning the array on that ' +
+      'one bit puts each of the two values in a different group and every other value still lands in a group where it ' +
+      'appears an even number of times, so each group folds down to its single answer. Isolating the lowest set bit with ' +
+      'fold & -fold makes the separator a single expression. Space stays O(1) and the passes are two plus a fold, so the ' +
+      'total is O(n); the frequency map matches the time and pays O(distinct) memory, and it is the version to choose when ' +
+      'the input might not satisfy the exactly-two promise.',
+    walkthrough:
+      'The partition is the whole idea and it is worth saying precisely: the two answers cannot both have the separator ' +
+      'bit set, since the fold says that bit is 1, so they land in different groups; and any third value has an even ' +
+      'multiplicity overall, all copies of it share its bit pattern, so they fall into one group together and cancel ' +
+      'there. Two accumulators over the two groups are therefore the two answers, and no element is examined twice.',
+    commonMistake:
+      'Returning the single fold as if it were one of the values, or picking a separator bit that both answers share.',
+    whyWrong:
+      'The fold is a combination of the two values and equals neither, so it cannot be reported as an answer. A bit where ' +
+      'the fold is 0 is a position where the two values agree, so splitting on it puts both answers in the same group and ' +
+      'the other group folds to zero - the partition has to come from a set bit.',
+    followUps: [
+      'Generalise the fold to three odd values. Which step of the partition argument breaks?',
+      'Use the highest differing bit instead of the lowest. What changes in the cost of finding it?',
+      'Make the function report how many odd-multiplicity values it actually found, using the map version. When is that check worth the memory?',
+    ],
+    solution:
+      'function twoOddValues(values) {\n' +
+      '  let fold = 0;\n' +
+      '  for (const value of values) fold ^= value;\n' +
+      '  const separator = fold & -fold;\n' +
+      '  let first = 0;\n' +
+      '  let second = 0;\n' +
+      '  for (const value of values) {\n' +
+      '    if ((value & separator) === 0) first ^= value;\n' +
+      '    else second ^= value;\n' +
+      '  }\n' +
+      '  return first <= second ? [first, second] : [second, first];\n' +
+      '}\n' +
+      '\n' +
+      'function twoOddValuesByCount(values) {\n' +
+      '  const counts = new Map();\n' +
+      '  for (const value of values) {\n' +
+      '    counts.set(value, (counts.get(value) ?? 0) + 1);\n' +
+      '  }\n' +
+      '  const odd = [];\n' +
+      '  for (const [value, count] of counts) {\n' +
+      '    if (count % 2 === 1) odd.push(value);\n' +
+      '  }\n' +
+      '  return odd.sort((a, b) => a - b);\n' +
+      '}',
+    modify: 'Make twoOddValues refuse an input that does not hold the promise by checking that the fold is nonzero and that the two groups are nonempty. What does it return for an array with only one odd value?',
   },
 ];
 

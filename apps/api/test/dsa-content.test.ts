@@ -373,6 +373,18 @@ const EXPECTS: Record<string, string> = {
     'setRightmostUnset(0) === 1 && setRightmostUnset(3) === 7 && setRightmostUnset(11) === 15 && clearRightmostSet(0) === 0 && clearRightmostSet(1) === 0 && clearRightmostSet(12) === 8 && clearRightmostSet(11) === 10',
   'Swap two numbers without third variable':
     '(() => { const a = swapXor([3, 8]); const b = swapXor([5, 5]); const c = swapDestructured([3, 8]); return a.join() === "8,3" && b.join() === "5,5" && c.join() === "8,3" && swapXor([0, 0]).join() === "0,0" && swapDestructured([3000000000, 1]).join() === "1,3000000000"; })()',
+  'Divide two integers without multiplication or division':
+    'divide(10, 3) === 3 && divide(43, 5) === 8 && divide(-7, 2) === -3 && divide(7, -2) === -3 && divide(1, 2) === 0 && divide(0, 5) === 0 && divide(2147483647, 1) === 2147483647 && divide(-2147483648, -1) === 2147483647 && divide(-2147483648, 2) === -1073741824 && divideBySubtraction(43, 5) === 8 && divideBySubtraction(-7, 2) === -3 && divideBySubtraction(0, 3) === 0',
+  'Count number of bits to be flipped to convert A to B':
+    'bitsToFlip(1, 4) === 2 && bitsToFlip(0, 0) === 0 && bitsToFlip(3, 10) === 2 && bitsToFlip(15, 8) === 3 && bitsToFlip(-1, 0) === 32 && differingPositions(1, 4).join() === "0,2" && differingPositions(0, 0).length === 0 && differingPositions(-1, 0).length === 32',
+  'Find the number that appears odd number of times':
+    'oddOccurrence([4, 1, 2, 1, 2]) === 4 && oddOccurrence([7]) === 7 && oddOccurrence([2, 2, 2, 2, 2]) === 2 && oddOccurrence([1, 1]) === 0 && oddOccurrenceByCount([1, 1, 1, 1, 2, 3, 3]) === 2 && oddOccurrenceByCount([1, 1, 2, 2]) === null && oddOccurrenceByCount([]) === null && oddOccurrenceByCount([0, 1, 0]) === 1',
+  'Power Set using Bit Manipulation':
+    'powerSet([1, 2, 3]).join("|") === "|1|2|1,2|3|1,3|2,3|1,2,3" && powerSet([1, 2]).length === 4 && powerSet([]).length === 1 && powerSet([]).join("|") === "" && bitmaskSubset([1, 2, 3], 0) === "" && bitmaskSubset([1, 2, 3], 5) === "1,3" && bitmaskSubset([1, 2, 3], 7) === "1,2,3"',
+  'Find XOR of numbers from L to R':
+    'xorUpTo(0) === 0 && xorUpTo(1) === 1 && xorUpTo(2) === 3 && xorUpTo(3) === 0 && xorUpTo(4) === 4 && xorUpTo(7) === 0 && xorUpTo(10) === 11 && xorRange(1, 10) === 11 && xorRange(3, 5) === 2 && xorRange(5, 5) === 5 && xorRange(0, 5) === 1 && xorRange(0, 0) === 0 && xorRange(17, 41) === xorRangeByLoop(17, 41) && xorRange(0, 100) === xorRangeByLoop(0, 100)',
+  'Find the two numbers appearing odd number of times':
+    'twoOddValues([1, 1, 2, 3, 2, 3, 4, 5]).join() === "4,5" && twoOddValues([4, 2, 4, 5, 2, 3, 3, 6]).join() === "5,6" && twoOddValues([0, 1, 0, 1, 2, 3]).join() === "2,3" && twoOddValuesByCount([4, 2, 4, 5, 2, 3, 3, 6]).join() === "5,6" && twoOddValuesByCount([1, 2, 3]).join() === "1,2,3" && twoOddValuesByCount([]).join() === ""',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */
