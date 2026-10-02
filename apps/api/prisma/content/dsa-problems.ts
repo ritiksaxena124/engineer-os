@@ -1548,6 +1548,34 @@ export const DSA_CONCEPTS = {
     terms: ['max heap below', 'min heap above', 'two roots are the answer', 'sizes differ by one', 'move one across to rebalance'],
     weight: 4,
   },
+  'dsa-first-fit-on-sorted-demand': {
+    slug: 'dsa-first-fit-on-sorted-demand',
+    name: 'Serve the least demanding first and spend the smallest thing that works',
+    detail: 'Sorting both sides turns matching into one forward walk: a resource too small for the current request is too small for every later one, so it is discarded rather than the request - the discard direction is the whole argument, and either pointer that rewinds is a bug.',
+    terms: ['sort both sides', 'discards the resource not the request', 'one forward pass', 'no rewinding', 'ties cost nothing'],
+    weight: 3,
+  },
+  'dsa-value-per-unit-orders-the-take': {
+    slug: 'dsa-value-per-unit-orders-the-take',
+    name: 'Order by what a unit buys, not by what the whole costs',
+    detail: 'When a shared capacity is filled by taking items in some order, the exchange argument always compares one unit: value per weight, units per box, benefit per slot. Sorting by the absolute amount, or by the size of the lot, hands the scarce capacity to the worst buyer and is only correct when the items cannot be split and the amounts happen to align.',
+    terms: ['density ordering', 'exchange one unit', 'capacity is the scarce thing', 'absolute value misorders', 'whole lots versus fractions'],
+    weight: 4,
+  },
+  'dsa-greedy-can-fail-to-answer-at-all': {
+    slug: 'dsa-greedy-can-fail-to-answer-at-all',
+    name: 'A greedy that cannot backtrack can report impossible when it is not',
+    detail: 'Taking the largest coin that fits is optimal only for denomination sets with the canonical property; with 3, 6 and 10 the same rule strands a remainder that 10 plus two 6s pays exactly. When the choice is not forced, the answer is a table of the best value for every amount, not a single pass.',
+    terms: ['canonical denominations', 'remainder stranded', 'table of amounts', 'unbounded choice', 'proof or dynamic programming'],
+    weight: 4,
+  },
+  'dsa-versatile-unit-stays-in-the-drawer': {
+    slug: 'dsa-versatile-unit-stays-in-the-drawer',
+    name: 'Spend the specific unit and keep the one that fits every request',
+    detail: 'Two payments can both cover a debt of fifteen, but three small notes are needed by every later small request while the large note is needed by almost nothing, so the safe greedy pays the large note first and spends the small ones only when it must - the choice is ranked by future usefulness, not by present cost.',
+    terms: ['keep the flexible unit', 'larger note first', 'small notes serve every request', 'future demand decides', 'both branches stay correct'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -18427,6 +18455,701 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return sorted[values.length >> 1];\n' +
       '}',
     modify: 'Keep the array ordered by a second field when the values are equal, so a 3 with an earlier timestamp beats a 3 with a later one. Which comparison in each insert form has to become a tie-break, and which form keeps the earlier record where the search lands it?',
+  },
+  {
+    step: 12,
+    name: 'Assign Cookies',
+    difficulty: 'Easy',
+    topicSlug: DP,
+    stem: 'Maximise how many children get a cookie when every cookie is spent on at most one child and a child only accepts a cookie as large as its greed.',
+    brief: 'Input: a greed array and a cookie-size array. Output: the largest number of satisfied children. Deliver the sorted one-pass two-pointer match, the nested smallest-fit search it replaces, and the two orderings that silently lose answers.',
+    concepts: ['dsa-first-fit-on-sorted-demand', 'dsa-sort-then-two-pointer', 'dsa-two-pointer', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Sort both arrays ascending and walk them together: the smallest remaining cookie either feeds the least demanding child ' +
+      'still unserved, or it is too small for that child and therefore for every later one, so it is thrown away. One pass, one ' +
+      'counter, and the counter is the answer.',
+    idealAnswer:
+      'The greedy step is the discard, and the sorted order is what makes discarding safe. With both lists ascending, a cookie ' +
+      'that cannot satisfy the current child cannot satisfy any later child, because every later greed is at least as large - so ' +
+      'the cookie leaves the window and the child stays, which is the direction the loop has to get right. Reversing it is the ' +
+      'one-line bug: stopping the walk, or spending a child on the unusable cookie, when the first cookie is too small. Neither ' +
+      'raises an error and both return a number. On greed 2, 2, 3 against cookies 1, 3, 4, 5 the walk is 1 too small, then 3 ' +
+      'feeds a 2, 4 feeds the other 2 and ' +
+      '5 feeds the 3, which is all three children; the version that quits at the first mismatch reports 0, and a random search ' +
+      'finds that shape in about a quarter of inputs. Sorting only one side is the same failure in a quieter form: feeding the ' +
+      'greeds in arrival order against sorted cookies measures the longest nondecreasing fit, not the maximum match, so greed ' +
+      '3, 5, 1, 1, 3 against cookies 5, 1 answers 1 where the answer is 2. The exchange argument that makes the greedy correct ' +
+      'is two sentences: in any optimal assignment the least demanding unserved child can be given the smallest cookie that ' +
+      'clears it without taking that cookie away from anybody, because a child with a bigger greed would have needed a bigger ' +
+      'cookie from the same pool. Nothing is owed to the discarded cookie and nothing is owed to the skipped child, so no ' +
+      'backtracking is needed and neither pointer ever rewinds - that is what separates this from the O(n times m) version that ' +
+      'searches for the smallest unused cookie per child. The nested search is the right reference to write first: it is the same ' +
+      '2 in every case, and a reviewer can see the answer without trusting the argument. Cost is the two sorts - n log n plus m ' +
+      'log m - and the walk is linear on top, which is why the comparison against a binary search per child (n log m after the ' +
+      'same sorts) does not buy anything: the walk already visits each cookie once. Edges are ordinary for a two-pointer loop: ' +
+      'no children or no cookies answer 0, more cookies than children stop at the first pointer running out and the leftovers ' +
+      'are never even read, and equal greed values are separate children - three children wanting 5 against two cookies of 5 ' +
+      'satisfy 2, because a cookie is consumed, not shared.',
+    walkthrough:
+      'Greed 1, 2 against cookies 1, 2, 3 is the clean case: 1 feeds 1, 2 feeds 2, and the third cookie is reached with no child ' +
+      'left, so the loop ends at 2. Add the interesting shape - greed 2, 2, 3 against cookies 1, 3, 4, 5 - and the first cookie ' +
+      'of size 1 cannot feed a greed of 2, so it is discarded while the child stays at the head of the queue; 3 then feeds the ' +
+      'first 2, 4 feeds the second 2, and 5 feeds the 3 for all three children. With greed 1, 2, 3 against cookies 1, 1 the ' +
+      'second cookie is too small for the greed of 2 and is discarded, so the answer is 1, and the walk never revisits the ' +
+      'first child.',
+    commonMistake:
+      'Treating a too-small cookie as a failure of the match instead of a failure of the cookie - breaking out of the loop, or ' +
+      'advancing the child pointer instead of the cookie pointer.',
+    whyWrong:
+      'Both forms throw away real answers in silence. Breaking at the first mismatch on greed 2, 2, 3 against cookies 1, 3, 4, 5 ' +
+      'returns 0 where the loop that discards the cookie returns 3, because the 1 is the only unusable cookie in the box. ' +
+      'Advancing the child instead - one step per cookie whatever happens - pairs the i-th smallest greed with the i-th smallest ' +
+      'cookie and stops at the shorter array, so greed 1, 2, 2 against cookies 1, 1, 4 reports three children fed when only two ' +
+      'cookies clear a greed. A number that is not an assignment cannot be an answer, and neither variant throws.',
+    followUps: [
+      'Write the exchange argument in two sentences. Which property of the sorted order does it use, and what breaks without it?',
+      'Children arrive in a stream and cookies are offered one at a time with no rewinding. What structure replaces the sort and what does each decision cost?',
+      'You also need to name which child got which cookie. What does the walk have to record, and why does the count version not need it?',
+      'Both arrays are already sorted by the caller. Which part of the cost disappears, and what does the loop become?',
+    ],
+    solution:
+      'function findContentChildren(greed, size) {\n' +
+      '  const wants = greed.slice().sort((first, second) => first - second);\n' +
+      '  const cookies = size.slice().sort((first, second) => first - second);\n' +
+      '  let child = 0;\n' +
+      '  let cookie = 0;\n' +
+      '  while (child < wants.length && cookie < cookies.length) {\n' +
+      '    if (cookies[cookie] >= wants[child]) child += 1;\n' +
+      '    cookie += 1;\n' +
+      '  }\n' +
+      '  return child;\n' +
+      '}\n' +
+      '\n' +
+      'function findContentByNesting(greed, size) {\n' +
+      '  const cookies = size.slice().sort((first, second) => first - second);\n' +
+      '  const used = new Array(cookies.length).fill(false);\n' +
+      '  let satisfied = 0;\n' +
+      '  for (const want of greed.slice().sort((first, second) => first - second)) {\n' +
+      '    for (let index = 0; index < cookies.length; index += 1) {\n' +
+      '      if (!used[index] && cookies[index] >= want) {\n' +
+      '        used[index] = true;\n' +
+      '        satisfied += 1;\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return satisfied;\n' +
+      '}\n' +
+      '\n' +
+      'function walkLog(greed, size) {\n' +
+      '  const wants = greed.slice().sort((first, second) => first - second);\n' +
+      '  const cookies = size.slice().sort((first, second) => first - second);\n' +
+      '  const out = [];\n' +
+      '  let child = 0;\n' +
+      '  for (const cookie of cookies) {\n' +
+      '    if (child >= wants.length) {\n' +
+      '      out.push(cookie + " nobody left");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    if (cookie >= wants[child]) {\n' +
+      '      out.push(cookie + " feeds " + wants[child]);\n' +
+      '      child += 1;\n' +
+      '    } else {\n' +
+      '      out.push(cookie + " too small for " + wants[child]);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function stopAtTheFirstGap(greed, size) {\n' +
+      '  const wants = greed.slice().sort((first, second) => first - second);\n' +
+      '  const cookies = size.slice().sort((first, second) => first - second);\n' +
+      '  let child = 0;\n' +
+      '  for (const cookie of cookies) {\n' +
+      '    if (child >= wants.length || cookie < wants[child]) break;\n' +
+      '    child += 1;\n' +
+      '  }\n' +
+      '  return child;\n' +
+      '}\n' +
+      '\n' +
+      'function unsortedFirstFit(greed, size) {\n' +
+      '  const cookies = size.slice().sort((first, second) => first - second);\n' +
+      '  let child = 0;\n' +
+      '  for (const cookie of cookies) {\n' +
+      '    if (child < greed.length && cookie >= greed[child]) child += 1;\n' +
+      '  }\n' +
+      '  return child;\n' +
+      '}\n' +
+      '\n' +
+      'function zipBothPointers(greed, size) {\n' +
+      '  const wants = greed.slice().sort((first, second) => first - second);\n' +
+      '  const cookies = size.slice().sort((first, second) => first - second);\n' +
+      '  let child = 0;\n' +
+      '  for (const cookie of cookies) {\n' +
+      '    if (child >= wants.length) break;\n' +
+      '    child += 1;\n' +
+      '  }\n' +
+      '  return child;\n' +
+      '}\n' +
+      '\n' +
+      'function sortedCopy(greed, size) {\n' +
+      '  return greed.slice().sort((first, second) => first - second).join(",") + " / " + size.slice().sort((first, second) => first - second).join(",");\n' +
+      '}',
+    modify: 'Children may now share a cookie of exactly their greed and no smaller, so a size 5 cookie feeds every child wanting 5. Which line stops advancing a pointer, and what does the walk have to count instead of children?',
+  },
+  {
+    step: 12,
+    name: 'Fractional Knapsack Problem',
+    difficulty: 'Medium',
+    topicSlug: DP,
+    stem: 'Fill a bounded capacity from items that may be broken, or boxes that may not, and get the most value out of the space.',
+    brief: 'Input: items as weight and value pairs, or box types as count and units per box, plus a capacity. Output: the value carried. Deliver the density-ordered fractional fill with its part recorded, the whole-box truck version, and the two orderings - by absolute value and by total - that misorder the take.',
+    concepts: ['dsa-value-per-unit-orders-the-take', 'dsa-single-pass-tracking', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Sort by value per unit of capacity descending and take in that order: a whole item while it fits, then the fraction of the ' +
+      'next one that fills the last of the space. When the lots cannot be split, the same ordering by units per box with a counted ' +
+      'take is the answer, and the only line that changes is how many of the current lot fit.',
+    idealAnswer:
+      'The scarce thing is capacity, so the ranking has to be per unit of capacity and not per item - that single sentence is the ' +
+      'exchange argument. If a solution takes some of a worse-density item while leaving a better-density item partly or wholly ' +
+      'untouched, moving the same weight from the first to the second strictly increases the value, so no optimal fill can order ' +
+      'the take that way; the fractional version is greedy all the way down because the last piece can be cut to exactly the ' +
+      'remaining space. On the classic set of 10 weight for 60, 20 for 100 and 30 for 120 with capacity 50, the densities are 6, ' +
+      '5 and 4, so the fill is the whole of the first two and 20 of the 30 units of the third, which pays 60 plus 100 plus 80 for ' +
+      '240, and the recorded break is what makes the walkthrough auditable. Ordering by absolute value instead takes the 120 first ' +
+      'and strands the rest of the capacity on the lightest, highest-density item: the same set by value gives 220 against 240, ' +
+      'and the sharpest shape is two items with equal value where the lighter is far better per unit - 6 weight for 12 against 1 ' +
+      'weight for 12 with capacity 1 is worth 12 by density and 2 by value, because the fill breaks the wrong item. Ordering by ' +
+      'weight answers "cheapest first", which is only the same order when the values happen to rise with it; on 1 weight for 2 ' +
+      'against 4 for 12 with capacity 4 the density order takes the heavy item whole for 12 while the light-first order takes the ' +
+      'cheap one and 3 quarters of the other for 11. The truck variant - boxes of units, capacity in boxes - is the same ranking ' +
+      'on a quantity that cannot be cut: sort by units per box, take min(boxes left in that type, space left) of each type, and ' +
+      'stop when the space runs out. On box types 1 of 3, 2 of 2 and 3 of 1 with room for 4 the take is 1, then 2, then 1 for 3, ' +
+      '7 and 8; with 5 of 10, 2 of 5, 4 of 7 and 3 of 9 and room for 9 it is 5 boxes of 10, 3 of 9 and 1 of 7 for 84, whereas ' +
+      'ranking by the total units a type holds gives 78 - it sends the big-but-mediocre lot first and runs out of space. Both ' +
+      'answers are linear after the sort, so the comparison candidates all cost n log n and the loop is not where the argument is. ' +
+      'Edges that need saying: capacity 0 takes nothing and records no break, a capacity larger than every weight carries ' +
+      'everything and the total is the sum, and an empty item list is 0 rather than undefined. The fraction is a double, so one ' +
+      'third of a 10-value item is 3.3333333333333335 and the honest statement of the answer is a number, not a rounded string; ' +
+      'the whole-box variant never has that problem because it multiplies integers.',
+    walkthrough:
+      'Items 10 weight for 60, 20 for 100, 30 for 120, capacity 50. The densities 6, 5, 4 are already the input order, so the loop ' +
+      'takes 10 for 60 with 40 left, takes 20 for 100 with 20 left, and reaches the 30-unit item with less space than it needs: ' +
+      'the branch that breaks the item carries 20 of its 30, pays 120 times 20 over 30 which is 80, and leaves 0 space. The log ' +
+      'reads take 10w for 60, take 20w for 100, break 20 of 30w for 80.00 and the total is 240. Same items, capacity 60: nothing ' +
+      'is broken, the three fits exactly for 280 and the leftover is 0. Now the truck: box types 1 of 3 units, 2 of 2 and 3 of 1 ' +
+      'with room for 4 boxes sorts to 3, 2, 1 per box, so it loads 1 box for 3 units, 2 boxes for 4 more, and 1 of the three ' +
+      'remaining type for 1 more - 8 units in 4 boxes, one box of the last type left on the platform.',
+    commonMistake:
+      'Sorting by value, by weight, or by the total a lot holds instead of by value per unit - and in the whole-box version, ' +
+      'loading min(boxes, space) wrongly as the whole count of the type.',
+    whyWrong:
+      'Value order answers what is impressive, not what pays: on 6 weight for 12 against 1 weight for 12 with capacity 1 it breaks ' +
+      'the heavy item for 2 while the light one is worth 12 whole. Weight order answers what is cheap: 1 for 2 against 4 for 12 ' +
+      'with capacity 4 gives 11 where density gives 12. Total order in the truck version answers what is big: 5 of 10, 2 of 5, 4 ' +
+      'of 7 and 3 of 9 with room for 9 reports 78 against the correct 84. And taking a whole type when only part of it fits ' +
+      'overfills the truck, which is the one error of the four that produces a physically invalid answer rather than a merely ' +
+      'poorer one - the count has to be the minimum of the boxes available and the space left.',
+    followUps: [
+      'State the exchange step for the fractional version in one sentence. Which property of the item that gets broken does it rely on?',
+      'The items cannot be split any more. Why does the same ordering stop being optimal, and what does the answer become?',
+      'Two item types have exactly the same density. Does the order between them change the total, and does it change the log?',
+      'Capacity arrives as a decimal and weights are integers. Which line has to be careful about floating point, and what would you compare instead of equality?',
+    ],
+    solution:
+      'function fractionalKnapsack(items, capacity) {\n' +
+      '  const ordered = items\n' +
+      '    .map((item) => ({ weight: item[0], value: item[1], ratio: item[1] / item[0] }))\n' +
+      '    .sort((first, second) => second.ratio - first.ratio);\n' +
+      '  let left = capacity;\n' +
+      '  let total = 0;\n' +
+      '  const taken = [];\n' +
+      '  for (const item of ordered) {\n' +
+      '    if (left <= 0) break;\n' +
+      '    if (item.weight <= left) {\n' +
+      '      total += item.value;\n' +
+      '      taken.push("take " + item.weight + "w for " + item.value);\n' +
+      '      left -= item.weight;\n' +
+      '    } else {\n' +
+      '      const part = (item.value * left) / item.weight;\n' +
+      '      total += part;\n' +
+      '      taken.push("break " + left + " of " + item.weight + "w for " + part.toFixed(2));\n' +
+      '      left = 0;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return { total, taken, left };\n' +
+      '}\n' +
+      '\n' +
+      'function knapsackByValue(items, capacity) {\n' +
+      '  const ordered = items.slice().sort((first, second) => second[1] - first[1]);\n' +
+      '  let left = capacity;\n' +
+      '  let total = 0;\n' +
+      '  for (const item of ordered) {\n' +
+      '    if (left <= 0) break;\n' +
+      '    if (item[0] <= left) {\n' +
+      '      total += item[1];\n' +
+      '      left -= item[0];\n' +
+      '    } else {\n' +
+      '      total += (item[1] * left) / item[0];\n' +
+      '      left = 0;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return total;\n' +
+      '}\n' +
+      '\n' +
+      'function knapsackByWeight(items, capacity) {\n' +
+      '  const ordered = items.slice().sort((first, second) => first[0] - second[0]);\n' +
+      '  let left = capacity;\n' +
+      '  let total = 0;\n' +
+      '  for (const item of ordered) {\n' +
+      '    if (left <= 0) break;\n' +
+      '    if (item[0] <= left) {\n' +
+      '      total += item[1];\n' +
+      '      left -= item[0];\n' +
+      '    } else {\n' +
+      '      total += (item[1] * left) / item[0];\n' +
+      '      left = 0;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return total;\n' +
+      '}\n' +
+      '\n' +
+      'function maximumUnits(boxTypes, truckSize) {\n' +
+      '  const ordered = boxTypes.slice().sort((first, second) => second[1] - first[1]);\n' +
+      '  let space = truckSize;\n' +
+      '  let units = 0;\n' +
+      '  for (const entry of ordered) {\n' +
+      '    if (space <= 0) break;\n' +
+      '    const take = Math.min(entry[0], space);\n' +
+      '    units += take * entry[1];\n' +
+      '    space -= take;\n' +
+      '  }\n' +
+      '  return units;\n' +
+      '}\n' +
+      '\n' +
+      'function maximumUnitsCounted(boxTypes, truckSize) {\n' +
+      '  const ordered = boxTypes.slice().sort((first, second) => second[1] - first[1]);\n' +
+      '  let space = truckSize;\n' +
+      '  let units = 0;\n' +
+      '  const log = [];\n' +
+      '  for (const entry of ordered) {\n' +
+      '    if (space <= 0) break;\n' +
+      '    const take = Math.min(entry[0], space);\n' +
+      '    units += take * entry[1];\n' +
+      '    space -= take;\n' +
+      '    log.push(take + " boxes x " + entry[1] + " = " + units);\n' +
+      '  }\n' +
+      '  return { units, log, space };\n' +
+      '}\n' +
+      '\n' +
+      'function maximumUnitsByTotal(boxTypes, truckSize) {\n' +
+      '  const ordered = boxTypes.slice().sort((first, second) => second[0] * second[1] - first[0] * first[1]);\n' +
+      '  let space = truckSize;\n' +
+      '  let units = 0;\n' +
+      '  for (const entry of ordered) {\n' +
+      '    if (space <= 0) break;\n' +
+      '    const take = Math.min(entry[0], space);\n' +
+      '    units += take * entry[1];\n' +
+      '    space -= take;\n' +
+      '  }\n' +
+      '  return units;\n' +
+      '}\n' +
+      '\n' +
+      'function densities(items) {\n' +
+      '  return items.map((item) => item[0] + "w:" + item[1] + " @" + (item[1] / item[0]).toFixed(2)).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function overfillAttempt(boxTypes, truckSize) {\n' +
+      '  const ordered = boxTypes.slice().sort((first, second) => second[1] - first[1]);\n' +
+      '  let space = truckSize;\n' +
+      '  let units = 0;\n' +
+      '  for (const entry of ordered) {\n' +
+      '    if (space <= 0) break;\n' +
+      '    units += entry[0] * entry[1];\n' +
+      '    space -= entry[0];\n' +
+      '  }\n' +
+      '  return { units, space };\n' +
+      '}',
+    modify: 'The items cannot be broken and each weighs a different amount, so the capacity may end up only partly used. Which line of the fractional loop has no honest counterpart, and what does the answer become?',
+  },
+  {
+    step: 12,
+    name: 'Find minimum number of coins',
+    difficulty: 'Medium',
+    topicSlug: DP,
+    stem: 'Pay an exact amount from an unlimited supply of denominations using as few coins as possible, or say the amount cannot be paid.',
+    brief: 'Input: a list of coin values and a target amount. Output: the fewest coins that sum to it, or -1. Deliver the amount-indexed table, the largest-first greedy with its trace, a breadth-first version over the same amounts, and the counting variant that adds instead of minimising.',
+    concepts: ['dsa-greedy-can-fail-to-answer-at-all', 'dsa-memo-decision-table', 'dsa-count-by-adding-branches', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'One table over amounts: best[0] is 0 and best[amount] is one more than the smallest best[amount - coin] over the coins that ' +
+      'fit, so the answer is best[target] or -1 when it is still Infinity. Largest-first is correct only for canonical denominations, ' +
+      'so it is a reference to compare against, not the algorithm.',
+    idealAnswer:
+      'Fewest coins is the question a greedy cannot answer, and the honest first move is to say so out loud. Taking the largest ' +
+      'denomination that fits is optimal only when the coin system has the canonical property, and on 1, 5, 8 the amount 15 is paid ' +
+      '8 plus 5 plus 1 plus 1 - four coins - where three 5s is the answer. The same rule on 3, 6, 10 for 22 takes two 10s, strands a ' +
+      'remainder of 2 with no coin small enough to touch it, and reports impossible for an amount three coins pay exactly as 10 plus ' +
+      '6 plus 6. A greedy has no backtrack, so a stranded remainder is a wrong answer rather than a slow one, and the interesting ' +
+      'part is that the failure is a property of the input rather than a bug to patch: the very same code is correct on 1, 2, 5 and ' +
+      'on 1, 5, 10, 25, so the question to ask is what is guaranteed about the denominations, and when the answer is "nothing", the ' +
+      'table is the only correct reply. The state is one integer, because paying 15 is paying 14, 13, 12, 10, 7 or 5 and adding one ' +
+      'coin, so a table of target plus 1 cells covers every subproblem and each cell is a minimum over the k denominations: O(target ' +
+      'times k) time, O(target) space, and no recursion depth to worry about. best[0] is 0 because the empty collection pays zero, and ' +
+      'that base is exactly what makes a single coin read 1 - best[5] is best[0] plus 1. Everything unreachable stays Infinity and is ' +
+      'returned as -1, which keeps the sentinel out of the arithmetic the caller does next; no isFinite guard is needed anywhere, ' +
+      'because Infinity plus 1 is Infinity, so unreachability propagates rather than poisoning a row. The amount loop runs upward on ' +
+      'purpose: an upward loop lets a cell read an amount that already spent the same coin, which is what "unlimited supply" means, ' +
+      'while one coin of each kind moves the coin loop outside and runs the amounts downward so no coin ever sees itself already ' +
+      'spent. Denomination order is irrelevant to the minimum because every cell is a minimum over all coins - a table built from ' +
+      '5, 1, 2 reads identically to one built from 1, 2, 5. A breadth-first growth over the same amounts, where level one is the ' +
+      'coins themselves and each level adds one coin to every amount already reached, returns the same integers as the table on a ' +
+      '4000-case fuzz, and that is the same fact stated twice: fewest coins is a shortest path on a graph of amounts with unit ' +
+      'edges, so the search stops the moment it touches the target while the table must fill every cell below it. The row itself ' +
+      'warns against any clever short cut, because it is not monotone - with 1, 2, 5 the amount 10 costs 2 coins and 9 costs 3, and ' +
+      '15 costs 3 after 14 costs 4 - so a binary search over amounts, an early exit at the first affordable cell, or a "stop once ' +
+      'the row is at least the incumbent best" prune is wrong on a set where larger amounts are cheaper. Greedy is not useless, it ' +
+      'is conditional: 1, 2, 5; 1, 5, 10, 25; 1, 2, 4, 8 and 1, 3, 9, 27 all agree with the table for every amount up to 60, because ' +
+      'a currency where each coin is a multiple of the one below it cannot be misordered, and 2, 3, 4 for the amount 5 is the ' +
+      'smallest three-coin system where largest-first takes the 4, is left holding 1 it cannot pay, and calls the amount impossible ' +
+      'while 2 plus 3 answers 2. Change the question from how few to how many and one recurrence character carries the whole ' +
+      'difference: ways[0] is 1 rather than 0, because there is exactly one way to pay nothing, and the cells add instead of ' +
+      'minimising. The nesting of the two loops is the actual semantics, not a style - coin outside counts combinations, where 1 ' +
+      'plus 1 plus 2 and 2 plus 1 plus 1 are one way, while amount outside counts arrangements and inflates the answer from 3 to 5 ' +
+      'at the amount 4 and from 11 to 218 at 11 on 1, 2, 5. An unpayable target reads 0 ways, which is correct for a count and would ' +
+      'be a lie as a -1, and the distinction is worth stating in an interview because the two questions share the table and disagree ' +
+      'on its sentinel.',
+    walkthrough:
+      'Denominations 1, 2, 5. The table fills upward: 0 is 0 from the base, 1 is best[0] plus 1 which is 1, 2 wins with a single 2, ' +
+      '3 is 2 plus 1 for 2 coins, 4 is 2 plus 2 for 2, 5 is one coin, and by 15 the row reads 0:0 1:1 2:1 3:2 4:2 5:1 6:2 7:2 8:3 ' +
+      '9:3 10:2 11:3 12:3 13:4 14:4 15:3, so 11 is 3 coins - 5 plus 5 plus 1 - and the dip to 2 at 10 against the 3 at 9 is the ' +
+      'shape no greedy predicts. Now the trap set 1, 5, 8 at 15: largest-first takes 8, then 5, then two 1s and reports 4, while the ' +
+      'table reaches 15 from 10 with one more coin and reads 3 for 5 plus 5 plus 5. At 3, 6, 10 with the amount 22 the greedy is ' +
+      'worse than suboptimal - it takes 10, another 10, is left with 2 and returns -1 - while the table shows 22:3, which is 10 plus ' +
+      '6 plus 6. The same 3, 6, 10 row carries the unreachable amounts: its dashes sit at 1, 2, 4, 5, 7, 8, 11, 14 and 17, and 21 ' +
+      'costs 4 coins because the only way to land on that odd amount is one 3 plus three 6s.',
+    commonMistake:
+      'Submitting largest-first because that is how a cash register works, letting Infinity reach the caller instead of -1, or ' +
+      'counting ways with the amount loop outside so every ordering of the same coins becomes a new way.',
+    whyWrong:
+      'Largest-first is wrong in two different degrees: on 1, 5, 8 for 15 it pays 4 coins where 3 exist, and on 3, 6, 10 for 22 it ' +
+      'reports the amount impossible when 10 plus 6 plus 6 pays it - a stranded remainder is not a proof of impossibility, only a ' +
+      'proof that the earlier choices were never forced. Returning Infinity leaks a sentinel into whatever arithmetic the caller ' +
+      'does next, and answering an unpayable amount with 0 is right for a count and inverted for a minimum. Nesting the amount loop ' +
+      'outside the coin loop answers a different question entirely: 5 rather than 3 at amount 4, 218 rather than 11 at amount 11, ' +
+      'because 1 plus 1 plus 1 plus 2 and 2 plus 1 plus 1 plus 1 are the same handful of coins in a combination and different ' +
+      'sequences in an arrangement. Assuming monotonicity is the quietest of the four: 9 costs 3 coins and 10 costs 2, so any prune ' +
+      'built on "amounts only get more expensive" deletes the answer.',
+    followUps: [
+      'Name the property of 1, 2, 5 that 1, 5, 8 lacks. Give a three-coin set where largest-first reports an impossible amount that is payable.',
+      'Now each coin exists exactly once. Which loop moves outside, which one changes direction, and what does that do to the answer for 1, 5, 8 at 15?',
+      'You are asked for the coins used, not the count. What extra array do you keep, and why does a table of integers alone not tell you the answer?',
+      'The target is 10 to the 9 and there are 400 denominations. Is the table still the right answer, and what would you try first?',
+    ],
+    solution:
+      'function minCoins(denominations, target) {\n' +
+      '  const best = new Array(target + 1).fill(Infinity);\n' +
+      '  best[0] = 0;\n' +
+      '  for (let amount = 1; amount <= target; amount += 1) {\n' +
+      '    for (const coin of denominations) {\n' +
+      '      if (coin <= amount && best[amount - coin] + 1 < best[amount]) best[amount] = best[amount - coin] + 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return best[target] === Infinity ? -1 : best[target];\n' +
+      '}\n' +
+      '\n' +
+      'function minCoinsGreedy(denominations, target) {\n' +
+      '  const coins = denominations.slice().sort((first, second) => second - first);\n' +
+      '  let left = target;\n' +
+      '  let count = 0;\n' +
+      '  for (const coin of coins) {\n' +
+      '    while (coin <= left) {\n' +
+      '      left -= coin;\n' +
+      '      count += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return left === 0 ? count : -1;\n' +
+      '}\n' +
+      '\n' +
+      'function greedyTrace(denominations, target) {\n' +
+      '  const coins = denominations.slice().sort((first, second) => second - first);\n' +
+      '  let left = target;\n' +
+      '  const parts = [];\n' +
+      '  for (const coin of coins) {\n' +
+      '    while (coin <= left) {\n' +
+      '      parts.push(coin);\n' +
+      '      left -= coin;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return parts.join("+") + (left === 0 ? " = " + parts.length : " remainder " + left + " stuck");\n' +
+      '}\n' +
+      '\n' +
+      'function coinTable(denominations, upTo) {\n' +
+      '  const best = new Array(upTo + 1).fill(Infinity);\n' +
+      '  best[0] = 0;\n' +
+      '  for (let amount = 1; amount <= upTo; amount += 1) {\n' +
+      '    for (const coin of denominations) {\n' +
+      '      if (coin <= amount && best[amount - coin] + 1 < best[amount]) best[amount] = best[amount - coin] + 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  const rows = [];\n' +
+      '  for (let amount = 0; amount <= upTo; amount += 1) {\n' +
+      '    rows.push(amount + ":" + (best[amount] === Infinity ? "-" : best[amount]));\n' +
+      '  }\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function countChangeWays(denominations, target) {\n' +
+      '  const ways = new Array(target + 1).fill(0);\n' +
+      '  ways[0] = 1;\n' +
+      '  for (const coin of denominations) {\n' +
+      '    for (let amount = coin; amount <= target; amount += 1) ways[amount] += ways[amount - coin];\n' +
+      '  }\n' +
+      '  return ways[target];\n' +
+      '}\n' +
+      '\n' +
+      'function countChangeArrangements(denominations, target) {\n' +
+      '  const ways = new Array(target + 1).fill(0);\n' +
+      '  ways[0] = 1;\n' +
+      '  for (let amount = 1; amount <= target; amount += 1) {\n' +
+      '    for (const coin of denominations) {\n' +
+      '      if (coin <= amount) ways[amount] += ways[amount - coin];\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return ways[target];\n' +
+      '}\n' +
+      '\n' +
+      'function minCoinsByLevels(denominations, target) {\n' +
+      '  if (target === 0) return 0;\n' +
+      '  const seen = new Set([0]);\n' +
+      '  let frontier = [0];\n' +
+      '  let level = 0;\n' +
+      '  while (frontier.length > 0) {\n' +
+      '    const next = [];\n' +
+      '    level += 1;\n' +
+      '    for (const amount of frontier) {\n' +
+      '      for (const coin of denominations) {\n' +
+      '        const reached = amount + coin;\n' +
+      '        if (reached === target) return level;\n' +
+      '        if (reached < target && !seen.has(reached)) {\n' +
+      '          seen.add(reached);\n' +
+      '          next.push(reached);\n' +
+      '        }\n' +
+      '      }\n' +
+      '    }\n' +
+      '    frontier = next;\n' +
+      '  }\n' +
+      '  return -1;\n' +
+      '}',
+    modify: 'Each denomination exists exactly once, so 15 cannot be paid with three 5s. Which loop moves outside, which one changes direction, and what does that do to the answer for 1, 5, 8 at 15?',
+  },
+  {
+    step: 12,
+    name: 'Lemonade Change',
+    difficulty: 'Easy',
+    topicSlug: DP,
+    stem: 'Customers pay with a 5, a 10 or a 20 for a 5 lemonade, starting from an empty till. Can every one of them be given change?',
+    brief: 'Input: the bills in arrival order. Output: whether the queue can be served. Deliver the two-counter till, the ledger that names the bill it dies on, the wrong note-ordering policy that fails on a seven-bill queue, and the exhaustive drawer-state check the greedy is measured against.',
+    concepts: ['dsa-versatile-unit-stays-in-the-drawer', 'dsa-memo-decision-table', 'dsa-single-pass-tracking', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Count only 5s and 10s, since a 20 is never given back. A 10-bill customer must be answered with one 5; a 20-bill customer ' +
+      'needs 15, which is either a 10 plus a 5 or three 5s, and paying the 10 first is what keeps the till able to answer the next ' +
+      '10-bill customer. One pass, two counters, false at the first customer you cannot serve.',
+    idealAnswer:
+      'The whole problem is a statement about state size. The till holds notes, but only two of them are ever handed back to a ' +
+      'customer, because a 20 that arrives is put on the shelf and never used as change - so the reachable configurations of the till ' +
+      'are exactly the pairs (fives, tens), two integers, and the algorithm that tracks "money in the till" as a total is already ' +
+      'wrong: a till holding one 10 and a till holding two 5s both contain 10, and only the second can serve a customer paying with a ' +
+      '10. Once the state is two counters the demands are embarrassingly small. A 5 leaves the till alone. A 10 takes one 5 - there is ' +
+      'no choice to make, which is why the failure on 5, 5, 10, 10, 20 is reported as 20 FAIL rather than as an earlier problem: the ' +
+      'two 10s consume both 5s and the third customer needs a 5 that the second branch of the 20 could not invent. A 20 needs 15, and ' +
+      '15 made of 5s and 10s has exactly two shapes: one 10 plus one 5, or three 5s. That single line of branching is the entire ' +
+      'greedy, and its ordering - the 10 branch before the three-5s branch - is the only non-trivial decision in the solution. The ' +
+      'argument is an exchange: a 5 is needed by every 10-payment and by both shapes of a 20-payment, while a 10 is needed by exactly ' +
+      'one shape of one payment, so the 10 has strictly fewer future uses and is the note to spend. If a plan pays three 5s while a 10 ' +
+      'sits in the till and a 5 is available, replacing that payment with the 10 plus one 5 satisfies the same customer and returns ' +
+      'two 5s to the till, which cannot make any later customer harder to serve. That is why the rule here is not a heuristic with a ' +
+      'good track record but a proven choice, and it is worth verifying rather than asserting: enumerating every queue of at most ' +
+      'eight bills over 5, 10 and 20 gives 9840 queues and the greedy agrees with the exhaustive drawer-state checker on all of them, ' +
+      'and the same holds to nine bills, 29523 queues, zero disagreements. The reversed policy - three 5s whenever three exist - is ' +
+      'wrong on 16 of the eight-bill family and 82 of the nine-bill one, and its shortest counterexample is only seven bills long: ' +
+      '5, 5, 5, 5, 10, 20, 10. Complexity is O(n) time in a single pass with an early return, and O(1) space in exactly two counters - ' +
+      'not an array of notes and not a map keyed by the till, because the counts are the state and nothing else about the till is ' +
+      'observable from the queue. Edges are the part an interviewer listens for. The first customer to hand over a 10 or a 20 ends ' +
+      'the run, because the till is empty - a queue of one 10 and a queue of one 20 are both false - while an empty queue is true, ' +
+      'since nobody was refused. A 20 arriving with five 5s and no 10 takes three of them and leaves the till at two, which is the ' +
+      'case that keeps the second branch reachable rather than an unreachable else, and it is why the answer is not just "always ' +
+      'spend a 10 if you have one". If a 50-note customer appeared, 45 would have more than two shapes over the notes the till keeps, ' +
+      'the state would need a third counter, and the honest move is to fall back to the state-set checker rather than invent a third ' +
+      'ordering rule.',
+    walkthrough:
+      'Queue 5, 5, 5, 10, 20. The till reads 1f0t, 2f0t, 3f0t after the three 5s; the 10-bill customer takes one 5 and leaves a 10, ' +
+      'so 2f1t; the 20-bill customer needs 15, the 10 branch is available, and the till ends at 1f0t - the ledger is 5->1f0t ' +
+      '5->2f0t 5->3f0t 10->2f1t 20->1f0t. Now 5, 5, 10, 10, 20: the two 10s spend both 5s, so the till is 0f2t when the 20 arrives - ' +
+      'the 10 branch needs a 5 that is gone and the three-5s branch needs three, and the ledger stops at 20 FAIL. The queue that ' +
+      'separates the two orderings is 5, 5, 5, 5, 10, 20, 10: after the 10 the till is 3f1t, the 20 takes the 10 plus a 5 to land on ' +
+      '2f0t, and the last customer is served from 1f1t. Pay the same 20 with three 5s and the till is 0f1t, so that final customer is ' +
+      'refused - same queue, same notes, opposite answers, one line of ordering apart.',
+    commonMistake:
+      'Tracking the till as a sum of money, spending three 5s before a 10 because three small notes looks like the smaller payment, ' +
+      'or running the whole queue and answering true without an early return.',
+    whyWrong:
+      'A sum is not a state: one 10 and two 5s are both 10 in the till, and only one of them serves the customer holding a 10. ' +
+      'Spending three 5s first is that error written in code - checking fives >= 3 before the 10 branch - and on 5, 5, 5, 5, 10, 20, ' +
+      '10 it refuses the last customer on a queue the correct ordering serves; it is wrong on 16 of the 9840 queues of at most eight ' +
+      'bills, so it is not a rare corner either. And a pass with no early return cannot report a refusal: it finishes 5, 5, 10, 10, ' +
+      '20 and says true, because counting what you can pay is not the same question as checking that you can pay everything.',
+    followUps: [
+      'Why is the till two integers rather than the total cash in it? Give two tills of equal value that answer the next customer differently.',
+      'Prove that paying a 10 plus a 5 whenever possible never leaves you worse off than paying three 5s. Which note is the exchange about?',
+      'A customer arrives with a 50 and the till also keeps 20s. What changes in the state, and does the ordering argument survive?',
+      'Report the position of the first customer you cannot serve as well as the yes-or-no answer. Which lines move?',
+    ],
+    solution:
+      'function lemonadeChange(bills) {\n' +
+      '  let fives = 0;\n' +
+      '  let tens = 0;\n' +
+      '  for (const bill of bills) {\n' +
+      '    if (bill === 5) fives += 1;\n' +
+      '    else if (bill === 10) {\n' +
+      '      if (fives === 0) return false;\n' +
+      '      fives -= 1;\n' +
+      '      tens += 1;\n' +
+      '    } else {\n' +
+      '      if (tens > 0 && fives > 0) {\n' +
+      '        tens -= 1;\n' +
+      '        fives -= 1;\n' +
+      '      } else if (fives >= 3) {\n' +
+      '        fives -= 3;\n' +
+      '      } else {\n' +
+      '        return false;\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function lemonadeFivesFirst(bills) {\n' +
+      '  let fives = 0;\n' +
+      '  let tens = 0;\n' +
+      '  for (const bill of bills) {\n' +
+      '    if (bill === 5) fives += 1;\n' +
+      '    else if (bill === 10) {\n' +
+      '      if (fives === 0) return false;\n' +
+      '      fives -= 1;\n' +
+      '      tens += 1;\n' +
+      '    } else {\n' +
+      '      if (fives >= 3) fives -= 3;\n' +
+      '      else if (tens > 0 && fives > 0) {\n' +
+      '        tens -= 1;\n' +
+      '        fives -= 1;\n' +
+      '      } else {\n' +
+      '        return false;\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function changeLedger(bills) {\n' +
+      '  let fives = 0;\n' +
+      '  let tens = 0;\n' +
+      '  const out = [];\n' +
+      '  for (const bill of bills) {\n' +
+      '    if (bill === 5) fives += 1;\n' +
+      '    else if (bill === 10) {\n' +
+      '      if (fives === 0) {\n' +
+      '        out.push(bill + " FAIL");\n' +
+      '        break;\n' +
+      '      }\n' +
+      '      fives -= 1;\n' +
+      '      tens += 1;\n' +
+      '    } else {\n' +
+      '      if (tens > 0 && fives > 0) {\n' +
+      '        tens -= 1;\n' +
+      '        fives -= 1;\n' +
+      '      } else if (fives >= 3) {\n' +
+      '        fives -= 3;\n' +
+      '      } else {\n' +
+      '        out.push(bill + " FAIL");\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '    out.push(bill + "->" + fives + "f" + tens + "t");\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function ledgerFivesFirst(bills) {\n' +
+      '  let fives = 0;\n' +
+      '  let tens = 0;\n' +
+      '  const out = [];\n' +
+      '  for (const bill of bills) {\n' +
+      '    if (bill === 5) fives += 1;\n' +
+      '    else if (bill === 10) {\n' +
+      '      if (fives === 0) {\n' +
+      '        out.push(bill + " FAIL");\n' +
+      '        break;\n' +
+      '      }\n' +
+      '      fives -= 1;\n' +
+      '      tens += 1;\n' +
+      '    } else {\n' +
+      '      if (fives >= 3) fives -= 3;\n' +
+      '      else if (tens > 0 && fives > 0) {\n' +
+      '        tens -= 1;\n' +
+      '        fives -= 1;\n' +
+      '      } else {\n' +
+      '        out.push(bill + " FAIL");\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '    out.push(bill + "->" + fives + "f" + tens + "t");\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function changeReachable(bills) {\n' +
+      '  let states = new Set(["0,0"]);\n' +
+      '  for (const bill of bills) {\n' +
+      '    const next = new Set();\n' +
+      '    for (const state of states) {\n' +
+      '      const parts = state.split(",");\n' +
+      '      const f = Number(parts[0]);\n' +
+      '      const t = Number(parts[1]);\n' +
+      '      if (bill === 5) next.add(f + 1 + "," + t);\n' +
+      '      else if (bill === 10) {\n' +
+      '        if (f >= 1) next.add(f - 1 + "," + (t + 1));\n' +
+      '      } else {\n' +
+      '        if (t >= 1 && f >= 1) next.add(f - 1 + "," + (t - 1));\n' +
+      '        if (f >= 3) next.add(f - 3 + "," + t);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    states = next;\n' +
+      '    if (states.size === 0) return false;\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function reachableDrawers(bills) {\n' +
+      '  let states = new Set(["0,0"]);\n' +
+      '  for (const bill of bills) {\n' +
+      '    const next = new Set();\n' +
+      '    for (const state of states) {\n' +
+      '      const parts = state.split(",");\n' +
+      '      const f = Number(parts[0]);\n' +
+      '      const t = Number(parts[1]);\n' +
+      '      if (bill === 5) next.add(f + 1 + "," + t);\n' +
+      '      else if (bill === 10) {\n' +
+      '        if (f >= 1) next.add(f - 1 + "," + (t + 1));\n' +
+      '      } else {\n' +
+      '        if (t >= 1 && f >= 1) next.add(f - 1 + "," + (t - 1));\n' +
+      '        if (f >= 3) next.add(f - 3 + "," + t);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    states = next;\n' +
+      '  }\n' +
+      '  return [...states].join(" ");\n' +
+      '}',
+    modify: 'A customer arrives with a 50, the till also keeps 20s, and lemonade still costs 5. What does the state become, and which of the two payment shapes survives the generalisation?',
   },
 ];
 
