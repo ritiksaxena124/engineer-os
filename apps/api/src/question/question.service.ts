@@ -6,6 +6,7 @@ import { MasteryService } from '../mastery/mastery.service';
 import { ReviewService } from '../mastery/review.service';
 import { PASS_SCORE } from '../mastery/derivation';
 import { gradeAnswer, type GradeableConcept } from './grading';
+import { BANK_SCOPE, bandFor } from './band';
 import type { AttemptDto, QuestionQueryDto } from './dto';
 
 /**
@@ -31,6 +32,7 @@ export class QuestionService {
      */
     const scope: Prisma.QuestionWhereInput = {
       isActive: true,
+      ...(filter.bank === undefined ? {} : BANK_SCOPE[filter.bank]),
       ...(filter.topic ? { topic: { slug: filter.topic } } : {}),
       ...(filter.category ? { categoryKey: filter.category } : {}),
       ...(filter.minDifficulty === undefined && filter.maxDifficulty === undefined
@@ -54,7 +56,7 @@ export class QuestionService {
           : { companies: { some: { isActive: true, companyKey: filter.company } } }),
     };
 
-    const [rows, companyRows, tagged, rungs, untagged] = await Promise.all([
+    const [rows, companyRows, tagged, rungs, perTopic, topics, untagged] = await Promise.all([
       this.prisma.question.findMany({
         where,
         orderBy: [{ difficulty: 'asc' }, { slug: 'asc' }],
@@ -79,10 +81,28 @@ export class QuestionService {
         _count: { _all: true },
         orderBy: { difficulty: 'asc' },
       }),
+      this.prisma.question.groupBy({
+        by: ['topicId'],
+        where: scope,
+        _count: { _all: true },
+      }),
+      // groupBy cannot reach through a relation, so the topic names come from a second, tiny
+      // query and are joined in memory.
+      this.prisma.topic.findMany({
+        where: { isActive: true },
+        select: { id: true, slug: true, title: true },
+      }),
       this.prisma.question.count({ where: { ...scope, companies: { none: { isActive: true } } } }),
     ]);
 
     const countByCompany = new Map(tagged.map((row) => [row.companyKey, row._count._all]));
+    const topicById = new Map(topics.map((topic) => [topic.id, topic]));
+    const areas = perTopic
+      .flatMap((row) => {
+        const topic = topicById.get(row.topicId);
+        return topic ? [{ slug: topic.slug, title: topic.title, count: row._count._all }] : [];
+      })
+      .sort((a, b) => b.count - a.count || a.slug.localeCompare(b.slug));
 
     return {
       questions: rows.map((row) => ({
@@ -91,6 +111,7 @@ export class QuestionService {
         topicSlug: row.topic.slug,
         category: row.categoryKey,
         difficulty: row.difficulty,
+        band: bandFor(row.difficulty),
         levelKey: row.levelKey,
         isDiagnostic: row.isDiagnostic,
         conceptCount: row._count.expectedConcepts,
@@ -105,6 +126,7 @@ export class QuestionService {
           count: countByCompany.get(company.key) ?? 0,
         })),
         difficulties: rungs.map((rung) => ({ difficulty: rung.difficulty, count: rung._count._all })),
+        areas,
         untagged,
       },
     };
@@ -122,6 +144,7 @@ export class QuestionService {
         category: loaded.row.category.key,
         categoryLabel: loaded.row.category.label,
         difficulty: loaded.row.difficulty,
+        band: bandFor(loaded.row.difficulty),
         levelKey: loaded.row.levelKey,
         topicSlug: loaded.row.topic.slug,
         isDiagnostic: loaded.row.isDiagnostic,

@@ -10,6 +10,7 @@ interface QuestionPayload {
   body: string;
   category: string;
   difficulty: number;
+  band: string | null;
   topicSlug: string;
   isDiagnostic: boolean;
   conceptCount: number;
@@ -22,6 +23,7 @@ interface BrowsePayload {
   facets: {
     companies: { key: string; label: string; count: number }[];
     difficulties: { difficulty: number; count: number }[];
+    areas: { slug: string; title: string; count: number }[];
     untagged: number;
   };
 }
@@ -169,6 +171,51 @@ describe('question engine', () => {
     expect(senior.questions.length).toBeGreaterThan(0);
     expect(senior.questions.every((row) => row.difficulty >= 6)).toBe(true);
     expect(senior.questions.length).toBeLessThan(fives.questions.length + senior.questions.length);
+  });
+
+  test('the dsa bank is the sheet, and its rows are labelled in the sheet vocabulary', async () => {
+    const rows = await browse('/questions?bank=dsa');
+    expect(rows.questions.length).toBeGreaterThan(100);
+    expect(rows.questions.every((row) => row.slug.startsWith('dsa-'))).toBe(true);
+    expect(new Set(rows.questions.map((row) => row.band)).size).toBe(3);
+    expect(rows.questions.every((row) => ['Easy', 'Medium', 'Hard'].includes(row.band ?? ''))).toBe(true);
+
+    // one ladder, two names for a rung: the band is derived from the difficulty, never stored
+    expect(
+      rows.questions.every((row) =>
+        row.band === 'Easy' ? row.difficulty <= 3 : row.band === 'Medium' ? row.difficulty === 4 : row.difficulty >= 5,
+      ),
+    ).toBe(true);
+  });
+
+  test('a band filter selects the same rows as the difficulty range it derives from', async () => {
+    const hard = await browse('/questions?bank=dsa&minDifficulty=5');
+    expect(hard.questions.length).toBeGreaterThan(0);
+    expect(hard.questions.every((row) => row.band === 'Hard')).toBe(true);
+
+    const everything = await browse('/questions?bank=dsa');
+    expect(everything.questions.filter((row) => row.band === 'Hard').length).toBe(hard.questions.length);
+  });
+
+  test('banks are disjoint and an unknown bank is refused', async () => {
+    const dsa = await browse('/questions?bank=dsa');
+    const interview = await browse('/questions?bank=interview');
+    expect(dsa.questions.some((row) => row.slug.startsWith('int-'))).toBe(false);
+    expect(interview.questions.some((row) => row.slug.startsWith('dsa-'))).toBe(false);
+    expect(interview.questions.every((row) => row.slug.startsWith('int-'))).toBe(true);
+
+    expect((await request('/questions?bank=leetcode', 'GET', token)).status).toBe(400);
+  });
+
+  test('the areas facet counts the topics reachable from the filters already applied', async () => {
+    const rows = await browse('/questions?bank=dsa');
+    expect(rows.facets.areas.length).toBeGreaterThan(3);
+    expect(rows.facets.areas.every((area) => area.count > 0 && area.title.length > 1)).toBe(true);
+    expect(rows.facets.areas.reduce((total, area) => total + area.count, 0)).toBe(rows.questions.length);
+
+    const narrowed = await browse('/questions?bank=dsa&topic=linked-lists');
+    expect(narrowed.facets.areas.map((area) => area.slug)).toEqual(['linked-lists']);
+    expect(narrowed.facets.areas[0].count).toBe(narrowed.questions.length);
   });
 
   test('company and difficulty filters compose, and the facet counts follow the other filters', async () => {

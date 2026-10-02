@@ -17,9 +17,11 @@ import {
 } from 'class-validator';
 import { QUESTION_CATEGORIES } from '../../prisma/content/reference';
 import { COMPANIES } from '../../prisma/content/companies';
+import { BANK_SCOPE } from './band';
 
 const CATEGORY_KEYS = QUESTION_CATEGORIES.map((row) => row.key);
 const COMPANY_KEYS = COMPANIES.map((row) => row.key);
+const BANK_KEYS = Object.keys(BANK_SCOPE);
 
 /**
  * A range nobody can satisfy is a bug in the caller rather than an empty page, so it is refused
@@ -39,6 +41,12 @@ class OrderedDifficultyRange implements ValidatorConstraintInterface {
 }
 
 export class QuestionQueryDto {
+  // A bank is the tab the learner opened: the sheet, or the interview set. It scopes the rows,
+  // it is not a property of a question.
+  @IsOptional()
+  @IsIn(BANK_KEYS)
+  bank?: string;
+
   @IsOptional()
   @IsString()
   topic?: string;
