@@ -1491,6 +1491,28 @@ export const DSA_CONCEPTS = {
     terms: ['dense ranks skip duplicates', 'set then sort then map', 'rank starts at one', 'ties share a rank', 'indexOf inflates ranks'],
     weight: 3,
   },
+  'dsa-heap-merges-k-sequences': {
+    slug: 'dsa-heap-merges-k-sequences',
+    name: 'A heap of one head per list merges m sorted lists',
+    detail: 'Each list is sorted, so its head is the minimum of that list and the global minimum is always one of the m heads; popping a head and pushing its successor keeps the heap at m entries and turns the merge into n pops at log m each.',
+
+    terms: ['head is the minimum of its list', 'push the successor', 'heap size stays m', 'relink instead of copy', 'pairwise merge is the same bound'],
+    weight: 3,
+  },
+  'dsa-greedy-by-frequency-with-idle-slots': {
+    slug: 'dsa-greedy-by-frequency-with-idle-slots',
+    name: 'The most frequent task writes the frame and the rest fill it',
+    detail: 'With a cooldown of n the highest-count task forces count minus one gaps of n plus one slots, tasks tied for the highest count widen the final frame, and the answer is that frame or the raw task count, whichever is larger, because enough distinct work removes every idle slot.',
+    terms: ['frame of cooldown plus one', 'highest count sets the length', 'ties widen the last frame', 'idle slots disappear', 'greedy by remaining count'],
+    weight: 3,
+  },
+  'dsa-consecutive-greedy-from-the-smallest': {
+    slug: 'dsa-consecutive-greedy-from-the-smallest',
+    name: 'The smallest remaining card has to start a group',
+    detail: 'Nothing can precede it, so consuming its run of groupSize consecutive values is forced rather than chosen; a value that is absent or already handed out is the only way the walk can fail, which makes a single pass over a count table sufficient.',
+    terms: ['forced first move', 'count table decrements', 'absent or exhausted', 'length must divide', 'lazy deletion from a heap'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -16459,6 +16481,482 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return values.map((value) => ranks.get(value));\n' +
       '}',
     modify: 'Rank the values by descending magnitude instead, still starting at 1 and still shared across ties. Which single line moves, and does the heap version need a different comparator or a different drain?',
+  },
+  {
+    step: 11,
+    name: 'Merge M Sorted Lists',
+    difficulty: 'Hard',
+    topicSlug: HEAPS,
+    stem: 'Merge m sorted linked lists into a single sorted list.',
+    brief: 'Input: an array of list heads, any of which may be null. Output: the head of the merged list. Deliver the heap-over-heads merge, the pairwise divide-and-conquer merge, and the flatten-and-sort fallback.',
+    concepts: ['dsa-heap-merges-k-sequences', 'dsa-heap-guarantees-only-the-root', 'dsa-sorted-merge', 'dsa-sentinel-head', 'dsa-null-termination'],
+    shortAnswer:
+      'Keep a min heap of the current head of every non-empty list: pop the smallest, link it onto the output, push its ' +
+      'successor. Every node costs one pop and one push at log m, so the merge is n log m with at most m heap entries.',
+    idealAnswer:
+      'The trick is a fact about sorted lists rather than about heaps: the head of a sorted list is the minimum of that list, ' +
+      'so the smallest node anywhere is always one of the m heads. That makes a heap over the heads enough - pop it, link the ' +
+      'winner onto the tail, and hand its successor back to the heap, which is now again holding exactly one candidate per ' +
+      'non-empty list. The heap never exceeds m entries, so the memory is O(m) regardless of how long the lists are, and the ' +
+      'time is n log m because every node is pushed once and popped once. The equally standard answer uses no heap at all: ' +
+      'merge lists pairwise, then merge the pairs, and repeat until one list survives. Each round moves every node once and ' +
+      'there are log m rounds, so it is also n log m, with the difference that the heap version is online while the pairwise ' +
+      'version is not and has no auxiliary structure. Pairwise is what you write when m is large and the log m factor is the ' +
+      'only thing you are buying; the plain two-list merge is what you write when m is 2, where a heap would cost more than ' +
+      'it saves. Then there is the honest fallback: walk everything, collect values, sort, rebuild. That is n log n plus an ' +
+      'n-node allocation, and for small m it is what production code should do - the log n versus log m gap is noise next to ' +
+      'the readability win, and the argument for the heap only becomes serious when m is large or the lists do not fit in ' +
+      'memory. Three JavaScript details carry the rest: the comparator must read the val field, since comparing two node ' +
+      'objects with the less-than operator is never true and gives you insertion order dressed as a merge; the heap must be ' +
+      'seeded only with real heads, because a null in the input array is a legitimate empty list; and the sentinel tail is ' +
+      'returned as dummy dot next, not as dummy, which is the single most common wrong answer on this problem. One property ' +
+      'worth naming out loud: the heap and pairwise versions relink the nodes they are given, so the input lists are consumed ' +
+      'by the merge and are no longer walkable afterwards, while the flatten version copies and leaves them intact.',
+    walkthrough:
+      'Merge 1, 4, 5 with 1, 3, 4 and an empty list. The heap is seeded with the two heads - both carrying 1 - and pops them ' +
+      'in turn, handing 4 and 3 back as successors, so the emitted order is 1, 1, 3, 4, 4, 5 with the heap never holding more ' +
+      'than two nodes. The pairwise version merges the first two lists into 1, 1, 3, 4, 4, 5 and then merges that against ' +
+      'null, which returns it unchanged. Flatten and sort reaches the same output through six fresh nodes and leaves the ' +
+      'input lists walkable.',
+    commonMistake:
+      'Pushing all n nodes into one heap and popping them out, or returning the sentinel node instead of the node after it.',
+    whyWrong:
+      'The full heap answers the question correctly at n log n and O(n), which is what an unsorted merge would have cost - it ' +
+      'throws away the only useful fact about the input, that each list is already ordered, and log n versus log m is the ' +
+      'entire difference when m is small next to n. Returning the sentinel gives a list that begins with the dummy value, so ' +
+      'the first element is the one you invented. And a heap that was seeded with a null head throws on the comparator read ' +
+      'the first time it sifts, which is the failure mode of treating an empty list as a list containing nothing.',
+    followUps: [
+      'Merge the lists without allocating or relinking anything, reporting the values in order as they are consumed. What does the heap hold now, and what does the caller still own?',
+      'm is huge and the lists arrive from disk one at a time. Which of the three answers survives, and what is the peak memory?',
+      'Prove the pairwise version is also n log m. Which quantity is log m and which is n in its recurrence?',
+      'The lists are sorted descending instead. Name every comparison that has to flip and say whether the output walk changes.',
+    ],
+    solution:
+      'class ListNode {\n' +
+      '  constructor(value) {\n' +
+      '    this.val = value;\n' +
+      '    this.next = null;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function buildList(values) {\n' +
+      '  const dummy = new ListNode(0);\n' +
+      '  let tail = dummy;\n' +
+      '  for (const value of values) {\n' +
+      '    tail.next = new ListNode(value);\n' +
+      '    tail = tail.next;\n' +
+      '  }\n' +
+      '  return dummy.next;\n' +
+      '}\n' +
+      '\n' +
+      'function toArray(head) {\n' +
+      '  const out = [];\n' +
+      '  let node = head;\n' +
+      '  while (node !== null) {\n' +
+      '    out.push(node.val);\n' +
+      '    node = node.next;\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function heapPush(items, node) {\n' +
+      '  items.push(node);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent].val <= items[index].val) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapPop(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left].val < items[best].val) best = left;\n' +
+      '      if (right < items.length && items[right].val < items[best].val) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'function mergeKLists(lists) {\n' +
+      '  const heap = [];\n' +
+      '  for (const head of lists) {\n' +
+      '    if (head !== null && head !== undefined) heapPush(heap, head);\n' +
+      '  }\n' +
+      '  const dummy = new ListNode(0);\n' +
+      '  let tail = dummy;\n' +
+      '  while (heap.length > 0) {\n' +
+      '    const node = heapPop(heap);\n' +
+      '    tail.next = node;\n' +
+      '    tail = node;\n' +
+      '    if (node.next !== null) heapPush(heap, node.next);\n' +
+      '  }\n' +
+      '  tail.next = null;\n' +
+      '  return dummy.next;\n' +
+      '}\n' +
+      '\n' +
+      'function mergeTwo(left, right) {\n' +
+      '  const dummy = new ListNode(0);\n' +
+      '  let tail = dummy;\n' +
+      '  let a = left;\n' +
+      '  let b = right;\n' +
+      '  while (a !== null && b !== null) {\n' +
+      '    if (a.val <= b.val) {\n' +
+      '      tail.next = a;\n' +
+      '      a = a.next;\n' +
+      '    } else {\n' +
+      '      tail.next = b;\n' +
+      '      b = b.next;\n' +
+      '    }\n' +
+      '    tail = tail.next;\n' +
+      '  }\n' +
+      '  tail.next = a !== null ? a : b;\n' +
+      '  return dummy.next;\n' +
+      '}\n' +
+      '\n' +
+      'function mergeKListsByPairs(lists) {\n' +
+      '  let level = [];\n' +
+      '  for (const head of lists) level.push(head === undefined ? null : head);\n' +
+      '  while (level.length > 1) {\n' +
+      '    const next = [];\n' +
+      '    for (let index = 0; index < level.length; index += 2) {\n' +
+      '      next.push(mergeTwo(level[index], index + 1 < level.length ? level[index + 1] : null));\n' +
+      '    }\n' +
+      '    level = next;\n' +
+      '  }\n' +
+      '  return level.length === 0 ? null : level[0];\n' +
+      '}\n' +
+      '\n' +
+      'function mergeKListsByFlatten(lists) {\n' +
+      '  const values = [];\n' +
+      '  for (const head of lists) {\n' +
+      '    let node = head;\n' +
+      '    while (node !== null && node !== undefined) {\n' +
+      '      values.push(node.val);\n' +
+      '      node = node.next;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  values.sort((first, second) => first - second);\n' +
+      '  return buildList(values);\n' +
+      '}',
+    modify: 'Merge into a fresh list so the m inputs stay walkable afterwards. Which line does the copying, and what does the heap version have to hold now that it did not before?',
+  },
+  {
+    step: 11,
+    name: 'Task Scheduler',
+    difficulty: 'Medium',
+    topicSlug: HEAPS,
+    stem: 'Given task labels and a cooldown between two runs of the same task, return the fewest intervals needed to finish everything.',
+    brief: 'Input: an array of task labels and a non-negative cooldown. Output: the length of the shortest schedule, idle slots included. Deliver the closed form and a greedy simulation that emits the schedule itself.',
+    concepts: ['dsa-greedy-by-frequency-with-idle-slots', 'dsa-hash-frequency', 'dsa-heap-guarantees-only-the-root', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Let the highest task count be c and let t tasks share it: the answer is the larger of (c minus 1) times (cooldown plus ' +
+      '1) plus t and the number of tasks. Simulating it takes a max heap by remaining count plus a queue of tasks still ' +
+      'cooling.',
+    idealAnswer:
+      'The longest-running task is the one that dictates the shape of the schedule. If a task appears c times and the same ' +
+      'task must be at least cooldown plus one slots apart, its first c minus one runs each open a frame of cooldown plus one ' +
+      'slots, and whatever is left goes in the last frame - which is exactly t slots wide when t tasks are tied at the top, ' +
+      'because all of them have to run once more at the end. Everything else is filler: the other tasks have fewer runs, so ' +
+      'they can be poured into the gaps as long as gaps exist, and once the gaps run out the schedule simply continues without ' +
+      'idling. That is why the answer is a max of two quantities and not just the frame: the frame counts slots, the task ' +
+      'count is a lower bound on slots, and whichever is larger is achievable. A cooldown of 0 collapses the expression to ' +
+      'the task count, and a hand of all-distinct tasks does the same, which are the two edge cases that catch an ungarded ' +
+      'implementation. The simulation is the version to write when you have to show the schedule rather than its length: a ' +
+      'max heap keyed on the remaining count, because the rule that keeps the greedy optimal is to run the most urgent task ' +
+      'at every free slot, and a queue of tasks still cooling. The queue needs no priority structure of its own - ready times ' +
+      'are handed out in nondecreasing order as the clock advances, so the head of the queue is always the next task to ' +
+      'become available and the promotion test is a single comparison against the current slot. Two details decide whether ' +
+      'the simulation agrees with the formula: the ready time is one plus cooldown after the slot on which the task ran, not ' +
+      'after the slot it was counted from, and the clock advances by one even on an idle slot, otherwise a permanently empty ' +
+      'heap is a loop that never ends. Order the heap by count and break ties on the label, or the schedule depends on ' +
+      'whichever task the Map happened to see first.',
+    walkthrough:
+      'Six tasks A, A, A, B, B, B with a cooldown of 2. The heap holds A and B both at 3, and the tie breaks alphabetically, ' +
+      'so slot 0 runs A and slot 1 runs B; A is ready again at slot 3 and B at slot 4, so slot 2 idles. The pattern repeats - ' +
+      'A, B, idle, A, B, idle, A, B - and the schedule is 8 slots long, which is what the frame gives: (3 minus 1) times 3 ' +
+      'plus 2 tied leaders equals 8. On A, A, B, C, D, E with the same cooldown the frame is only 4 while six tasks exist, so ' +
+      'the max wins, and the simulation fills every gap: it emits a schedule of 6 slots with no idling at all.',
+    commonMistake:
+      'Returning the frame without comparing it against the number of tasks, or counting the ready time from the slot the ' +
+      'task was dequeued on rather than the slot it ran on.',
+    whyWrong:
+      'Without the max the answer can come out smaller than the input - A, A, B, C, D, E with a cooldown of 2 has a frame of ' +
+      '4 for six tasks, and 4 is not a length any schedule can have. The off-by-one in the ready time is subtler: measuring ' +
+      'the cooldown from the moment a task became eligible instead of the moment it ran shortens every gap by one, and the ' +
+      'simulation then reports a schedule the rules forbid - two A slots one interval apart where the cooldown demanded ' +
+      'three.',
+    followUps: [
+      'Return the schedule with task ids and idle markers instead of its length. What does the dot stand for, and does any other line change?',
+      'Two workers share the cooldown. Which quantity in the frame argument changes, and which one is untouched?',
+      'The cooldown becomes per task rather than global. Which record has to hold a ready time, and what does the queue of cooling tasks turn into?',
+      'Prove the greedy-by-largest-remaining-count optimal with an exchange argument. Which two slots do you swap, and why does the swap never increase an idle count?',
+    ],
+    solution:
+      'function taskCounts(tasks) {\n' +
+      '  const counts = new Map();\n' +
+      '  for (const task of tasks) {\n' +
+      '    const seen = counts.get(task);\n' +
+      '    counts.set(task, seen === undefined ? 1 : seen + 1);\n' +
+      '  }\n' +
+      '  return counts;\n' +
+      '}\n' +
+      '\n' +
+      'function minimumIntervals(tasks, cooldown) {\n' +
+      '  if (tasks.length === 0) return 0;\n' +
+      '  const counts = taskCounts(tasks);\n' +
+      '  let highest = 0;\n' +
+      '  for (const count of counts.values()) if (count > highest) highest = count;\n' +
+      '  let tied = 0;\n' +
+      '  for (const count of counts.values()) if (count === highest) tied += 1;\n' +
+      '  const frame = (highest - 1) * (cooldown + 1) + tied;\n' +
+      '  return frame > tasks.length ? frame : tasks.length;\n' +
+      '}\n' +
+      '\n' +
+      'function ahead(items, first, second) {\n' +
+      '  if (items[first].count !== items[second].count) return items[first].count > items[second].count;\n' +
+      '  return items[first].task < items[second].task;\n' +
+      '}\n' +
+      '\n' +
+      'function maxHeapPush(items, entry) {\n' +
+      '  items.push(entry);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (!ahead(items, index, parent)) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function maxHeapPop(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && ahead(items, left, best)) best = left;\n' +
+      '      if (right < items.length && ahead(items, right, best)) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'function minimumIntervalsSchedule(tasks, cooldown) {\n' +
+      '  const counts = taskCounts(tasks);\n' +
+      '  const heap = [];\n' +
+      '  for (const pair of counts) maxHeapPush(heap, { task: pair[0], count: pair[1] });\n' +
+      '  const cooling = [];\n' +
+      '  const out = [];\n' +
+      '  while (heap.length > 0 || cooling.length > 0) {\n' +
+      '    while (cooling.length > 0 && cooling[0].readyAt <= out.length) maxHeapPush(heap, cooling.shift());\n' +
+      '    if (heap.length > 0) {\n' +
+      '      const entry = maxHeapPop(heap);\n' +
+      '      out.push(entry.task);\n' +
+      '      entry.count -= 1;\n' +
+      '      if (entry.count > 0) {\n' +
+      '        entry.readyAt = out.length + cooldown;\n' +
+      '        cooling.push(entry);\n' +
+      '      }\n' +
+      '    } else {\n' +
+      '      out.push(".");\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out.join("");\n' +
+      '}\n' +
+      '\n' +
+      'function minimumIntervalsBySimulation(tasks, cooldown) {\n' +
+      '  return minimumIntervalsSchedule(tasks, cooldown).length;\n' +
+      '}',
+    modify: 'Give every task its own cooldown instead of one global value. Which record has to carry a ready time, and does the queue of cooling tasks stay a queue?',
+  },
+  {
+    step: 11,
+    name: 'Hands of Straights',
+    difficulty: 'Medium',
+    topicSlug: HEAPS,
+    stem: 'Decide whether a hand of card values can be rearranged into groups of groupSize consecutive values.',
+    brief: 'Input: an integer array and a group size. Output: a boolean. Deliver the count-table walk over a min heap of distinct values, the sorted-keys version that subtracts whole deficits at once, and a naive group-at-a-time reference.',
+    concepts: ['dsa-consecutive-greedy-from-the-smallest', 'dsa-hash-frequency', 'dsa-heap-guarantees-only-the-root', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Count the values, then repeatedly take the smallest value still in hand and hand out one run of groupSize consecutive ' +
+      'values from the counts. A value that is missing or already handed out fails the test, and the length has to divide by ' +
+      'groupSize before any of that runs.',
+    idealAnswer:
+      'The greedy is forced, which is what makes it correct. Take the smallest value still present: no group can be opened by ' +
+      'a smaller value, because there is none, and this value cannot extend a group either, because every group that could ' +
+      'have extended it was already opened by a smaller value and consumed its run. So it must start a group, and that group ' +
+      'owes one copy each of the next groupSize minus one values. If any of them is absent or already spent, no arrangement ' +
+      'exists; if all of them are there, taking them can never hurt, because the alternative is to spend those successors on a ' +
+      'later group that could have used values further along instead. Counting is what turns that argument into code: with a ' +
+      'table of how many copies each value holds, handing out a card is a decrement and a failure test is a comparison ' +
+      'against zero, so the work is proportional to the cards rather than to the range of values. The heap supplies the ' +
+      'smallest remaining value, and because a value can be exhausted long before the heap empties while another can still ' +
+      'hold copies after a single group, the walk keeps the popped start and opens group after group from it until its count ' +
+      'reaches zero, so an exhausted key popped later simply opens nothing. That is cheaper than lazy deletion: the heap is ' +
+      'seeded once with the distinct values and nothing is ever removed from it. The second implementation is the same idea ' +
+      'with the counting done in batches: ' +
+      'walk the distinct values ascending, and when a value still owes c groups, subtract c from each of the next groupSize ' +
+      'minus one keys at once, because all c groups opened here need one copy from each of them. That is one pass over the ' +
+      'distinct values and it makes the per-card loop disappear, at the cost of a check that the keys really are consecutive ' +
+      '- a gap in the distinct values is a failure even when the counts are large enough to hide it. Both versions need the ' +
+      'guard up front that the hand size divides by the group size, and both have to distinguish a missing key from a spent ' +
+      'one: Map.get of a key never dealt is undefined, and any comparison against undefined is false, so a test written as ' +
+      'have is less than owed silently accepts a card that does not exist. Sorting the keys needs a numeric comparator like ' +
+      'every other sort of numbers, and here it has an extra sting - with the default string order the value 10 lands before ' +
+      '2, and the consecutiveness test then rejects a hand that is perfectly playable.',
+    walkthrough:
+      'The hand 1, 2, 3, 6, 2, 3, 4, 7, 8 with groupSize 3 is playable in three groups. The counts are 1:1, 2:2, 3:2, 4:1, ' +
+      '6:1, 7:1, 8:1, so the heap pops 1 first and, while 1 still holds copies, hands out one run of 1, 2, 3 - which leaves 1 ' +
+      'spent and 2 and 3 down to a single copy each. The next pop is 2, which still holds a copy, and it opens 2, 3, 4; 3 and ' +
+      '4 are now exhausted, so popping them opens nothing and is not a failure, and 6 opens the last group 6, 7, 8. On ' +
+      '1, 2, 3, 4, 5 with groupSize 4 the first group takes 1, 2, 3, 4 and the leftover 5 opens a group needing 5, 6, 7, 8, so ' +
+      'the answer is false.',
+    commonMistake:
+      'Sorting the hand and cutting it into consecutive runs by position, which ignores how many copies each value owes, and ' +
+      'leaving out the divisibility guard.',
+    whyWrong:
+      'Position says nothing about value. The hand 1, 1, 2, 2, 3, 3 with groupSize 3 is playable - two groups of 1, 2, 3 - ' +
+      'while cutting the sorted array by position reads the first group as 1, 1, 2 and reports false on a hand that works. ' +
+      'The mirror error is trusting a count lookup that returned undefined: an absent value and a spent value both mean the ' +
+      'group cannot be formed, but undefined fails a less-than test silently, so the walk keeps going and calls a broken hand ' +
+      'playable.',
+    followUps: [
+      'Return the groups themselves rather than a boolean. Which version hands them over more cheaply, and what does each group cost to record?',
+      'Groups of size at least groupSize instead of exactly. Which line of the count walk changes, and does the divisibility guard survive?',
+      'The hand is a million cards drawn from a small range of values. What replaces the heap, and what does one pass look like then?',
+      'State the invariant over the count table that makes the forced-first-move argument airtight, and use it to show the greedy never blocks a later group.',
+    ],
+    solution:
+      'function heapPush(items, value) {\n' +
+      '  items.push(value);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent] <= items[index]) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapPop(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left] < items[best]) best = left;\n' +
+      '      if (right < items.length && items[right] < items[best]) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'function countedHand(hand) {\n' +
+      '  const counts = new Map();\n' +
+      '  for (const card of hand) {\n' +
+      '    const seen = counts.get(card);\n' +
+      '    counts.set(card, seen === undefined ? 1 : seen + 1);\n' +
+      '  }\n' +
+      '  return counts;\n' +
+      '}\n' +
+      '\n' +
+      'function isPossibleStraight(hand, groupSize) {\n' +
+      '  if (groupSize === 1 || hand.length === 0) return true;\n' +
+      '  if (hand.length % groupSize !== 0) return false;\n' +
+      '  const counts = countedHand(hand);\n' +
+      '  const heap = [];\n' +
+      '  for (const key of counts.keys()) heapPush(heap, key);\n' +
+      '  while (heap.length > 0) {\n' +
+      '    const start = heapPop(heap);\n' +
+      '    while (counts.get(start) > 0) {\n' +
+      '      for (let offset = 0; offset < groupSize; offset += 1) {\n' +
+      '        const have = counts.get(start + offset);\n' +
+      '        if (have === undefined || have === 0) return false;\n' +
+      '        counts.set(start + offset, have - 1);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function isPossibleStraightByDeficits(hand, groupSize) {\n' +
+      '  if (groupSize === 1 || hand.length === 0) return true;\n' +
+      '  if (hand.length % groupSize !== 0) return false;\n' +
+      '  const counts = countedHand(hand);\n' +
+      '  const values = Array.from(counts.keys()).sort((first, second) => first - second);\n' +
+      '  for (let index = 0; index < values.length; index += 1) {\n' +
+      '    const open = counts.get(values[index]);\n' +
+      '    if (open === 0) continue;\n' +
+      '    for (let offset = 1; offset < groupSize; offset += 1) {\n' +
+      '      const next = values[index + offset];\n' +
+      '      if (next === undefined || next !== values[index] + offset) return false;\n' +
+      '      const have = counts.get(next);\n' +
+      '      if (have < open) return false;\n' +
+      '      counts.set(next, have - open);\n' +
+      '    }\n' +
+      '    counts.set(values[index], 0);\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function isPossibleStraightByGroups(hand, groupSize) {\n' +
+      '  if (groupSize === 1 || hand.length === 0) return true;\n' +
+      '  if (hand.length % groupSize !== 0) return false;\n' +
+      '  const cards = hand.slice().sort((first, second) => first - second);\n' +
+      '  while (cards.length > 0) {\n' +
+      '    const start = cards[0];\n' +
+      '    for (let offset = 0; offset < groupSize; offset += 1) {\n' +
+      '      const at = cards.indexOf(start + offset);\n' +
+      '      if (at === -1) return false;\n' +
+      '      cards.splice(at, 1);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}',
+    modify: 'Require the group values to step by a fixed stride instead of 1. Which decrements move, and does the smallest-remaining-card argument still force the first move?',
   },
   {
     step: 11,
