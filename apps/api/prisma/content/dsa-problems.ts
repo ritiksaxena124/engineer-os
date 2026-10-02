@@ -1428,6 +1428,41 @@ export const DSA_CONCEPTS = {
     terms: ['monotone over-estimate', 'bound instead of exact', 'best length never decreases', 'shrink once per step', 'window never shrinks below the answer'],
     weight: 3,
   },
+  'dsa-heap-array-layout': {
+    slug: 'dsa-heap-array-layout',
+    name: 'A heap is an array plus one arithmetic',
+    detail: 'The node at index i has children at 2i plus 1 and 2i plus 2 and a parent at i minus 1 over 2, so a complete tree needs no nodes and no pointers - only the shape implied by the indices and the invariant that every parent beats its children.',
+    terms: ['children at 2i plus 1', 'parent at i minus 1 over 2', 'complete tree', 'no pointers', 'invariant not ordering'],
+    weight: 3,
+  },
+  'dsa-sift-up-sift-down': {
+    slug: 'dsa-sift-up-sift-down',
+    name: 'Bubble up from a leaf, sink down from the root',
+    detail: 'Insertion appends a leaf and swaps with the parent while the parent is worse; removal moves the last leaf to the root and sinks it toward its better child; each swap drops one level, so both cost the height of the tree.',
+    terms: ['bubble up', 'sink down', 'better child', 'one level per swap', 'height is the bound'],
+    weight: 3,
+  },
+  'dsa-heap-guarantees-only-the-root': {
+    slug: 'dsa-heap-guarantees-only-the-root',
+    name: 'A heap orders parents against children, not neighbours',
+    detail: 'Only the top is promised to be the extremum of the whole array; the rest is a forest of local comparisons, so a heap cannot say what the fifth smallest element is without popping four times, and a sorted prefix is not what was bought.',
+    terms: ['root only', 'siblings unordered', 'not a sorted array', 'pop to enumerate', 'partial order'],
+    weight: 3,
+  },
+  'dsa-heapify-bottom-up-linear': {
+    slug: 'dsa-heapify-bottom-up-linear',
+    name: 'Sinking from the last parent builds a heap in linear time',
+    detail: 'Nearly every node sits near the bottom where a sink is short, so the total swap count is the sum over levels of nodes times remaining height, which converges to a small multiple of n - the linear build that n separate insertions at log n each cannot give.',
+    terms: ['last internal node', 'sink each parent', 'sum of heights', 'linear build', 'most nodes are leaves'],
+    weight: 3,
+  },
+  'dsa-default-sort-is-lexicographic': {
+    slug: 'dsa-default-sort-is-lexicographic',
+    name: 'Sort without a comparator compares the string forms',
+    detail: 'Array sort converts elements with String before comparing them, so numbers come out 1, 10, 2 - and a comparator written as a minus b returns NaN on strings, which makes every comparison false and the structure quietly do nothing.',
+    terms: ['no comparator', 'string coercion', 'ten before two', 'NaN comparison', 'silent no-op'],
+    weight: 2,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -1448,6 +1483,7 @@ const MONO = 'monotonic-stacks';
 const GRAPH = 'graph-traversal';
 const APPLIED = 'lru-rate-limiter';
 const WINDOW = 'sliding-window';
+const HEAPS = 'heaps-priority-queues';
 
 export const DSA_PROBLEMS: DsaProblem[] = [
   {
@@ -15600,6 +15636,410 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return best === null ? "" : best;\n' +
       '}',
     modify: 'Change the rule so a character covered only counts while every copy of it in the text inside the window is consecutive. Which record stops being a count, and what replaces it?',
+  },
+  {
+    step: 11,
+    name: 'Introduction to Priority Queues and Binary Heaps',
+    difficulty: 'Medium',
+    topicSlug: HEAPS,
+    stem: 'Build a priority queue on a binary heap that offers push, peek and pop of the smallest element, and say what each operation actually guarantees.',
+    brief: 'Design: a container that hands back the smallest element on demand while insertions arrive in any order. Deliver a MinHeap with push, peek, pop and size, plus the sort that drains it.',
+    concepts: ['dsa-heap-array-layout', 'dsa-sift-up-sift-down', 'dsa-heap-guarantees-only-the-root', 'dsa-heapify-bottom-up-linear', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'A complete tree stored in an array, kept in the parent-beats-children invariant by swapping one level at a time: a new ' +
+      'leaf bubbles up, the root is replaced by the last leaf and sinks down. Push, peek and pop cost O(log n), O(1) and ' +
+      'O(log n).',
+    idealAnswer:
+      'A priority queue is the contract - give me the extremum now, and let me add to you at any time - and a binary heap is ' +
+      'the cheapest implementation that keeps it without ever fully ordering anything. The tree is complete, so it fits in an ' +
+      'array with no pointers: the children of i are 2i plus 1 and 2i plus 2, the parent is i minus 1 over 2, and the whole ' +
+      'structure is that arithmetic plus one invariant. Insertion appends at the end, which preserves completeness for free, ' +
+      'and then swaps upward until the parent is no longer worse; removal takes the root out, moves the last leaf into it to ' +
+      'keep the shape, and sinks toward the better child. Both walks are bounded by the height, and a complete tree of n ' +
+      'nodes has height log n. What the heap does not promise is the important half: siblings are unordered, so the second ' +
+      'smallest element could be at either of the two child positions and nothing says which - enumerating in order means ' +
+      'popping n times at n log n, which is heap sort, and a plain sort of the array is not what the structure bought. ' +
+      'Building from an existing array is the other trap: n pushes cost n log n, while sinking every internal node from the ' +
+      'last one up costs O(n), because nearly every node is a leaf and its sink is empty. JavaScript ships no priority queue ' +
+      'in the language or in Node, so this is one of the few structures worth having ready to type, and the numeric heap must ' +
+      'not be handed the default sort comparator: without a function, sort compares string forms, which is how 10 lands ' +
+      'before 2.',
+    walkthrough:
+      'Push 5, 3, 8, 1 and 2 in that order and the array settles as 1, 2, 8, 5, 3: 1 is the root, its children are 2 and 8, ' +
+      'and 5 and 3 hang beneath 2 - a partial order, not a sorted array. Peek returns 1 without touching the shape. Pop takes ' +
+      '1 out, moves the last leaf 3 into the root and sinks it past 2, leaving 2, 3, 8, 5. Pushing 0 then bubbles straight up ' +
+      'from the new leaf to the top, giving 0, 2, 8, 5, 3, and draining hands back 0, 2, 3, 5, 8 in order. Building the same ' +
+      'five values from an array costs one bottom-up pass instead of five separate bubbles.',
+    commonMistake:
+      'Treating the heap array as sorted, or rebuilding a heap by pushing its elements one at a time when they are all known ' +
+      'up front.',
+    whyWrong:
+      'The array is only a partial order: in 1, 2, 8, 5, 3 the value 8 sits at index 2 while the smaller 3 sits at index 4, so ' +
+      'position does not track magnitude, a binary search over a heap is nonsense, and a code path that assumes sortedness ' +
+      'returns wrong answers without throwing. The n pushes ' +
+      'are not wrong, just slower - each one pays a log n bubble, where one bottom-up pass over the same data sinks most ' +
+      'nodes zero times and the total cost comes out linear.',
+    followUps: [
+      'How many comparisons does building a heap of 1000 elements cost by bottom-up sinking versus by 1000 pushes? Say which nodes never sink at all.',
+      'Add a decrease-key operation for a scheduler that raises the priority of a queued job. Why is it awkward without a second index, and what does that index map?',
+      'Enumerate the k smallest elements of a stream that never fits in memory. Which heap do you keep, and which one do you pop from?',
+    ],
+    solution:
+      'class MinHeap {\n' +
+      '  constructor(values) {\n' +
+      '    this.items = Array.isArray(values) ? values.slice() : [];\n' +
+      '    for (let index = (this.items.length >> 1) - 1; index >= 0; index -= 1) this.sink(index);\n' +
+      '  }\n' +
+      '\n' +
+      '  size() {\n' +
+      '    return this.items.length;\n' +
+      '  }\n' +
+      '\n' +
+      '  parent(index) {\n' +
+      '    return (index - 1) >> 1;\n' +
+      '  }\n' +
+      '\n' +
+      '  swap(left, right) {\n' +
+      '    const hold = this.items[left];\n' +
+      '    this.items[left] = this.items[right];\n' +
+      '    this.items[right] = hold;\n' +
+      '  }\n' +
+      '\n' +
+      '  sink(index) {\n' +
+      '    const count = this.items.length;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < count && this.items[left] < this.items[best]) best = left;\n' +
+      '      if (right < count && this.items[right] < this.items[best]) best = right;\n' +
+      '      if (best === index) return;\n' +
+      '      this.swap(index, best);\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '\n' +
+      '  push(value) {\n' +
+      '    this.items.push(value);\n' +
+      '    let index = this.items.length - 1;\n' +
+      '    while (index > 0 && this.items[this.parent(index)] > this.items[index]) {\n' +
+      '      this.swap(this.parent(index), index);\n' +
+      '      index = this.parent(index);\n' +
+      '    }\n' +
+      '    return this.size();\n' +
+      '  }\n' +
+      '\n' +
+      '  peek() {\n' +
+      '    return this.items.length === 0 ? undefined : this.items[0];\n' +
+      '  }\n' +
+      '\n' +
+      '  pop() {\n' +
+      '    const count = this.items.length;\n' +
+      '    if (count === 0) return undefined;\n' +
+      '    const top = this.items[0];\n' +
+      '    const last = this.items.pop();\n' +
+      '    if (count > 1) {\n' +
+      '      this.items[0] = last;\n' +
+      '      this.sink(0);\n' +
+      '    }\n' +
+      '    return top;\n' +
+      '  }\n' +
+      '\n' +
+      '  drain() {\n' +
+      '    const out = [];\n' +
+      '    while (this.items.length > 0) out.push(this.pop());\n' +
+      '    return out.join(",");\n' +
+      '  }\n' +
+      '\n' +
+      '  layout() {\n' +
+      '    return this.items.join(",");\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapSort(values) {\n' +
+      '  const heap = new MinHeap(values);\n' +
+      '  const out = [];\n' +
+      '  while (heap.size() > 0) out.push(heap.pop());\n' +
+      '  return out.join(",");\n' +
+      '}',
+    modify: 'Give the heap a maximum size and make push evict the smallest element when it is full, which is the top-K-over-a-stream shape. Which operation tells you what to drop, and what does the retained set cost?',
+  },
+  {
+    step: 11,
+    name: 'Min Heap and Max Heap Implementation',
+    difficulty: 'Medium',
+    topicSlug: HEAPS,
+    stem: 'Implement both heap directions from one body of code, and keep it working for elements that are not numbers.',
+    brief: 'Design: one heap class parameterised by a comparison function, with factories for the min and the max direction. Elements may be strings, objects or numbers, so the comparison cannot be subtraction.',
+    concepts: ['dsa-heap-array-layout', 'dsa-sift-up-sift-down', 'dsa-default-sort-is-lexicographic', 'dsa-heap-guarantees-only-the-root', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Store one three-way comparator and compare through it everywhere: the min heap asks whether the parent is worse, the ' +
+      'max heap asks the same question with the comparator reversed. Nothing else in the code changes.',
+    idealAnswer:
+      'The two heaps are the same algorithm wearing different signs, so the implementation that survives review takes the ' +
+      'comparison as a parameter and never mentions less-than again. The comparator has to be three-way - negative when the ' +
+      'left argument is better, positive when the right one is, zero otherwise - because subtraction, the compact version for ' +
+      'numbers, returns NaN for anything else, and every comparison against NaN is false: the heap does nothing at all, keeps ' +
+      'insertion order, and hands back whatever happened to be pushed first. That failure is silent, which is what makes it ' +
+      'worth saying out loud, and it is the same class of bug as calling sort without a comparator and watching 10 land ' +
+      'before 2. A comparator is a total order on the elements, but a heap only ever needs a weak one: two elements that ' +
+      'compare equal may be returned in either order, because the invariant is a parent against its children and says nothing ' +
+      'about siblings - so a heap is not a stable sort and should not be used as one. For objects, the comparator should ' +
+      'break ties explicitly on a second field, which is how a scheduler stops favouring whichever job happened to arrive ' +
+      'first.',
+    walkthrough:
+      'Build both directions over 4, 1 and 7. The min heap settles as 1, 4, 7 and peeks 1; after pushing 0 its root is 0 and ' +
+      'popping returns 0, leaving 1, 4, 7 to drain in order. The max heap over the same three values is 7, 1, 4 - the 1 and 4 ' +
+      'are siblings and deliberately unordered - and drains 7, 4, 1. Hand the three strings pear, apple and fig to an ' +
+      'explicit three-way comparator and they build as apple, pear, fig; hand them to the subtraction comparator instead and ' +
+      'every comparison is against NaN, so the construction performs no swaps at all and peek returns pear.',
+    commonMistake:
+      'Writing the comparator as a minus b and handing it non-numeric elements, or flipping the sign in only one of the two ' +
+      'walks.',
+    whyWrong:
+      'A minus sign on strings is NaN, and NaN comparisons are false, so the sift loops exit immediately and the structure is ' +
+      'a plain array wearing a heap API - it answers a peek with the first element pushed rather than the smallest. Flipping ' +
+      'the sign in the up-walk but not the down-walk gives a heap that is correct after a build and wrong after an insertion, ' +
+      'the worst possible failure pattern, because it passes the tests that only pop.',
+    followUps: [
+      'Make the heap hold objects of the shape name and priority, breaking ties on the name. Why can the comparator not be replaced by a numeric key alone?',
+      'Give the max heap the same drain as a descending sort of its input. Is that always true, and what does it cost per pop?',
+      'Replace the comparator parameter with a key function and cache the key per element. What does that buy when comparing is expensive?',
+    ],
+    solution:
+      'class Heap {\n' +
+      '  constructor(compare, values) {\n' +
+      '    this.compare = compare;\n' +
+      '    this.items = Array.isArray(values) ? values.slice() : [];\n' +
+      '    for (let index = (this.items.length >> 1) - 1; index >= 0; index -= 1) this.sink(index);\n' +
+      '  }\n' +
+      '\n' +
+      '  size() {\n' +
+      '    return this.items.length;\n' +
+      '  }\n' +
+      '\n' +
+      '  parent(index) {\n' +
+      '    return (index - 1) >> 1;\n' +
+      '  }\n' +
+      '\n' +
+      '  better(first, second) {\n' +
+      '    return this.compare(this.items[first], this.items[second]) < 0;\n' +
+      '  }\n' +
+      '\n' +
+      '  swap(left, right) {\n' +
+      '    const hold = this.items[left];\n' +
+      '    this.items[left] = this.items[right];\n' +
+      '    this.items[right] = hold;\n' +
+      '  }\n' +
+      '\n' +
+      '  sink(index) {\n' +
+      '    const count = this.items.length;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < count && this.better(left, best)) best = left;\n' +
+      '      if (right < count && this.better(right, best)) best = right;\n' +
+      '      if (best === index) return;\n' +
+      '      this.swap(index, best);\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '\n' +
+      '  push(value) {\n' +
+      '    this.items.push(value);\n' +
+      '    let index = this.items.length - 1;\n' +
+      '    while (index > 0 && this.better(index, this.parent(index))) {\n' +
+      '      this.swap(index, this.parent(index));\n' +
+      '      index = this.parent(index);\n' +
+      '    }\n' +
+      '    return this.size();\n' +
+      '  }\n' +
+      '\n' +
+      '  peek() {\n' +
+      '    return this.items.length === 0 ? undefined : this.items[0];\n' +
+      '  }\n' +
+      '\n' +
+      '  pop() {\n' +
+      '    const count = this.items.length;\n' +
+      '    if (count === 0) return undefined;\n' +
+      '    const top = this.items[0];\n' +
+      '    const last = this.items.pop();\n' +
+      '    if (count > 1) {\n' +
+      '      this.items[0] = last;\n' +
+      '      this.sink(0);\n' +
+      '    }\n' +
+      '    return top;\n' +
+      '  }\n' +
+      '\n' +
+      '  drain() {\n' +
+      '    const out = [];\n' +
+      '    while (this.items.length > 0) out.push(this.pop());\n' +
+      '    return out.join(",");\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function threeWay(left, right) {\n' +
+      '  if (left < right) return -1;\n' +
+      '  if (left > right) return 1;\n' +
+      '  return 0;\n' +
+      '}\n' +
+      '\n' +
+      'function minHeap(values) {\n' +
+      '  return new Heap((left, right) => (left < right ? -1 : left > right ? 1 : 0), values);\n' +
+      '}\n' +
+      '\n' +
+      'function maxHeap(values) {\n' +
+      '  return new Heap((left, right) => (left < right ? 1 : left > right ? -1 : 0), values);\n' +
+      '}',
+    modify: 'Add a heap built from objects carrying a priority and a sequence number, so equal priorities come out oldest first. Which comparator field is the tie-break, and why can it not be left to the array order?',
+  },
+  {
+    step: 11,
+    name: 'Check if an array represents a min-heap or not',
+    difficulty: 'Easy',
+    topicSlug: HEAPS,
+    stem: 'Decide whether a flat array already satisfies the min-heap invariant.',
+    brief: 'Input: an array of numbers using the implicit complete-tree layout. Output: a boolean saying whether every parent is no larger than its children. The array must not be reordered to answer.',
+    concepts: ['dsa-heap-array-layout', 'dsa-heap-guarantees-only-the-root', 'dsa-default-sort-is-lexicographic', 'dsa-boundary-conditions', 'dsa-single-pass-tracking'],
+    shortAnswer:
+      'Walk every index that has at least one child - that is, while 2i plus 1 is still in range - and compare the parent ' +
+      'with both children. Any child smaller than its parent disqualifies the array.',
+    idealAnswer:
+      'The invariant is local, so the check is local: a heap is not sorted and there is no global property to verify. Only ' +
+      'internal nodes have children, and the last internal node is at index n over 2 minus 1, so the loop stops there rather ' +
+      'than running to the end - which is not just faster but the difference between a check and a bug, because reading past ' +
+      'the end of a JavaScript array gives undefined and any comparison with undefined is false. A version that walks to ' +
+      'length and forgets the range guard therefore reports no violation for the missing child, and it reports the same ' +
+      'nothing for a genuinely broken pair if the loop condition is written against the child index instead of the parent. ' +
+      'Two boundary cases fall out of the same arithmetic: an empty array and a single element have no internal node at all, ' +
+      'so both are heaps, and equal values are fine because the invariant is no larger than rather than strictly smaller - ' +
+      'which is why the test reads child is less than parent for a violation, not child is less than or equal.',
+    walkthrough:
+      'The array 2, 3, 5, 7, 10, 8, 9, 15, 18 passes: 2 parents 3 and 5, 3 parents 7 and 10, 5 parents 8 and 9, and every one ' +
+      'of those children is larger, while 15 and 18 are leaves with nothing to check. Change the 5 to a 1 and the violation ' +
+      'list reports the pair 0 to 2, because 1 sits at index 2 as a child of 2. The array 2, 2, 3 passes for the same reason ' +
+      'that ties are legal - the left child of the root is 2, which is not less than the root - and 5, 4 fails on the single ' +
+      'pair 0 to 1.',
+    commonMistake:
+      'Looping over every index and comparing against children without a range guard, or verifying that the array is sorted ' +
+      'instead.',
+    whyWrong:
+      'Without the guard the right child of the last internal node is read as undefined, and undefined is never less than ' +
+      'anything, so a check that leans on that read silently passes arrays whose tail is broken. Sorting is the other ' +
+      'misreading: a heap may hold 1, 3, 2, 5, 8, which is not a sorted array, and a check that rejects it is rejecting ' +
+      'valid structures.',
+    followUps: [
+      'Report every violating parent-child pair instead of the first one. Which loop bound changes, and what does the list say about how broken the array is?',
+      'Now check the max-heap invariant on the same array. Which single comparison moves?',
+      'An array of 10^6 elements is a valid heap except for one leaf. Where in the walk do you find it fastest, top-down or bottom-up, and why?',
+    ],
+    solution:
+      'function isMinHeap(values) {\n' +
+      '  const count = values.length;\n' +
+      '  for (let index = 0; index * 2 + 1 < count; index += 1) {\n' +
+      '    const left = index * 2 + 1;\n' +
+      '    const right = left + 1;\n' +
+      '    if (values[left] < values[index]) return false;\n' +
+      '    if (right < count && values[right] < values[index]) return false;\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function minHeapViolations(values) {\n' +
+      '  const count = values.length;\n' +
+      '  const broken = [];\n' +
+      '  for (let index = 0; index * 2 + 1 < count; index += 1) {\n' +
+      '    const left = index * 2 + 1;\n' +
+      '    const right = left + 1;\n' +
+      '    if (values[left] < values[index]) broken.push(index + " to " + left);\n' +
+      '    if (right < count && values[right] < values[index]) broken.push(index + " to " + right);\n' +
+      '  }\n' +
+      '  return broken.join(",");\n' +
+      '}',
+    modify: 'Extend the check to say whether the array is a valid heap in either direction, and report which. Does one walk over the indices answer both, and what does it cost when they disagree?',
+  },
+  {
+    step: 11,
+    name: 'Convert Min Heap to Max Heap',
+    difficulty: 'Medium',
+    topicSlug: HEAPS,
+    stem: 'Turn an array that is already a min-heap into a max-heap over the same elements, in linear time.',
+    brief: 'Input: an array holding a valid min-heap. Output: an array holding the same multiset as a valid max-heap. The min-heap structure buys nothing on the way there.',
+    concepts: ['dsa-heapify-bottom-up-linear', 'dsa-heap-array-layout', 'dsa-heap-guarantees-only-the-root', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Ignore the input order and heapify from scratch with the max rule: sink every internal node from the last one up. ' +
+      'That is O(n), and the min-heap invariant contributes nothing.',
+    idealAnswer:
+      'The instinct is to reuse the structure - the min heap knows the smallest element is at the root, so maybe the largest ' +
+      'is somewhere near the bottom - but the max-heap invariant compares every parent against both children, and a min heap ' +
+      'guarantees the opposite at every one of those pairs. There is no partial credit to harvest, so the honest answer is a ' +
+      'fresh build: walk the internal nodes from n over 2 minus 1 down to 0, sinking each toward its larger child, and the ' +
+      'result is a max heap over the same elements. That walk is linear rather than n log n because the sink cost is the ' +
+      'height remaining below the node, and almost all nodes are leaves: half the array sinks zero levels, a quarter sinks ' +
+      'one, and the weighted sum converges. The alternative framings are both worse and worth naming - popping the min heap ' +
+      'n times is n log n, and sorting the array descending is n log n too, though it is amusingly valid, since a descending ' +
+      'array satisfies the max-heap invariant trivially. One JavaScript detail: the rebuild is in place, so the caller keeps ' +
+      'holding the same array it passed in and its min-heap copy is gone; a slice at the top of the function is the line that ' +
+      'decides who owns the data.',
+    walkthrough:
+      'Take the min heap 1, 3, 2, 7, 4, 5, 6. The last internal node is index 2, which parents 5 and 6, so 6 swaps up into it ' +
+      'and 2 drops to the leaf: 1, 3, 6, 7, 4, 5, 2. Index 1 parents 7 and 4 and takes 7: 1, 7, 6, 3, 4, 5, 2. The root ' +
+      'parents 7 and 6, takes 7, and is left holding 1 at index 1, whose children are now 3 and 4 - it swaps with the larger, ' +
+      '4, and lands at index 4 where it has no children. The result is 7, 4, 6, 3, 1, 5, 2: every parent larger than both of ' +
+      'its children, and the same seven values.',
+    commonMistake:
+      'Trying to derive the max heap from the min heap by mirroring indices or reversing the array, or paying n log n for ' +
+      'n separate pushes.',
+    whyWrong:
+      'Reversing does not work: the leaves of the min heap are not its largest elements, only the ones that never beat a ' +
+      'parent, and reversing 1, 3, 2, 7, 4, 5, 6 gives 6, 5, 4, 7, 2, 3, 1, in which the 7 at index 3 is a child of the 5 at ' +
+      'index 1 - so the array fails the invariant even though its root looks plausible. Mirroring is the same error with more ' +
+      'confidence. And ' +
+      'n pushes is merely slow, which on a heap of 10^7 elements is a difference of a constant factor times log n, not a ' +
+      'rounding error.',
+    followUps: [
+      'Convert in place rather than into a copy. What does the caller have to know, and which line of the function is the whole difference?',
+      'Give the max-heap build the min-heap input already sorted ascending. Does the bottom-up pass sink anything at all, and what is the best case?',
+      'Now convert a max heap to a min heap. Which one comparison changes, and is the linear bound still honest?',
+    ],
+    solution:
+      'function minHeapToMaxHeap(values) {\n' +
+      '  const items = values.slice();\n' +
+      '  const count = items.length;\n' +
+      '  for (let index = (count >> 1) - 1; index >= 0; index -= 1) {\n' +
+      '    let current = index;\n' +
+      '    for (;;) {\n' +
+      '      const left = current * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = current;\n' +
+      '      if (left < count && items[left] > items[best]) best = left;\n' +
+      '      if (right < count && items[right] > items[best]) best = right;\n' +
+      '      if (best === current) break;\n' +
+      '      const hold = items[current];\n' +
+      '      items[current] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      current = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return items;\n' +
+      '}\n' +
+      '\n' +
+      'function isMaxHeap(values) {\n' +
+      '  const count = values.length;\n' +
+      '  for (let index = 0; index * 2 + 1 < count; index += 1) {\n' +
+      '    const left = index * 2 + 1;\n' +
+      '    const right = left + 1;\n' +
+      '    if (values[left] > values[index]) return false;\n' +
+      '    if (right < count && values[right] > values[index]) return false;\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function minHeapToMaxHeapDescending(values) {\n' +
+      '  return values.slice().sort((first, second) => second - first);\n' +
+      '}',
+    modify: 'Convert a min heap into a max heap without touching any element more than twice. Which nodes can be proven to stay where they are, and what does that do to the swap count?',
   },
 ];
 
