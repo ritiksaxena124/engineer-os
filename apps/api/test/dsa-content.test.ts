@@ -413,6 +413,16 @@ const EXPECTS: Record<string, string> = {
     'isBalanced("([{}])") && isBalanced("{[()]}") && isBalanced("(a+b)*[c-d]") && isBalanced("") && !isBalanced("(]") && !isBalanced("(()") && !isBalanced(")(") && !isBalanced("[{(}]") && isBalancedDepth("(()())") && isBalancedDepth("") && !isBalancedDepth(")(") && !isBalancedDepth("(()") && !isBalancedDepth("())")',
   'Implement Min Stack':
     '(() => { const s = new MinStack(); s.push(-2); s.push(0); s.push(-3); const a = s.getMin() === -3 && s.top() === -3 && s.pop() === -3 && s.getMin() === -2 && s.top() === 0; const r = new MinStack(); r.push(3); r.push(3); r.push(1); r.push(1); const b = r.getMin() === 1; r.pop(); const c = r.getMin() === 1; r.pop(); const d = r.getMin() === 3; r.pop(); const e = r.getMin() === 3; r.pop(); const f = r.getMin() === null && r.pop() === null && r.size() === 0; return a && b && c && d && e && f; })()',
+  'Infix to Postfix Conversion':
+    'infixToPostfix("a+b*c") === "abc*+" && infixToPostfix("(a+b)*c") === "ab+c*" && infixToPostfix("a*(b+c)/d") === "abc+*d/" && infixToPostfix("a+b+c") === "ab+c+" && infixToPostfix("2-3-4") === "23-4-" && infixToPostfix(" a + b * c ") === "abc*+" && infixToPostfix("(a+b") === null && infixToPostfix("a+b)") === null && evaluatePostfix(infixToPostfix("2+3*4")) === 14 && evaluatePostfix(infixToPostfix("(2+3)*4")) === 20 && evaluatePostfix(infixToPostfix("2-3-4")) === -5 && evaluatePostfix(infixToPostfix("8/4/2")) === 1 && evaluatePostfix("2+") === null',
+  'Prefix to Infix Conversion':
+    'prefixToInfix("-+ab*cd") === "((a+b)-(c*d))" && prefixToInfix("*+ab-c*de") === "((a+b)*(c-(d*e)))" && prefixToInfix("a") === "a" && prefixToInfix("ab+") === null && prefixToInfix("*+ab-cde") === null',
+  'Prefix to Postfix Conversion':
+    'prefixToPostfix("*+ab-c*de") === "ab+cde*-*" && prefixToPostfix("-+ab*cd") === "ab+cd*-" && prefixToPostfix("-a*bc") === "abc*-" && prefixToPostfix("a") === "a" && prefixToPostfix("ab+") === null && prefixToPostfix("*+ab-cde") === null',
+  'Postfix to Prefix Conversion':
+    'postfixToPrefix("ab+cde*-*") === "*+ab-c*de" && postfixToPrefix("abc-*") === "*a-bc" && postfixToPrefix("ab+") === "+ab" && postfixToPrefix("a") === "a" && postfixToPrefix("+ab") === null && postfixToPrefix("abc*") === null && postfixToPrefix("ab-cd-*") === "*-ab-cd"',
+  'Postfix to Infix Conversion':
+    'postfixToInfix("abc-*") === "(a*(b-c))" && postfixToInfix("ab+") === "(a+b)" && postfixToInfix("ab+c+") === "((a+b)+c)" && postfixToInfix("a") === "a" && postfixToInfix("abc*") === null && postfixToInfixMinimal("abc-*") === "a*(b-c)" && postfixToInfixMinimal("ab+c+") === "a+b+c" && postfixToInfixMinimal("abc*+") === "a+b*c" && postfixToInfixMinimal("ab+cd*+") === "a+b+c*d" && postfixToInfixMinimal("ab-c-") === "a-b-c" && postfixToInfixMinimal("abc--") === "a-(b-c)"',
 };
 
 /** The solution runs in its own function scope with console captured, so a printing solution is testable too. */

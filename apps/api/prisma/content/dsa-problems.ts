@@ -1197,6 +1197,41 @@ export const DSA_CONCEPTS = {
     terms: ['parallel stack', 'history of minima', 'restore on pop', 'repeats need their own entry', 'constant extra per push'],
     weight: 3,
   },
+  'dsa-precedence-climbing-stack': {
+    slug: 'dsa-precedence-climbing-stack',
+    name: 'A new operator releases everything already on the stack that binds at least as tightly',
+    detail: 'The operator stack holds work in progress, and anything on top of it that is no looser than the arriving operator has to be finished first - which is the only rule a precedence table needs.',
+    terms: ['pop while rank at least', 'left associativity', 'binds tighter', 'work in progress', 'one rank table'],
+    weight: 3,
+  },
+  'dsa-parenthesis-stack-barrier': {
+    slug: 'dsa-parenthesis-stack-barrier',
+    name: 'An opening bracket freezes the stack until its closer arrives',
+    detail: 'The stack cannot pop past an unmatched opener, so a bracket pair is a barrier that outranks the precedence table for everything inside it.',
+    terms: ['stack barrier', 'unmatched opener', 'pop until the paren', 'discard the opener', 'precedence override'],
+    weight: 3,
+  },
+  'dsa-operator-operand-alternation': {
+    slug: 'dsa-operator-operand-alternation',
+    name: 'A well-formed expression alternates operator and operand in both directions',
+    detail: 'Reading left to right or right to left, the pattern forces itself: operands go on the stack, an operator consumes exactly two of them, and anything else means malformed input.',
+    terms: ['prefix and postfix are mirrors', 'consume two push one', 'final stack length one', 'undefined pop means invalid', 'single character operands'],
+    weight: 3,
+  },
+  'dsa-stack-construction-pops-in-order': {
+    slug: 'dsa-stack-construction-pops-in-order',
+    name: 'Popping gives the newest first, so a constructed string picks its own order',
+    detail: 'Building a subexpression from two popped parts means deciding which one the operator goes between, and that choice is different for a prefix scan and a postfix scan.',
+    terms: ['first popped is the nearer operand', 'operator position', 'same walk different assembly', 'order decides meaning', 'no second pass'],
+    weight: 3,
+  },
+  'dsa-stack-reversal-two-stacks': {
+    slug: 'dsa-stack-reversal-two-stacks',
+    name: 'A second stack is how a stack gets read from the other end',
+    detail: 'Pouring one stack into another reverses it, which is the way to walk an expression in the opposite direction without touching the original and without recursion.',
+    terms: ['pour to reverse', 'walk right to left', 'no index access', 'mirror algorithms', 'same routine both directions'],
+    weight: 2,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -12653,6 +12688,354 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  }\n' +
       '}',
     modify: 'Replace the shadow stack with a single stack of [value, minSoFar] pairs. Which method loses its constant-time property if you drop the second field?',
+  },
+  {
+    step: 9,
+    name: 'Infix to Postfix Conversion',
+    difficulty: 'Medium',
+    topicSlug: STACKS,
+    stem: 'Convert an infix expression with three precedence levels and parentheses into postfix, in one left-to-right pass.',
+    brief: 'Input: a string of single-character operands, the operators + - * / ^, and parentheses. Output: the postfix form, or null for mismatched brackets. Say what the operator stack is holding at any moment.',
+    concepts: ['dsa-precedence-climbing-stack', 'dsa-parenthesis-stack-barrier', 'dsa-bracket-matching-stack', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Emit operands immediately, keep operators on a stack, and before pushing a new operator pop everything on top that ' +
+      'binds at least as tightly. An opening bracket is a barrier nothing pops past, and a closing one drains up to it.',
+    idealAnswer:
+      'Converting to postfix removes the need for both precedence and parentheses by fixing the order of emission, so the ' +
+      'converter has to decide, for every operator, which earlier operators are already finished. The operator stack is ' +
+      'exactly the set of unfinished ones, ordered by increasing tightness, which makes the rule one comparison: pop while ' +
+      'the top binds at least as tightly as the newcomer. Popping on equal rank is what makes the output left-associative, ' +
+      'so a - b - c becomes ab-c- and reads as (a-b)-c; for a right-associative operator such as ^ the comparison has to be ' +
+      'strict, and ' +
+      'getting that wrong is silent because both forms are valid expressions with different values. The barrier rule gives ' +
+      'parentheses their override, and the two failure modes are the same ones a bracket matcher has: a closer with no ' +
+      'opener below it, and openers still on the stack at the end. One pass, each token pushed and popped at most once, so ' +
+      'O(n) time and O(depth) space - which is why compilers and calculators do this rather than building a tree first.',
+    walkthrough:
+      'Trace a*(b+c)/d to see all three rules fire: a is emitted; * waits on the stack because nothing on it binds ' +
+      'tighter; the opener freezes the stack; b is emitted and c arrives; the closer drains + and discards the opener; ' +
+      'then / sees * on top with equal rank, so * is emitted before / is pushed, and the tail drain leaves ab c+ * d /. ' +
+      'The evaluator in the same row is the proof reader: converting and then evaluating returns the arithmetic answer, so ' +
+      'a precedence mistake cannot hide.',
+    commonMistake:
+      'Draining the whole operator stack at a closing bracket, or emitting the opener as an operator.',
+    whyWrong:
+      'A full drain at a closer destroys the barrier that encloses the matching pair, so an outer operator leaks inside ' +
+      'and the result reorders the expression. The opener is only ever a marker - emitting it puts a stray bracket in the ' +
+      'postfix string that no evaluator can read.',
+    followUps: [
+      'Make ^ right-associative. Which single comparison changes, and what does a^b^c emit before and after?',
+      'Extend the tokenizer to multi-digit numbers. Where does the per-character loop have to become a per-token loop?',
+      'Add unary minus. What information beyond the previous token tells you whether a minus is binary?',
+    ],
+    solution:
+      'function infixToPostfix(expression) {\n' +
+      '  const rank = { "+": 1, "-": 1, "*": 2, "/": 2, "^": 3 };\n' +
+      '  const output = [];\n' +
+      '  const operators = [];\n' +
+      '  for (const token of expression) {\n' +
+      '    if (token === " ") continue;\n' +
+      '    if (/[a-z0-9]/i.test(token)) {\n' +
+      '      output.push(token);\n' +
+      '    } else if (token === "(") {\n' +
+      '      operators.push(token);\n' +
+      '    } else if (token === ")") {\n' +
+      '      while (operators.length > 0 && operators[operators.length - 1] !== "(") output.push(operators.pop());\n' +
+      '      if (operators.length === 0) return null;\n' +
+      '      operators.pop();\n' +
+      '    } else {\n' +
+      '      while (\n' +
+      '        operators.length > 0 &&\n' +
+      '        operators[operators.length - 1] !== "(" &&\n' +
+      '        rank[operators[operators.length - 1]] >= rank[token]\n' +
+      '      ) output.push(operators.pop());\n' +
+      '      operators.push(token);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  while (operators.length > 0) {\n' +
+      '    const operator = operators.pop();\n' +
+      '    if (operator === "(") return null;\n' +
+      '    output.push(operator);\n' +
+      '  }\n' +
+      '  return output.join("");\n' +
+      '}\n' +
+      '\n' +
+      'function evaluatePostfix(expression) {\n' +
+      '  const stack = [];\n' +
+      '  for (const token of expression) {\n' +
+      '    if (token === " ") continue;\n' +
+      '    if (/[0-9]/.test(token)) {\n' +
+      '      stack.push(Number(token));\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const right = stack.pop();\n' +
+      '    const left = stack.pop();\n' +
+      '    if (right === undefined || left === undefined) return null;\n' +
+      '    let value = 0;\n' +
+      '    if (token === "+") value = left + right;\n' +
+      '    else if (token === "-") value = left - right;\n' +
+      '    else if (token === "*") value = left * right;\n' +
+      '    else value = left / right;\n' +
+      '    stack.push(value);\n' +
+      '  }\n' +
+      '  return stack.length === 1 ? stack.pop() : null;\n' +
+      '}',
+    modify: 'Give the unary-minus version that keeps one pass, and the tree-building version that recurses on the lowest-precedence operator outside brackets. Which is easier to extend with functions?',
+  },
+  {
+    step: 9,
+    name: 'Prefix to Infix Conversion',
+    difficulty: 'Medium',
+    topicSlug: STACKS,
+    stem: 'Rebuild a fully parenthesised infix expression from its prefix form by scanning right to left with one stack.',
+    brief: 'Input: a prefix string of single-character operands and binary operators. Output: the infix form with every binary operation wrapped in parentheses, or null when the string is not a well-formed prefix expression. Name what the final stack must contain.',
+    concepts: ['dsa-stack-construction-pops-in-order', 'dsa-operator-operand-alternation', 'dsa-bracket-matching-stack', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Walk right to left, push operands, and on an operator pop two subexpressions and push first operator second - the ' +
+      'first pop is the nearer operand because the scan came from the right. One item left at the end, or the input was bad.',
+    idealAnswer:
+      'Prefix writes the operator before its operands, so reading it forwards means the operator arrives before anything is ' +
+      'known about what it applies to; reading it backwards puts the operator last, which is exactly the order a stack ' +
+      'algorithm wants. The asymmetry to get right is which popped value is left and which is right: the stack top is the ' +
+      'operand that appeared closest behind the operator, so the first pop is the left operand and the second is the right ' +
+      '- reversing them yields an equivalent-looking but different expression for every non-commutative operator. Each ' +
+      'operator consumes two items and produces one, so a well-formed expression of k operators ends with exactly one item ' +
+      'on the stack; anything else - an attempted pop on an empty stack, or two items left over - is the malformed case, ' +
+      'and that is the test to state rather than trusting the input. Fully parenthesising every operation is the safe ' +
+      'output; producing a minimal-parenthesis form requires the precedence and associativity rules from the postfix to ' +
+      'infix row.',
+    walkthrough:
+      'Take -+ab*cd: read backwards, d and c arrive before the * that combines them into (c*d), then b and a before the + ' +
+      'that makes (a+b), and the final - has its two operands already on the stack in the right order. The invariant is ' +
+      'that the stack holds the completed subexpressions of the suffix already scanned, deepest first.',
+    commonMistake:
+      'Concatenating the popped operands in pop order, or accepting a result when the stack ends with more than one item.',
+    whyWrong:
+      'The first pop is the operand nearer the operator in the original string, so using it as the right operand silently ' +
+      'flips every subtraction and division. A leftover stack is a sign that the string held more operands than operators ' +
+      'could bind, and returning the top item anyway reports an answer for input that has none.',
+    followUps: [
+      'Emit the minimal-parenthesis form instead. What extra state does each stack entry need?',
+      'Do the same conversion left to right without reversing the scan. What structure replaces the stack?',
+      'Detect the malformed input that leaves exactly one item on the stack anyway - is there such an input?',
+    ],
+    solution:
+      'function isOperand(token) {\n' +
+      '  return /[a-z0-9]/i.test(token);\n' +
+      '}\n' +
+      '\n' +
+      'function prefixToInfix(expression) {\n' +
+      '  const stack = [];\n' +
+      '  for (let i = expression.length - 1; i >= 0; i -= 1) {\n' +
+      '    const token = expression[i];\n' +
+      '    if (token === " ") continue;\n' +
+      '    if (isOperand(token)) {\n' +
+      '      stack.push(token);\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const first = stack.pop();\n' +
+      '    const second = stack.pop();\n' +
+      '    if (first === undefined || second === undefined) return null;\n' +
+      '    stack.push("(" + first + token + second + ")");\n' +
+      '  }\n' +
+      '  return stack.length === 1 ? stack.pop() : null;\n' +
+      '}',
+    modify: 'Make the function return the parse depth as well, so a caller can reject expressions nested deeper than a budget. Which stack entry shape makes that free?',
+  },
+  {
+    step: 9,
+    name: 'Prefix to Postfix Conversion',
+    difficulty: 'Medium',
+    topicSlug: STACKS,
+    stem: 'Convert prefix directly to postfix with one stack and no intermediate tree.',
+    brief: 'Input: a prefix expression of single-character operands and binary operators. Output: the equivalent postfix string, or null for malformed input. Say why the scan runs right to left and what a tree-free conversion buys.',
+    concepts: ['dsa-stack-construction-pops-in-order', 'dsa-operator-operand-alternation', 'dsa-stack-reversal-two-stacks', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Same right-to-left walk as the prefix to infix row, but each operator pushes first second operator - one line ' +
+      'different, and no parentheses to strip afterwards.',
+    idealAnswer:
+      'Prefix and postfix are mirrors: one reads the operator first and the other last, which is why a single reversed scan ' +
+      'converts between them without building a tree. The mechanics are the prefix to infix algorithm with a different ' +
+      'assembly order - operands pushed as encountered, each operator popping two completed subexpressions and pushing ' +
+      'them back in scan order with the operator trailing - and the reason first comes before second is the same one: the ' +
+      'top of the stack is the operand that sat nearest behind the operator. Doing it in one pass with strings beats ' +
+      'parse-to-tree-then-serialise for the interview answer and for a preprocessor, because it allocates nothing beyond ' +
+      'the stack and never needs a node type; the tree version earns its place when the expression has to be analysed, ' +
+      'optimised or evaluated with functions and precedence. Malformed input is detected the same way: an operator with ' +
+      'fewer than two items to pop, or a final stack that is not exactly one item.',
+    walkthrough:
+      'For *+ab-c*de the reversed scan assembles (d*e) as de*, then c - (d*e) as cde*-, then (a+b) as ab+, and the outer * ' +
+      'joins ab+ with cde*- to give ab+cde*-*. Every intermediate is a valid postfix expression of the suffix scanned, ' +
+      'which is the invariant that makes the concatenation safe.',
+    commonMistake:
+      'Scanning left to right, or putting the operator between the two popped parts.',
+    whyWrong:
+      'Left to right is the postfix direction: a prefix operator arrives before its operands exist, so there is nothing to ' +
+      'pop. Putting the operator in the middle produces an infix string inside a postfix result, which no evaluator can ' +
+      'read and which passes every length-based sanity check.',
+    followUps: [
+      'Convert postfix to prefix in the mirror direction and check the two routines are inverses on the same example.',
+      'Extend to operators with fixed but differing arity. What does the pop count become?',
+      'Give the version that builds a tree instead, and name the two later questions it answers that the string version cannot.',
+    ],
+    solution:
+      'function isOperand(token) {\n' +
+      '  return /[a-z0-9]/i.test(token);\n' +
+      '}\n' +
+      '\n' +
+      'function prefixToPostfix(expression) {\n' +
+      '  const stack = [];\n' +
+      '  for (let i = expression.length - 1; i >= 0; i -= 1) {\n' +
+      '    const token = expression[i];\n' +
+      '    if (token === " ") continue;\n' +
+      '    if (isOperand(token)) {\n' +
+      '      stack.push(token);\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const first = stack.pop();\n' +
+      '    const second = stack.pop();\n' +
+      '    if (first === undefined || second === undefined) return null;\n' +
+      '    stack.push(first + second + token);\n' +
+      '  }\n' +
+      '  return stack.length === 1 ? stack.pop() : null;\n' +
+      '}',
+    modify: 'Add a validity report that says how many operators the string consumed and how many operands it never bound. What does that report make possible for a parser front end?',
+  },
+  {
+    step: 9,
+    name: 'Postfix to Prefix Conversion',
+    difficulty: 'Medium',
+    topicSlug: STACKS,
+    stem: 'Convert a postfix expression to prefix in one left-to-right pass, and say what makes a postfix string invalid.',
+    brief: 'Input: a postfix string of single-character operands and binary operators. Output: the prefix form, or null when the string is not a well-formed expression. Explain the pop order, which is the opposite of the prefix rows.',
+    concepts: ['dsa-stack-construction-pops-in-order', 'dsa-operator-operand-alternation', 'dsa-bracket-matching-stack', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Scan left to right, push operands, and on an operator pop twice and push operator second first - the second pop is ' +
+      'the left operand because the stack top is the more recent one.',
+    idealAnswer:
+      'Postfix arrives in evaluation order, so the scan runs forward and every operator is ready the moment it appears: pop ' +
+      'the two completed operands and push the operator ahead of them. The order detail is the whole risk - the first pop ' +
+      'is the right operand, so the assembled string is operator, then the second pop, then the first - and writing it the ' +
+      'other way round is invisible on commutative operators and wrong everywhere else, which is exactly the class of bug ' +
+      'a test on a-b has to catch. Validity has two checks and both are cheap: an operator that finds fewer than two items ' +
+      'on the stack is under-applied, and a stack longer than one item at the end means the string had operands the ' +
+      'operators never bound. A postfix expression is also read directly by a VM in this same shape, which is why the row ' +
+      'matters beyond the conversion: the stack discipline here is the stack discipline of a bytecode interpreter.',
+    walkthrough:
+      'On abc-* the scan pushes a, b, c, turns - into b-c as -bc, and then * joins a with -bc to give *a-bc. Each stack ' +
+      'entry is a complete prefix expression of a prefix of the input, which is the invariant that makes the assembly ' +
+      'order obvious once you have stated it.',
+    commonMistake:
+      'Pushing operator first-popped second-popped, or trusting that the input is well formed because it converts.',
+    whyWrong:
+      'Reversed operands turn *a-bc into *-bca, which is (b-c)*a rather than a*(b-c) - the same product here but a ' +
+      'different tree, and for a non-commutative outer operator a different answer entirely. A leftover stack is a sign ' +
+      'that the string held more operands than its operators could bind, and returning the top item anyway reports an ' +
+      'answer for input that has none.',
+    followUps: [
+      'Evaluate the postfix string numerically instead of converting it. What changes in the stack contents?',
+      'Give the shortest invalid postfix string that still leaves exactly one item on the stack. Is there one?',
+      'Convert prefix to postfix and this routine back, and check they are inverses on the same example.',
+    ],
+    solution:
+      'function isOperand(token) {\n' +
+      '  return /[a-z0-9]/i.test(token);\n' +
+      '}\n' +
+      '\n' +
+      'function postfixToPrefix(expression) {\n' +
+      '  const stack = [];\n' +
+      '  for (const token of expression) {\n' +
+      '    if (token === " ") continue;\n' +
+      '    if (isOperand(token)) {\n' +
+      '      stack.push(token);\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const first = stack.pop();\n' +
+      '    const second = stack.pop();\n' +
+      '    if (first === undefined || second === undefined) return null;\n' +
+      '    stack.push(token + second + first);\n' +
+      '  }\n' +
+      '  return stack.length === 1 ? stack.pop() : null;\n' +
+      '}',
+    modify: 'Make postfixToPrefix reject an operator character that is not in a known operator table. What is the smallest change that also reports the position of the unknown operator?',
+  },
+  {
+    step: 9,
+    name: 'Postfix to Infix Conversion',
+    difficulty: 'Medium',
+    topicSlug: STACKS,
+    stem: 'Rebuild infix from postfix twice: once fully parenthesised, once with the minimum parentheses the precedence rules allow.',
+    brief: 'Input: a postfix string with single-character operands and the operators + - * /. Output: the infix form. Give the version that wraps every operation, and the version that only wraps where precedence or associativity requires it.',
+    concepts: ['dsa-stack-construction-pops-in-order', 'dsa-operator-operand-alternation', 'dsa-parenthesis-stack-barrier', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Forward scan, pop two, push first operator second - with parentheses on every operation in the simple version, and ' +
+      'a rank carried with each stack entry deciding in the minimal version.',
+    idealAnswer:
+      'The full-parenthesis version is the safest readable output and needs no precedence knowledge: every operation is ' +
+      'wrapped, so the string re-parses to the same tree whatever the operators are. The minimal version has to carry more ' +
+      'state - each stack entry needs its own rank, not just its text - and the two rules are then: wrap a left child when ' +
+      'it binds more loosely than the parent, and wrap a right child when it binds no more tightly, because the operators ' +
+      'here are left-associative and a-(b-c) is not a-b-c. That asymmetry is the interesting part: the same pair of ranks ' +
+      'needs parentheses on one side and not the other, and a pretty-printer that ignores it produces a string that parses ' +
+      'back to a different tree. Every compiler backend and every code formatter has this routine, and it is the reason ' +
+      'the row is on the sheet next to the conversions rather than with them - the input is the same, the question is what ' +
+      'the reader has to see.',
+    walkthrough:
+      'With abc-* the naive form is (a*(b-c)) and the minimal form is a*(b-c), since the left child is a bare operand and ' +
+      'the right child is looser. ab+c+ shows the associativity case from the other side: the left child has the same rank ' +
+      'as the parent and still needs no parentheses, because a+b+c re-parses left to the same tree.',
+    commonMistake:
+      'Wrapping both children whenever ranks are equal, or dropping parentheses whenever the ranks match.',
+    whyWrong:
+      'Equal rank on the left is safe for a left-associative operator but equal rank on the right changes the meaning, so a ' +
+      'symmetric rule either adds noise or - worse - loses the parentheses that a-(b-c) depends on. Omitting them emits a ' +
+      'string that is valid syntax for a different tree, which is the failure mode no test on commutative operators shows.',
+    followUps: [
+      'Make ^ right-associative. Which of the two wrap rules flips?',
+      'Emit the minimal form with function calls instead of parentheses where precedence allows. What is the extra state?',
+      'Round-trip the output back through the postfix converter and compare. What does that test catch that a printed answer does not?',
+    ],
+    solution:
+      'function isOperand(token) {\n' +
+      '  return /[a-z0-9]/i.test(token);\n' +
+      '}\n' +
+      '\n' +
+      'function postfixToInfix(expression) {\n' +
+      '  const stack = [];\n' +
+      '  for (const token of expression) {\n' +
+      '    if (token === " ") continue;\n' +
+      '    if (isOperand(token)) {\n' +
+      '      stack.push(token);\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const first = stack.pop();\n' +
+      '    const second = stack.pop();\n' +
+      '    if (first === undefined || second === undefined) return null;\n' +
+      '    stack.push("(" + second + token + first + ")");\n' +
+      '  }\n' +
+      '  return stack.length === 1 ? stack.pop() : null;\n' +
+      '}\n' +
+      '\n' +
+      'function postfixToInfixMinimal(expression) {\n' +
+      '  const rank = { "+": 1, "-": 1, "*": 2, "/": 2 };\n' +
+      '  const stack = [];\n' +
+      '  for (const token of expression) {\n' +
+      '    if (token === " ") continue;\n' +
+      '    if (isOperand(token)) {\n' +
+      '      stack.push({ text: token, rank: 4 });\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const first = stack.pop();\n' +
+      '    const second = stack.pop();\n' +
+      '    if (first === undefined || second === undefined) return null;\n' +
+      '    const own = rank[token];\n' +
+      '    const leftText = second.rank < own ? "(" + second.text + ")" : second.text;\n' +
+      '    const rightText = first.rank <= own ? "(" + first.text + ")" : first.text;\n' +
+      '    stack.push({ text: leftText + token + rightText, rank: own });\n' +
+      '  }\n' +
+      '  return stack.length === 1 ? stack.pop().text : null;\n' +
+      '}',
+    modify: 'Carry associativity per operator instead of assuming left-to-right for all of them, and make ^ bind to the right. Which of the two comparison operators changes?',
   },
 ];
 
