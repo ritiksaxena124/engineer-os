@@ -1463,6 +1463,34 @@ export const DSA_CONCEPTS = {
     terms: ['no comparator', 'string coercion', 'ten before two', 'NaN comparison', 'silent no-op'],
     weight: 2,
   },
+  'dsa-heap-of-size-k-keeps-the-top-k': {
+    slug: 'dsa-heap-of-size-k-keeps-the-top-k',
+    name: 'A heap of k entries holds the k extremes and its root is the boundary',
+    detail: 'Retaining at most k elements and evicting the extremum on every overflow keeps the k largest in a min heap and the k smallest in a max heap, so the root that survives the pass is the kth one in the wanted direction while memory stays independent of n.',
+    terms: ['bounded heap', 'evict on overflow', 'root is the kth', 'streaming top k', 'opposite heap direction'],
+    weight: 4,
+  },
+  'dsa-quickselect-discard-one-side': {
+    slug: 'dsa-quickselect-discard-one-side',
+    name: 'One partition lets selection throw away half of the array',
+    detail: 'The kth order statistic only needs the side of the partition that contains index k, so the expected work is n plus n over two plus n over four, which is linear - and a fixed first-element pivot turns sorted input into the quadratic worst case, which is why the pivot comes from the middle or from a random index.',
+    terms: ['selection is not sorting', 'expected linear', 'pivot choice is the worst case', 'three-way partition for duplicates', 'index n minus k'],
+    weight: 4,
+  },
+  'dsa-window-heap-for-k-sorted': {
+    slug: 'dsa-window-heap-for-k-sorted',
+    name: 'In a k-sorted array a heap of k plus one entries is a full sort',
+    detail: 'No element sits more than k positions from where it belongs, so the value destined for position i is inside the next k plus one inputs; feeding a heap of that size one element at a time emits the sorted order in O(n log k), and a heap smaller than the true displacement emits something that is not sorted at all.',
+    terms: ['bounded displacement', 'sliding candidate window', 'log k per element', 'wrong k does not sort', 'insertion sort costs n times k'],
+    weight: 3,
+  },
+  'dsa-dense-rank-from-sorted-unique': {
+    slug: 'dsa-dense-rank-from-sorted-unique',
+    name: 'Ranks come from the order of distinct values, not from positions',
+    detail: 'Collapsing to a Set and sorting once puts the distinct values in order, and a Map from value to index plus one answers every element in constant time; scanning the sorted array with duplicates instead inflates each later rank by the number of ties that precede it.',
+    terms: ['dense ranks skip duplicates', 'set then sort then map', 'rank starts at one', 'ties share a rank', 'indexOf inflates ranks'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -16040,6 +16068,544 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return values.slice().sort((first, second) => second - first);\n' +
       '}',
     modify: 'Convert a min heap into a max heap without touching any element more than twice. Which nodes can be proven to stay where they are, and what does that do to the swap count?',
+  },
+  {
+    step: 11,
+    name: 'Kth Largest Element in an Array',
+    difficulty: 'Medium',
+    topicSlug: HEAPS,
+    stem: 'Return the kth largest element of an unsorted array - the kth one in sorted order, counting duplicates.',
+    brief: 'Input: an array of numbers and k with 1 <= k <= n. Output: the kth largest value. Deliver a bounded min heap pass and a quickselect that partitions and discards one side.',
+    concepts: ['dsa-heap-of-size-k-keeps-the-top-k', 'dsa-quickselect-discard-one-side', 'dsa-three-way-partition', 'dsa-heap-array-layout', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Push every element into a min heap that never exceeds k entries, evicting the smallest on each overflow: the root that ' +
+      'survives is the kth largest, at n log k time and O(k) memory. Quickselect reaches the same value by partitioning and ' +
+      'recursing only into the side holding index n minus k.',
+    idealAnswer:
+      'Two answers are worth having because they solve two different problems. The streaming answer keeps a min heap of at ' +
+      'most k entries: push each element and, whenever the heap overflows, pop the smallest. The invariant is that the heap ' +
+      'always holds the best k candidates seen so far, so the elements it has thrown away are all smaller than everything it ' +
+      'kept; the smallest of the k largest is exactly the kth largest, which makes the root the answer with no extra work. ' +
+      'That pass costs n log k and O(k), and it is the reason the structure points the opposite way from the question - to ' +
+      'collect the largest you evict with a min heap, because the thing you can prove about a min heap is its bottom. The ' +
+      'offline answer is quickselect: the kth largest is the element at ascending index n minus k, so partition the live ' +
+      'range into less-than, equal and greater-than and recurse into only the part containing that index. The expected cost ' +
+      'is linear, n plus n over two plus n over four, because each partition discards about half of what is left, and the ' +
+      'three-way split is not decoration - on an array of mostly equal values a two-way partition separates nothing and the ' +
+      'recursion degenerates. Pivot choice is the difference between the guarantee and the trap: always taking the first ' +
+      'element of the range costs n plus n minus 1 plus ... on already sorted input, which is why the pivot is read from the ' +
+      'middle index. Both versions count duplicates, matching the wording of the problem - the second largest of 5, 5, 4 is ' +
+      '5, not 4 - and both beat nothing in practice over values.slice().sort((first, second) => second - first)[k - 1], ' +
+      'which is the right production answer unless the array is huge or k is tiny next to it.',
+    walkthrough:
+      'Take 3, 2, 1, 5, 6, 4 with k = 2. After pushing 3 and 2 the bounded heap holds 2, 3. Pushing 1 overflows it and pops ' +
+      '1 straight back out, so the heap is unchanged; 5 arrives, evicts 2 and holds 3, 5; 6 evicts 3 and holds 5, 6; 4 ' +
+      'bubbles to the root and is evicted on the same step. The root is 5, the second largest of the array, and the heap ' +
+      'never kept more than two entries. Quickselect asks a different question - the ascending index 4 of six elements - and ' +
+      'returns the same 5 after partitions that keep only the upper side.',
+    commonMistake:
+      'Dropping duplicates and returning the kth distinct value, or building a max heap of the whole array and popping k ' +
+      'times when k is far smaller than n.',
+    whyWrong:
+      'De-duplicating is a wrong answer, not a slow one: with 5, 5, 4 and k = 2 the second largest is 5 while the distinct ' +
+      'walk returns 4, and the tests on LeetCode are full of exactly that shape. The full max heap is merely wasteful - a ' +
+      'build of n plus k log n pops, where the bounded version pays log k per element and never holds more than k. And ' +
+      'sorting the input in place, whether with sort or with an in-place quickselect, mutates an array the caller still ' +
+      'owns; the fix is one slice at the top of the function.',
+    followUps: [
+      'Design the stream version: a class built with k and the initial numbers that adds one number at a time and reports the current kth largest. Which heap, what size, and what does add cost?',
+      'Now return the k largest in descending order, not just the boundary value. Do you sort the bounded heap, drain a max heap, or pop the min heap and reverse - and what does each option cost?',
+      'Run quickselect over 10^6 identical values with a two-way partition. What happens to the ranges, and which line of the three-way version prevents it?',
+      'k is close to n. Which of the two answers wins, and is there a third that is better than both?',
+    ],
+    solution:
+      'function heapPush(items, value) {\n' +
+      '  items.push(value);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent] <= items[index]) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapPop(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left] < items[best]) best = left;\n' +
+      '      if (right < items.length && items[right] < items[best]) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'function kthLargestByHeap(values, k) {\n' +
+      '  if (k < 1 || k > values.length) return undefined;\n' +
+      '  const keep = [];\n' +
+      '  for (const value of values) {\n' +
+      '    heapPush(keep, value);\n' +
+      '    if (keep.length > k) heapPop(keep);\n' +
+      '  }\n' +
+      '  return keep[0];\n' +
+      '}\n' +
+      '\n' +
+      'function kthLargestByQuickselect(values, k) {\n' +
+      '  if (k < 1 || k > values.length) return undefined;\n' +
+      '  const items = values.slice();\n' +
+      '  const wanted = items.length - k;\n' +
+      '  let low = 0;\n' +
+      '  let high = items.length - 1;\n' +
+      '  while (low <= high) {\n' +
+      '    const pivot = items[low + ((high - low) >> 1)];\n' +
+      '    let small = low;\n' +
+      '    let same = low;\n' +
+      '    let large = high;\n' +
+      '    while (same <= large) {\n' +
+      '      if (items[same] < pivot) {\n' +
+      '        const hold = items[small];\n' +
+      '        items[small] = items[same];\n' +
+      '        items[same] = hold;\n' +
+      '        small += 1;\n' +
+      '        same += 1;\n' +
+      '      } else if (items[same] > pivot) {\n' +
+      '        const hold = items[same];\n' +
+      '        items[same] = items[large];\n' +
+      '        items[large] = hold;\n' +
+      '        large -= 1;\n' +
+      '      } else {\n' +
+      '        same += 1;\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (wanted < small) {\n' +
+      '      high = small - 1;\n' +
+      '    } else if (wanted > large) {\n' +
+      '      low = large + 1;\n' +
+      '    } else {\n' +
+      '      return items[wanted];\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return undefined;\n' +
+      '}\n' +
+      '\n' +
+      'function kthLargestBySort(values, k) {\n' +
+      '  if (k < 1 || k > values.length) return undefined;\n' +
+      '  return values.slice().sort((first, second) => second - first)[k - 1];\n' +
+      '}',
+    modify: 'Ask for the kth largest distinct value instead. Which line changes, what does the bounded heap have to track now, and what does k mean when there are fewer than k distinct values?',
+  },
+  {
+    step: 11,
+    name: 'Sort K Sorted Array (Nearly Sorted Array)',
+    difficulty: 'Medium',
+    topicSlug: HEAPS,
+    stem: 'Sort an array in which no element is more than k positions from where it belongs, faster than a full sort.',
+    brief: 'Input: a k-sorted array and k. Output: the values in ascending order. Deliver the window heap of k plus one entries, the insertion-sort alternative and a checker for the precondition.',
+    concepts: ['dsa-window-heap-for-k-sorted', 'dsa-heap-of-size-k-keeps-the-top-k', 'dsa-heap-array-layout', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Push elements into a min heap and emit the minimum once the heap holds k plus one entries: the value that belongs at ' +
+      'position i can only be inside the next k plus one inputs, so the emit is always correct and the cost is n log k.',
+    idealAnswer:
+      'The precondition is the whole algorithm. If every element is at most k positions from its sorted place, then at the ' +
+      'moment the output needs position i, the element that belongs there has already arrived - it can be no further back ' +
+      'than input index i plus k - and nothing that arrives later can belong earlier. So the candidate set for the next ' +
+      'output slot is a window of k plus one values, and a min heap over that window hands the slot to the right element in ' +
+      'log k time. Feeding one value and emitting one value per step keeps the window at that size, the tail is drained at ' +
+      'the end, and the total is n log k against the n log n of a general sort. When k is a constant the bound is linear, ' +
+      'which is the honest headline: this is not a faster sort, it is the observation that no sort is needed, because the ' +
+      'array has already done almost all of the work. The competing answer is insertion sort, which on a k-sorted array ' +
+      'shifts at most k places per element and is therefore also O(n k) - it wins on tiny k and on cache behaviour since it ' +
+      'touches a contiguous slice of the array and needs no auxiliary structure, and the heap wins when k grows because a ' +
+      'shift is linear while a sift is logarithmic. Both trust their precondition, and that is the dangerous part: hand the ' +
+      'window heap a smaller k than the true displacement and it does not slow down or complain, it emits a permutation that ' +
+      'is simply not sorted, so production code asserts the bound or falls back. One JavaScript note: the window holds ' +
+      'values, not indices, so duplicate elements are interchangeable and nothing has to be done to keep equal keys stable.',
+    walkthrough:
+      'Take the 2-sorted array 3, 2, 1, 5, 4, 6 and a window of k plus one equals 3. The first two pushes hold 3 and 2 with ' +
+      'nothing emitted; pushing 1 makes three entries, which is the overflow, so 1 is emitted into position 0. Each later ' +
+      'push replaces one emit: 5 arrives and 2 leaves, 4 arrives and 3 leaves, 6 arrives and 4 leaves, and the drain at the ' +
+      'end releases 5 then 6. The output is 1, 2, 3, 4, 5, 6 and the heap never held more than three values. Run the same ' +
+      'code on 3, 2, 1 with k = 1, where the precondition is false, and it emits 2, 1, 3.',
+    commonMistake:
+      'Choosing the window size as k instead of k plus one, or assuming the algorithm degrades gracefully when k is too ' +
+      'small for the input.',
+    whyWrong:
+      'A window of k is one element short: the value destined for the current output slot can legitimately be the (k plus ' +
+      'one)-th unread element, so the narrower window emits something that is not the smallest remaining - on 3, 2, 1, 5, 4, ' +
+      '6 it returns 2, 1, 3, 4, 5, 6 and never throws. The understated k is the sharper lesson, because the same code on the ' +
+      'same 2-sorted array with k = 1 returns exactly that unsorted permutation, and a permutation that looks almost sorted ' +
+      'is plausible enough to survive code review.',
+    followUps: [
+      'You are not given k. How do you detect that the window was too small without sorting the output afterwards, and what does the check cost?',
+      'The nearly sorted data is a stream that does not fit in memory. What replaces the array, what is the peak memory, and where does the first emit land?',
+      'Insertion sort and the window heap are both O(n k)-ish on this input. Give the two trade-offs that decide which one you ship.',
+      'Merge m sorted runs where each run is internally k-sorted. Which step of this problem do you reuse for every output position?',
+    ],
+    solution:
+      'function heapPush(items, value) {\n' +
+      '  items.push(value);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent] <= items[index]) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapPop(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left] < items[best]) best = left;\n' +
+      '      if (right < items.length && items[right] < items[best]) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'function sortKSorted(values, k) {\n' +
+      '  const out = [];\n' +
+      '  const window = [];\n' +
+      '  for (const value of values) {\n' +
+      '    heapPush(window, value);\n' +
+      '    if (window.length > k) out.push(heapPop(window));\n' +
+      '  }\n' +
+      '  while (window.length > 0) out.push(heapPop(window));\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function sortKSortedWithNarrowWindow(values, k) {\n' +
+      '  const out = [];\n' +
+      '  const window = [];\n' +
+      '  for (const value of values) {\n' +
+      '    heapPush(window, value);\n' +
+      '    if (window.length > k - 1) out.push(heapPop(window));\n' +
+      '  }\n' +
+      '  while (window.length > 0) out.push(heapPop(window));\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function sortByInsertion(values) {\n' +
+      '  const items = values.slice();\n' +
+      '  for (let index = 1; index < items.length; index += 1) {\n' +
+      '    const value = items[index];\n' +
+      '    let at = index;\n' +
+      '    while (at > 0 && items[at - 1] > value) {\n' +
+      '      items[at] = items[at - 1];\n' +
+      '      at -= 1;\n' +
+      '    }\n' +
+      '    items[at] = value;\n' +
+      '  }\n' +
+      '  return items;\n' +
+      '}\n' +
+      '\n' +
+      'function isKSorted(values, k) {\n' +
+      '  const sorted = values.slice().sort((first, second) => first - second);\n' +
+      '  const slots = new Map();\n' +
+      '  for (let index = 0; index < sorted.length; index += 1) {\n' +
+      '    const open = slots.get(sorted[index]);\n' +
+      '    if (open) open.push(index);\n' +
+      '    else slots.set(sorted[index], [index]);\n' +
+      '  }\n' +
+      '  for (let index = 0; index < values.length; index += 1) {\n' +
+      '    const open = slots.get(values[index]);\n' +
+      '    if (open === undefined || open.length === 0) return false;\n' +
+      '    const target = open.shift();\n' +
+      '    if (target - index > k || index - target > k) return false;\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}',
+    modify: 'Sort a k-sorted array in place with constant extra space. Does the window heap survive that constraint, and which of the two answers here comes closest?',
+  },
+  {
+    step: 11,
+    name: 'Replace each element by its rank in the array',
+    difficulty: 'Easy',
+    topicSlug: HEAPS,
+    stem: 'Replace every element with its rank in the sorted order of the distinct values, starting at 1, with ties sharing a rank.',
+    brief: 'Input: an array of numbers. Output: an array of the same length where each element is 1 plus the number of distinct values strictly smaller than it. Equal elements must get equal ranks.',
+    concepts: ['dsa-dense-rank-from-sorted-unique', 'dsa-default-sort-is-lexicographic', 'dsa-heap-guarantees-only-the-root', 'dsa-boundary-conditions', 'dsa-single-pass-tracking'],
+    shortAnswer:
+      'Sort the distinct values once, map each to its index plus one, and rewrite the array through that map. Ties share a ' +
+      'rank because the rank counts smaller values, not smaller positions.',
+    idealAnswer:
+      'The rank of a value is a property of the value, not of the element holding it, so the transform has three steps and ' +
+      'only one of them is a sort: collapse to the distinct values, order them, and then answer every element from a lookup ' +
+      'table. Collapsing first is what makes ties share a rank - dense ranking is defined by counting the distinct values ' +
+      'strictly below, so 10, 10, 20 gives 1, 1, 2 and never 3. It also fixes the cost: the Set is linear, sorting d ' +
+      'distinct values is d log d with d at most n, and the rewrite is n map lookups, so the total is dominated by the sort ' +
+      'and an array of a million equal elements sorts in the time of one comparison per element. The heap version is the ' +
+      'same shape with a different supplier of order: push everything, drain ascending, and assign the next rank only when ' +
+      'the drained value has not been seen, which is a heap doing the work of a sorted array at the same asymptotic price. ' +
+      'The version to recognise in review is the accidental one - sorting the array with its duplicates and using indexOf to ' +
+      'find each value. That returns the competition ranking, where ties inflate everyone behind them, and it is quadratic ' +
+      'because every lookup scans the array from the front. Two JavaScript details decide the rest: sort needs a numeric ' +
+      'comparator or 100 orders before 20 and every rank after it is wrong, and an empty input must produce an empty output ' +
+      'rather than a lookup that returns undefined.',
+    walkthrough:
+      'On 40, 10, 20, 30 the distinct values in order are 10, 20, 30, 40, so the table reads 10 to 1, 20 to 2, 30 to 3 and ' +
+      '40 to 4, and the rewrite gives 4, 1, 2, 3. On 10, 8, 12, 6, 12, 10 the distinct order is 6, 8, 10, 12, so both copies ' +
+      'of 10 rank 3 and both copies of 12 rank 4, producing 3, 2, 4, 1, 4, 3. The indexOf version of 10, 10, 20 returns 1, ' +
+      '1, 3 - the third value is the second distinct one, and the duplicate ahead of it pushed its rank by one. Drop the ' +
+      'numeric comparator on 3, 100, 20 and the distinct values order as 100, 20, 3, so the answer comes out 3, 1, 2 instead ' +
+      'of 1, 3, 2.',
+    commonMistake:
+      'Ranking by position in the sorted array with duplicates, or ranking by position in the original array.',
+    whyWrong:
+      'The first gives 1, 1, 3 where the answer is 1, 1, 2, and it hides a second problem - indexOf rescans the sorted array ' +
+      'per element, so an n log n idea becomes n squared and fails on the large cases. The second is wrong even without ' +
+      'duplicates: the input order carries no information about magnitude, so a rank read off index 0 of 40, 10, 20, 30 ' +
+      'claims 40 is the smallest value in the array.',
+    followUps: [
+      'Rank the elements of a string array case-insensitively, ties sharing a rank. What has to be true about the comparator and the Map keys?',
+      'The array is bigger than memory but the distinct values are few. Which of the three steps survives, and what do you stream?',
+      'Report dense ranks and competition ranks for the same array in one pass over the sorted distinct values. What does each one need from the walk?',
+      'Give every element its percentile instead of its rank. Which quantity changes in the map, and what does an all-equal array produce?',
+    ],
+    solution:
+      'function arrayRankTransform(values) {\n' +
+      '  const distinct = Array.from(new Set(values)).sort((first, second) => first - second);\n' +
+      '  const ranks = new Map();\n' +
+      '  for (let index = 0; index < distinct.length; index += 1) ranks.set(distinct[index], index + 1);\n' +
+      '  return values.map((value) => ranks.get(value));\n' +
+      '}\n' +
+      '\n' +
+      'function heapPush(items, value) {\n' +
+      '  items.push(value);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent] <= items[index]) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapPop(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left] < items[best]) best = left;\n' +
+      '      if (right < items.length && items[right] < items[best]) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'function arrayRankTransformByHeap(values) {\n' +
+      '  const items = [];\n' +
+      '  for (const value of values) heapPush(items, value);\n' +
+      '  const ranks = new Map();\n' +
+      '  while (items.length > 0) {\n' +
+      '    const value = heapPop(items);\n' +
+      '    if (ranks.has(value) === false) ranks.set(value, ranks.size + 1);\n' +
+      '  }\n' +
+      '  return values.map((value) => ranks.get(value));\n' +
+      '}\n' +
+      '\n' +
+      'function arrayRankTransformByIndexOf(values) {\n' +
+      '  const sorted = values.slice().sort((first, second) => first - second);\n' +
+      '  return values.map((value) => sorted.indexOf(value) + 1);\n' +
+      '}\n' +
+      '\n' +
+      'function arrayRankTransformWithoutComparator(values) {\n' +
+      '  const distinct = Array.from(new Set(values)).sort();\n' +
+      '  const ranks = new Map();\n' +
+      '  for (let index = 0; index < distinct.length; index += 1) ranks.set(distinct[index], index + 1);\n' +
+      '  return values.map((value) => ranks.get(value));\n' +
+      '}',
+    modify: 'Rank the values by descending magnitude instead, still starting at 1 and still shared across ties. Which single line moves, and does the heap version need a different comparator or a different drain?',
+  },
+  {
+    step: 11,
+    name: 'Kth Smallest Element in an Array',
+    difficulty: 'Medium',
+    topicSlug: HEAPS,
+    stem: 'Return the kth smallest element of an unsorted array, counting duplicates, without sorting the whole thing.',
+    brief: 'Input: an array of numbers and k with 1 <= k <= n. Output: the kth smallest. Deliver a bounded max heap, an ascending window of k kept by hand, and the sorted-array answer.',
+    concepts: ['dsa-heap-of-size-k-keeps-the-top-k', 'dsa-heap-guarantees-only-the-root', 'dsa-sift-up-sift-down', 'dsa-default-sort-is-lexicographic', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'Keep the k smallest in a max heap: push each element and pop the largest on overflow, so the root is the biggest of ' +
+      'the k smallest - which is the kth smallest. The heap direction flips from the kth largest problem even though the code ' +
+      'is the same.',
+    idealAnswer:
+      'The mirror image of the kth largest is not the same heap wearing the same name. To hold the k smallest you have to ' +
+      'throw away the largest candidate, and the only element a heap can hand you cheaply is its root - so the container is a ' +
+      'max heap, the root after the pass is the largest of the retained k, and that value is precisely the kth smallest. ' +
+      'Getting the direction backwards is the most common interview slip on this problem: a min heap of k entries answers the ' +
+      'kth largest, and a min heap of everything answers the kth smallest only by popping k times. The second answer keeps ' +
+      'the same k candidates in a plain ascending array, inserting each new value at its sorted position by shifting and ' +
+      'truncating the tail; that is O(n k) rather than O(n log k) but it never exceeds k elements either, and for k in the ' +
+      'single digits the shift loop is faster than a sift because it walks contiguous memory and does no index arithmetic. ' +
+      'Knowing both lets you say which trade you are making instead of being asked. The third answer is the one to reach for ' +
+      'in a code review: slice, sort ascending with a real numeric comparator, and take index k minus 1. The comparator is ' +
+      'not optional - the default sort compares string forms, so 100 lands before 20 and the returned value is wrong without ' +
+      'any error being raised. Every version counts duplicates, since the problem asks for the kth element of the sorted ' +
+      'array and not the kth distinct one; and when both the kth smallest and the kth largest are needed, quickselect over ' +
+      'the same slice answers both in two linear passes, or one pass if the partition already isolates the pair.',
+    walkthrough:
+      'Take 7, 3, 9, 1, 5, 2 with k = 3. The bounded max heap holds 7, then 7, 3, then after 9 arrives it holds 9, 3, 7 - ' +
+      'three entries and nothing popped. 1 overflows it, so the root 9 leaves and the heap is 7, 3, 1; 5 overflows again and ' +
+      '7 leaves; 2 overflows and 5 leaves. The root is 3, and the three retained values are 1, 2, 3 - the three smallest - ' +
+      'with 3 on top because it is the largest of them. The hand-kept ascending window ends at the same 3 at index 2.',
+    commonMistake:
+      'Evicting with a min heap, which retains the k largest and returns the kth largest, or sorting the array without a ' +
+      'comparator and reading index k minus 1.',
+    whyWrong:
+      'The wrong end to trim is a silent wrong answer: keep the same ascending window but drop from the front instead of the ' +
+      'tail, and on 7, 3, 9, 1, 5, 2 with k = 3 it reports 5, the third largest, while the third smallest is 3 - the insert, ' +
+      'the shift loop and the size test are all identical to the working version. Sorting without a comparator is worse, ' +
+      'because the default compares string forms and 100 precedes 20, so index k minus 1 points at a value that is not in the ' +
+      'kth position of the numeric order at all.',
+    followUps: [
+      'Answer the kth smallest and the kth largest of the same array in one pass. How many heaps do you keep, and when is one of them redundant?',
+      'k is half of n. Is a bounded heap still the right container, and what does the quickselect version cost now?',
+      'The array is the concatenation of m sorted runs rather than random. Which answer stops being about heaps and what replaces the partition?',
+      'Make the bounded window return the k smallest in ascending order. Does the heap drain give it to you, and what does that cost?',
+    ],
+    solution:
+      'function maxHeapPush(items, value) {\n' +
+      '  items.push(value);\n' +
+      '  let index = items.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (items[parent] >= items[index]) break;\n' +
+      '    const hold = items[parent];\n' +
+      '    items[parent] = items[index];\n' +
+      '    items[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function maxHeapPop(items) {\n' +
+      '  const count = items.length;\n' +
+      '  const top = items[0];\n' +
+      '  const last = items.pop();\n' +
+      '  if (count > 1) {\n' +
+      '    items[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = index * 2 + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let best = index;\n' +
+      '      if (left < items.length && items[left] > items[best]) best = left;\n' +
+      '      if (right < items.length && items[right] > items[best]) best = right;\n' +
+      '      if (best === index) break;\n' +
+      '      const hold = items[index];\n' +
+      '      items[index] = items[best];\n' +
+      '      items[best] = hold;\n' +
+      '      index = best;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'function kthSmallestByMaxHeap(values, k) {\n' +
+      '  if (k < 1 || k > values.length) return undefined;\n' +
+      '  const keep = [];\n' +
+      '  for (const value of values) {\n' +
+      '    maxHeapPush(keep, value);\n' +
+      '    if (keep.length > k) maxHeapPop(keep);\n' +
+      '  }\n' +
+      '  return keep[0];\n' +
+      '}\n' +
+      '\n' +
+      'function kSmallestAscending(values, k) {\n' +
+      '  if (k < 1 || k > values.length) return [];\n' +
+      '  const keep = [];\n' +
+      '  for (const value of values) {\n' +
+      '    maxHeapPush(keep, value);\n' +
+      '    if (keep.length > k) maxHeapPop(keep);\n' +
+      '  }\n' +
+      '  const out = [];\n' +
+      '  while (keep.length > 0) out.push(maxHeapPop(keep));\n' +
+      '  return out.reverse();\n' +
+      '}\n' +
+      '\n' +
+      'function kthSmallestByBoundedWindow(values, k) {\n' +
+      '  if (k < 1 || k > values.length) return undefined;\n' +
+      '  const keep = [];\n' +
+      '  for (const value of values) {\n' +
+      '    let at = keep.length;\n' +
+      '    while (at > 0 && keep[at - 1] > value) {\n' +
+      '      keep[at] = keep[at - 1];\n' +
+      '      at -= 1;\n' +
+      '    }\n' +
+      '    keep[at] = value;\n' +
+      '    if (keep.length > k) keep.length = k;\n' +
+      '  }\n' +
+      '  return keep[k - 1];\n' +
+      '}\n' +
+      '\n' +
+      'function kthLargestByBoundedWindow(values, k) {\n' +
+      '  if (k < 1 || k > values.length) return undefined;\n' +
+      '  const keep = [];\n' +
+      '  for (const value of values) {\n' +
+      '    let at = keep.length;\n' +
+      '    while (at > 0 && keep[at - 1] > value) {\n' +
+      '      keep[at] = keep[at - 1];\n' +
+      '      at -= 1;\n' +
+      '    }\n' +
+      '    keep[at] = value;\n' +
+      '    if (keep.length > k) keep.shift();\n' +
+      '  }\n' +
+      '  return keep[0];\n' +
+      '}\n' +
+      '\n' +
+      'function kthSmallestBySort(values, k) {\n' +
+      '  if (k < 1 || k > values.length) return undefined;\n' +
+      '  return values.slice().sort((first, second) => first - second)[k - 1];\n' +
+      '}\n' +
+      '\n' +
+      'function kthSmallestWithoutComparator(values, k) {\n' +
+      '  if (k < 1 || k > values.length) return undefined;\n' +
+      '  return values.slice().sort()[k - 1];\n' +
+      '}',
+    modify: 'Return the k smallest elements as an ascending array instead of only the kth. Which container stops paying for a sift, and what does the final ordering cost?',
   },
 ];
 
