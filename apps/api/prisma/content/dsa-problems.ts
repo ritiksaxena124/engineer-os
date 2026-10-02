@@ -1274,6 +1274,41 @@ export const DSA_CONCEPTS = {
     terms: ['amortised cost', 'pushed once popped once', 'retire to bound', 'worst case per call', 'aggregate accounting'],
     weight: 3,
   },
+  'dsa-element-owns-its-subarrays': {
+    slug: 'dsa-element-owns-its-subarrays',
+    name: 'An element is the extreme of exactly the subarrays between its two blockers',
+    detail: 'Instead of enumerating subarrays, find how many of them an element is the answer for: the nearest worse element on each side bounds the span, and the count is the product of the two distances.',
+    terms: ['contribution counting', 'nearest blocker', 'left times right', 'count instead of enumerate', 'linear from boundaries'],
+    weight: 3,
+  },
+  'dsa-tie-broken-on-one-side': {
+    slug: 'dsa-tie-broken-on-one-side',
+    name: 'A tie counted from both sides is a subarray counted twice, so one boundary is strict',
+    detail: 'Contribution counting only partitions the subarrays if equal values get exactly one owner, which means the left boundary pops on a different comparison than the right boundary.',
+    terms: ['strict on one side', 'at most on the other', 'double counted subarray', 'asymmetric pop rule', 'one owner per range'],
+    weight: 3,
+  },
+  'dsa-bar-owns-the-span-until-shorter': {
+    slug: 'dsa-bar-owns-the-span-until-shorter',
+    name: 'A histogram bar reaches full height only between the shorter bars on either side',
+    detail: 'The tallest rectangle using a given bar has that bar height and spans outward until something shorter blocks it, so a pop reveals both boundaries at once: the width is the gap between the new top and the arriving index.',
+    terms: ['bar closed by a shorter one', 'width from the stack', 'sentinel zero height', 'one rectangle per bar', 'index gap decides width'],
+    weight: 3,
+  },
+  'dsa-water-level-is-the-lower-wall': {
+    slug: 'dsa-water-level-is-the-lower-wall',
+    name: 'A column holds water only up to the lower of the two tallest walls around it',
+    detail: 'Both sides have to hold the water, so the level is the minimum of the two prefix maxima and the fill is that level minus the ground; the two-pointer version moves the weaker side because that is the side the shorter wall decides.',
+    terms: ['bounded from both sides', 'prefix maximum', 'minimum of two walls', 'move the weaker side', 'constant space'],
+    weight: 3,
+  },
+  'dsa-sum-of-differences-splits': {
+    slug: 'dsa-sum-of-differences-splits',
+    name: 'A sum of differences is the difference of two sums',
+    detail: 'Addition does not care which subarray a term came from, so a quantity defined per subarray as max minus min can be computed as one whole-array maximum total minus one whole-array minimum total.',
+    terms: ['linearity of summation', 'split the aggregate', 'two independent passes', 'no pairing needed', 'per-element contribution'],
+    weight: 2,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -13510,6 +13545,301 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  }\n' +
       '}',
     modify: 'Make the span strictly less than today instead of at most. Which comparison flips, and what happens to a run of equal prices?',
+  },
+  {
+    step: 9,
+    name: 'Trapping Rainwater',
+    difficulty: 'Hard',
+    topicSlug: MONO,
+    stem: 'Given an elevation map as bar heights, compute how much water it can trap after rain.',
+    brief: 'Input: a non-negative integer array where each entry is the height of a width-one bar. Output: the total units of water trapped between the bars. Aim for O(n) time and, if possible, O(1) space.',
+    concepts: ['dsa-water-level-is-the-lower-wall', 'dsa-suffix-maximum', 'dsa-two-pointer', 'dsa-complexity-counting', 'dsa-boundary-conditions'],
+    shortAnswer:
+      'A column holds min(tallest wall on the left, tallest wall on the right) minus its own height. Two prefix-max arrays do ' +
+      'it in one pass per side; two pointers do the same thing in constant space.',
+    idealAnswer:
+      'The per-column view is the whole problem: water above a column is decided by the tallest bar to its left and the ' +
+      'tallest to its right, and only the shorter of those two walls matters, because anything above it spills over. The ' +
+      'prefix-maximum version states that directly and is the one to write first - two arrays of running maxima, then a ' +
+      'third pass taking the minimum minus the ground. The two-pointer version notices that you never need the future ' +
+      'maximum as a stored value: when the left bar is shorter than the right bar, the left column is capped by the left ' +
+      'maximum whatever the unseen right side holds, since a wall at least as tall as the right bar is already guaranteed ' +
+      'to exist. So the shorter side is settled and can be accumulated with one integer per side. Both are O(n); only the ' +
+      'second is O(1) space, and the reason to give for moving the weaker pointer is that argument, not symmetry.',
+    walkthrough:
+      'For [3, 0, 3] the left and right walls are both 3 at the middle column, so the level is 3 and the fill is 3 - 0 = 3. ' +
+      'For [4, 1, 3] the middle column is capped by min(4, 3) = 3, giving 2 units, and the fact that the taller wall is on ' +
+      'the left is irrelevant - which is exactly the case that breaks a solution using the running left maximum alone.',
+    commonMistake:
+      'Using only the left maximum, or comparing adjacent bars and adding the difference between neighbours.',
+    whyWrong:
+      'The adjacent-difference rule reads the ground between neighbours instead of the depth below the lower of the two ' +
+      'enclosing maxima, so it has no way to see a far wall. Using one side maximum alone is the same mistake pointed the ' +
+      'other way: on [5, 0, 1] the running left maximum promises 5 units at the middle column, while the right wall caps ' +
+      'the true fill at 1 and the whole map traps exactly 1.',
+    followUps: [
+      'Why is it safe to settle the weaker pointer without knowing the full right maximum? State the invariant.',
+      'Extend to 2D: water trapped in a height map. Which structure replaces the two pointers and why is it a priority queue?',
+      'Container With Water is the related problem where the answer is width times the shorter wall. Why is that a different proof?',
+    ],
+    solution:
+      'function trappedWater(elevations) {\n' +
+      '  let left = 0;\n' +
+      '  let right = elevations.length - 1;\n' +
+      '  let leftWall = 0;\n' +
+      '  let rightWall = 0;\n' +
+      '  let water = 0;\n' +
+      '  while (left < right) {\n' +
+      '    if (elevations[left] < elevations[right]) {\n' +
+      '      if (elevations[left] >= leftWall) leftWall = elevations[left];\n' +
+      '      else water += leftWall - elevations[left];\n' +
+      '      left++;\n' +
+      '    } else {\n' +
+      '      if (elevations[right] >= rightWall) rightWall = elevations[right];\n' +
+      '      else water += rightWall - elevations[right];\n' +
+      '      right--;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return water;\n' +
+      '}\n' +
+      '\n' +
+      'function trappedWaterWithWalls(elevations) {\n' +
+      '  const size = elevations.length;\n' +
+      '  const leftWall = new Array(size).fill(0);\n' +
+      '  const rightWall = new Array(size).fill(0);\n' +
+      '  let high = 0;\n' +
+      '  for (let index = 0; index < size; index++) {\n' +
+      '    leftWall[index] = high;\n' +
+      '    if (elevations[index] > high) high = elevations[index];\n' +
+      '  }\n' +
+      '  high = 0;\n' +
+      '  for (let index = size - 1; index >= 0; index--) {\n' +
+      '    rightWall[index] = high;\n' +
+      '    if (elevations[index] > high) high = elevations[index];\n' +
+      '  }\n' +
+      '  let water = 0;\n' +
+      '  for (let index = 0; index < size; index++) {\n' +
+      '    const level = leftWall[index] < rightWall[index] ? leftWall[index] : rightWall[index];\n' +
+      '    const gap = level - elevations[index];\n' +
+      '    if (gap > 0) water += gap;\n' +
+      '  }\n' +
+      '  return water;\n' +
+      '}',
+    modify: 'Return the water above each column instead of the total, so a leaking map can be inspected. Which of the two versions can produce that per-column list without a second pass?',
+  },
+  {
+    step: 9,
+    name: 'Largest Rectangle in Histogram',
+    difficulty: 'Hard',
+    topicSlug: MONO,
+    stem: 'Given bar heights of equal width, find the largest rectangle that fits entirely under the histogram.',
+    brief: 'Input: a non-negative integer array of bar heights. Output: the area of the largest axis-aligned rectangle contained in the histogram.',
+    concepts: ['dsa-bar-owns-the-span-until-shorter', 'dsa-index-stack-not-value-stack', 'dsa-monotone-discard-never-answer', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Keep a stack of indices with increasing heights. A bar that is shorter than the top closes that bar, and the width it ' +
+      'gets is the gap between the arriving index and the index now on top.',
+    idealAnswer:
+      'The rectangle of maximum area is full height for at least one bar, so it is enough to ask, for every bar, how far it ' +
+      'can extend left and right while staying at its own height. The answer is up to but not including the first shorter ' +
+      'bar on either side, which is a previous-smaller and next-smaller question. The stack computes both boundaries in one ' +
+      'pass: when a bar is popped, the arriving index is its right blocker and the new top is its left blocker, so the width ' +
+      'is index - stack top - 1 rather than a distance from the popped position. A sentinel index past the end with height 0 ' +
+      'flushes whatever is left, which removes the second loop. Equal heights need care - closing a bar at a strictly ' +
+      'smaller height, or at a height equal to it, both give the correct maximum, but only because the wider rectangle is ' +
+      'attributed to the later bar. O(n) time, O(n) space.',
+    walkthrough:
+      'For [2, 1, 5, 6, 2, 3] the arriving 2 at index 4 closes the 6 with a width of one bar, area 6, and then closes the 5 ' +
+      'with a width of two, because the blocker now on top is the 1 at index 1 - that area of 10 is the answer. The ' +
+      'sentinel at the end flushes the rest: the 3 alone for 3, the 2 at index 4 across four bars for 8, and the 1 across ' +
+      'all six bars for 6. Empty input and a single bar are the two edges the sentinel exists to cover.',
+    commonMistake:
+      'Computing the width as the distance from the popped index instead of the gap between the two blockers, or forgetting ' +
+      'the final flush and reporting rectangles that only extend to the last processed bar.',
+    whyWrong:
+      'The popped bar does not know its own left blocker - only the bar underneath it in the stack does - so measuring the ' +
+      'width from the popped index shrinks every rectangle that extends leftwards: on [2, 1, 2] it reports 2 where the ' +
+      'answer is 3, and it survives [2, 1, 5, 6, 2, 3] only because that maximum runs rightwards from its bar. Skipping ' +
+      'the flush fails on a rising histogram such as [1, 2, 3, 4, 5]: nothing pops during the scan, every candidate is ' +
+      'still on the stack when the loop ends, and the correct answer of 9 is never computed.',
+    followUps: [
+      'Maximal Rectangle is this routine applied to the row histograms of a binary matrix. How do you build the histogram as you go?',
+      'Return the left and right bounds of the largest rectangle too. Which two values must be carried alongside the area?',
+      'Solve it with a divide and conquer on the minimum bar. What recurrence does that give, and where does it lose?',
+    ],
+    solution:
+      'function largestRectangle(heights) {\n' +
+      '  const stack = [];\n' +
+      '  let best = 0;\n' +
+      '  for (let index = 0; index <= heights.length; index++) {\n' +
+      '    const height = index === heights.length ? 0 : heights[index];\n' +
+      '    while (stack.length > 0 && heights[stack[stack.length - 1]] >= height) {\n' +
+      '      const top = stack.pop();\n' +
+      '      const left = stack.length === 0 ? -1 : stack[stack.length - 1];\n' +
+      '      const area = heights[top] * (index - left - 1);\n' +
+      '      if (area > best) best = area;\n' +
+      '    }\n' +
+      '    stack.push(index);\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Report the width of the largest rectangle as well as its area, then generalise to the largest rectangle of a binary matrix of 0 and 1 cells.',
+  },
+  {
+    step: 9,
+    name: 'Sum of Subarray Minimums',
+    difficulty: 'Medium',
+    topicSlug: MONO,
+    stem: 'Add up the minimum element of every contiguous subarray of an array.',
+    brief: 'Input: an integer array. Output: the sum of the minimum of each subarray, where subarrays of length one count. The answer is requested modulo 1e9 + 7 at scale; the exact sum is the thing to get right first.',
+    concepts: ['dsa-element-owns-its-subarrays', 'dsa-tie-broken-on-one-side', 'dsa-monotone-discard-never-answer', 'dsa-complexity-counting'],
+    shortAnswer:
+      'For each element count the subarrays for which it is the minimum - the distance to the previous smaller element times ' +
+      'the distance to the next smaller-or-equal - and add value times that count.',
+    idealAnswer:
+      'Enumerating subarrays is quadratic and there are n times n plus one over two of them, so the trick is to change what ' +
+      'is counted: instead of finding the minimum of each subarray, ask each element how many subarrays it is the minimum ' +
+      'of. Those subarrays are exactly the ones that start after the previous smaller element and end before the next one, ' +
+      'so two monotonic passes give the count and the total is a sum of value times left choices times right choices. The ' +
+      'comparison must be strict on one side and non-strict on the other, otherwise an array of equal values assigns the ' +
+      'same subarray to two elements or to none. This is the same contribution argument that makes the largest rectangle ' +
+      'linear, and it is why the row sits with the monotonic stack rows rather than the sliding window ones.',
+    walkthrough:
+      'For [3, 1, 2, 4] the 1 is smaller than everything around it, so it is the minimum of every subarray that contains ' +
+      'index 1: two choices of start and three of end, contributing 1 times 6. The 3 owns only [3], the 2 owns [2] and ' +
+      '[2, 4], and the 4 owns itself, giving 3 + 6 + 4 + 4 = 17 over the ten subarrays.',
+    commonMistake:
+      'Using the same strictness on both boundaries, or counting subarrays by their start and end indices without the ' +
+      'product form.',
+    whyWrong:
+      'With both boundaries strict the subarray [2, 2] is claimed by both equal elements: the total for [2, 2] comes out as ' +
+      '8 where the true sum is 6, and on [3, 3, 3] it is 30 against 18. With both boundaries non-strict the same subarrays ' +
+      'fall between the owners and the totals come out low instead - 4 and 9 for those two inputs. Either asymmetric pair, ' +
+      'strict to the left with non-strict to the right or the reverse, gives the exact partition, which is the point worth ' +
+      'stating out loud rather than memorising one of the two.',
+    followUps: [
+      'Apply the modulo at each addition. Why is summing first and reducing at the end wrong for arrays of a hundred thousand elements in JavaScript?',
+      'Sum of Subarray Maximums is the same code with the comparison flipped. Write both in one function that takes the comparator.',
+      'Count instead the number of subarrays whose minimum equals a given value. Which two boundaries do you combine now?',
+    ],
+    solution:
+      'function sumSubarrayMins(values) {\n' +
+      '  const size = values.length;\n' +
+      '  const previousSmaller = new Array(size).fill(-1);\n' +
+      '  const nextSmallerOrEqual = new Array(size).fill(size);\n' +
+      '  let stack = [];\n' +
+      '  for (let index = 0; index < size; index++) {\n' +
+      '    while (stack.length > 0 && values[stack[stack.length - 1]] >= values[index]) stack.pop();\n' +
+      '    if (stack.length > 0) previousSmaller[index] = stack[stack.length - 1];\n' +
+      '    stack.push(index);\n' +
+      '  }\n' +
+      '  stack = [];\n' +
+      '  for (let index = size - 1; index >= 0; index--) {\n' +
+      '    while (stack.length > 0 && values[stack[stack.length - 1]] > values[index]) stack.pop();\n' +
+      '    if (stack.length > 0) nextSmallerOrEqual[index] = stack[stack.length - 1];\n' +
+      '    stack.push(index);\n' +
+      '  }\n' +
+      '  let total = 0;\n' +
+      '  for (let index = 0; index < size; index++) {\n' +
+      '    const left = index - previousSmaller[index];\n' +
+      '    const right = nextSmallerOrEqual[index] - index;\n' +
+      '    total += values[index] * left * right;\n' +
+      '  }\n' +
+      '  return total;\n' +
+      '}\n' +
+      '\n' +
+      'function sumSubarrayMinsNaive(values) {\n' +
+      '  let total = 0;\n' +
+      '  for (let start = 0; start < values.length; start++) {\n' +
+      '    let low = values[start];\n' +
+      '    for (let end = start; end < values.length; end++) {\n' +
+      '      if (values[end] < low) low = values[end];\n' +
+      '      total += low;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return total;\n' +
+      '}',
+    modify: 'Reduce the total modulo 1e9 + 7 as it accumulates, then do the same for the sum of subarray maximums in a single pass. How many stacks does that need?',
+  },
+  {
+    step: 9,
+    name: 'Sum of Subarray Ranges',
+    difficulty: 'Medium',
+    topicSlug: MONO,
+    stem: 'Sum the range of every contiguous subarray, where the range of a subarray is its maximum minus its minimum.',
+    brief: 'Input: an integer array. Output: the sum over all subarrays of (maximum - minimum).',
+    concepts: ['dsa-element-owns-its-subarrays', 'dsa-tie-broken-on-one-side', 'dsa-sum-of-differences-splits', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Ranges are differences, and sums of differences split: compute the sum of subarray maximums and the sum of subarray ' +
+      'minimums with the same contribution routine, with opposite comparators, and subtract.',
+    idealAnswer:
+      'The naive solution is a quadratic scan keeping a running maximum and minimum for each start position, which is ' +
+      'perfectly acceptable as the reference implementation and worth writing first because it defines the answer. The ' +
+      'linear-in-effect version leans on linearity: the sum of maxima minus the sum of minima is the sum of the differences, ' +
+      'even though no single subarray is involved in either term separately. Each of those two sums is the contribution ' +
+      'counting problem from the previous row, so the whole routine is one helper called with a greater-than comparator and ' +
+      'with a less-than comparator. Both calls then use the same asymmetry - strict towards the left, non-strict towards ' +
+      'the right - so a run of equal values is owned by its rightmost member on both sides, and the two totals stay ' +
+      'consistent with each other instead of disagreeing by the duplicates.',
+    walkthrough:
+      'For [4, 1, 3] the six subarrays have ranges 0, 3, 3, 0, 2, 0, summing to 8. Split the same way: the sum of maxima is ' +
+      '4 + 4 + 4 + 1 + 3 + 3 = 19 and the sum of minima is 4 + 1 + 1 + 1 + 1 + 3 = 11, and 19 - 11 = 8. Constant arrays ' +
+      'collapse to 0 from both sides, which is the check that the tie rule did not invent or lose area.',
+    commonMistake:
+      'Using identical boundary strictness for the maximum and the minimum passes without checking which side is strict, or ' +
+      'subtracting minima from maxima per subarray with a nested loop and calling it linear.',
+    whyWrong:
+      'Contribution counting is only exact when each subarray has one owner per pass. Make both boundaries strict and the two ' +
+      'passes disagree by real amounts: the ranges of [2, 2, 1] come out as -4 where the answer is 2. A constant array such ' +
+      'as [2, 2, 2] still prints 0, because both sides inflate equally and the error cancels in the subtraction - which is ' +
+      'exactly why a duplicates-only test case proves nothing here. Claiming linearity for a quadratic loop is the other ' +
+      'failure: it is the right answer for the wrong reason and does not survive the ' +
+      'hundred-thousand-element follow-up.',
+    followUps: [
+      'Sum of Subarray Ranges II asks for the k smallest ranges. Which structure now orders the candidates?',
+      'Do it in one pass with two stacks live at once. What has to be true of the tie rule for the two stacks to stay valid?',
+      'Prove the split: why does sum(max) - sum(min) equal sum(max - min) without any independence assumption?',
+    ],
+    solution:
+      'function sumSubarrayRanges(values) {\n' +
+      '  const size = values.length;\n' +
+      '  const sumOfExtremes = (better) => {\n' +
+      '    const left = new Array(size).fill(-1);\n' +
+      '    const right = new Array(size).fill(size);\n' +
+      '    let stack = [];\n' +
+      '    for (let index = 0; index < size; index++) {\n' +
+      '      while (stack.length > 0 && !better(values[stack[stack.length - 1]], values[index])) stack.pop();\n' +
+      '      if (stack.length > 0) left[index] = stack[stack.length - 1];\n' +
+      '      stack.push(index);\n' +
+      '    }\n' +
+      '    stack = [];\n' +
+      '    for (let index = size - 1; index >= 0; index--) {\n' +
+      '      while (stack.length > 0 && better(values[index], values[stack[stack.length - 1]])) stack.pop();\n' +
+      '      if (stack.length > 0) right[index] = stack[stack.length - 1];\n' +
+      '      stack.push(index);\n' +
+      '    }\n' +
+      '    let total = 0;\n' +
+      '    for (let index = 0; index < size; index++) {\n' +
+      '      total += values[index] * (index - left[index]) * (right[index] - index);\n' +
+      '    }\n' +
+      '    return total;\n' +
+      '  };\n' +
+      '  return sumOfExtremes((a, b) => a > b) - sumOfExtremes((a, b) => a < b);\n' +
+      '}\n' +
+      '\n' +
+      'function sumSubarrayRangesNaive(values) {\n' +
+      '  let total = 0;\n' +
+      '  for (let start = 0; start < values.length; start++) {\n' +
+      '    let low = values[start];\n' +
+      '    let high = values[start];\n' +
+      '    for (let end = start; end < values.length; end++) {\n' +
+      '      if (values[end] < low) low = values[end];\n' +
+      '      if (values[end] > high) high = values[end];\n' +
+      '      total += high - low;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return total;\n' +
+      '}',
+    modify: 'Sum the squares of the subarray ranges instead. Which single term of the expansion still splits into contributions and which one does not?',
   },
 ];
 
