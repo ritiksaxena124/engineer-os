@@ -1786,6 +1786,42 @@ export const DSA_CONCEPTS = {
     terms: ['group by band or by column', 'first or last inside the group', 'breadth-first chooses for free', 'depth-first must compare depths', 'one walk, four views'],
     weight: 3,
   },
+  'dsa-side-view-is-the-edge-of-a-band': {
+    slug: 'dsa-side-view-is-the-edge-of-a-band',
+    name:
+    'A side view is one node per depth band, and a band is wider than a spine',
+    detail:
+    'The right view is the last node of each depth band and the left view the first, so the walk has to keep band boundaries rather than descend down one side. A spine walk stops the moment its preferred child is missing, while the band below it still holds nodes reached from the other side. Every depth-first order visits the nodes of one band from left to right, which is why a map keyed by depth gives the same listing as the queue - the first node seen at a depth is the left edge and the last is the right edge - while inside a breadth-first walk the push order alone decides which of the two edges the same read produces.',
+    terms: ['last of a band, not last of a spine', 'depth-first lists a band left to right', 'push order picks the edge', 'the two views coincide when every band holds one node', 'the widest band is the queue cost'],
+    weight: 3,
+  },
+  'dsa-symmetry-is-a-mirrored-comparison': {
+    slug: 'dsa-symmetry-is-a-mirrored-comparison',
+    name:
+    'Symmetry compares a pair across an axis instead of two halves in the same order',
+    detail:
+    'A symmetric tree needs a helper that takes two nodes and crosses the children: left with right, right with left. Comparing the two halves with the identical test fails in both directions, since mirror images of opposite-shaped halves are symmetric while identical halves standing in mirrored positions are not. Checking that the value list of each level is a palindrome ignores which half each node came from; keeping the null placeholders makes the test correct but pays for a complete tree, reading two to the height cells when the tree holds a chain on each side.',
+    terms: ['pair helper with crossed children', 'identical halves answers a different question', 'a palindrome without nulls accepts bad shapes', 'padded bands are correct and exponential', 'a mirrored shape can still fail on values'],
+    weight: 3,
+  },
+  'dsa-path-is-a-stack-that-must-unwind': {
+    slug: 'dsa-path-is-a-stack-that-must-unwind',
+    name:
+    'A root-to-node path is the recursion stack, so a failed branch has to be popped',
+    detail:
+    'While a depth-first walk stands at a node, the values on its stack are exactly that node and its ancestors, which is why pushing on entry and popping on exit yields the path with no extra bookkeeping. A walk that pushes and never pops reports every node it visited rather than the ancestors of the target, and it reports something even when the target is not in the tree. With unique values the depth-first walk and a breadth-first parent map return the same route; with repeats the depth-first answer is the first in visit order and the map answer is the shallowest one, so the question is only well posed when the caller names a node.',
+    terms: ['push on entry, pop on exit', 'no-pop lists visited nodes, not ancestors', 'an absent target must answer nothing', 'first in preorder versus shallowest in breadth-first', 'unique values or node references'],
+    weight: 3,
+  },
+  'dsa-lca-is-where-two-routes-diverge': {
+    slug: 'dsa-lca-is-where-two-routes-diverge',
+    name:
+    'The common ancestor is where two root routes part, and one of the pair can be the answer',
+    detail:
+    'A postorder walk answers with itself when it holds one of the pair, with its own node when both sides below it report, and with whichever side reported otherwise. The first case is what makes an ancestor pair correct: the higher node returns itself and no split ever fires above it. Requiring two non-null sides turns every ancestor pair into a null answer, and a plain recursion cannot tell absence from a one-sided find, so a half-absent pair comes back as the node that was found. Value keyed queries lose the answer completely when one value sits at two nodes.',
+    terms: ['hit case, split case, pass-through case', 'an ancestor pair has no split node', 'absence looks like success to a plain recursion', 'comparing paths gives distance for free', 'values are not node identity'],
+    weight: 4,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -24867,6 +24903,914 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return "bottom=" + bottomView(root) + " deepest-first=" + bottomViewDeepestKeepsFirst(root) + " by-value=" + bottomViewDeepestByValue(root) + " dfs-last=" + bottomViewByDfsKeepLast(root) + " dfs-first=" + bottomViewByDfsKeepFirst(root) + " dfs-depth=" + bottomViewByDfsWithDepth(root) + " top=" + topViewFromColumns(root) + " columns=[" + columnsListed(root) + "] deepTies=" + deepestTies(root) + " shallowTies=" + shallowestTies(root) + " hidden0=" + hiddenBehindBottom(root, 0) + " nodes=" + nodeCount(root);\n' +
       '}',
     modify: 'Break the deepest tie by node value rather than by arrival. Which listings change on 1 2 5 null 9 4 and on the perfect tree, and which of the two views still needs no tie rule at all?',
+  },
+  {
+    step: 13,
+    name: 'Right / Left View of Binary Tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Print the nodes visible from the right side of the tree, one per level, then the same from the left, and explain why walking down the right children is not the right view.',
+    brief: 'Input: a binary tree. Output: the right view and the left view - the last and the first node of every depth band. Deliver a breadth-first construction and a depth-first one, the spine trap, the push-order trap, and the reason all three depth-first orders produce the same listing here.',
+    concepts:
+      [
+        'dsa-side-view-is-the-edge-of-a-band',
+        'dsa-bfs-needs-the-band-boundary',
+        'dsa-view-is-an-extremum-per-column-or-band',
+        'dsa-boundary-is-two-spines-and-the-leaves',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Walk the tree band by band and keep one node from each: the last for the right view, the first for the left. On 1 2 3 4 5 6 7 that is 1 3 7 from the right and 1 2 4 from the left. O(n) time and O(width) queue. A depth-first walk answers too, with a map from depth to one value, because every depth-first order visits the nodes of a band from left to right - so the first node seen at a depth is the left edge and the last one recorded is the right edge.' +
+      'A spine walk is not a view: it stops when its preferred child is missing, and the band below can still hold nodes reached from the other side.',
+    idealAnswer:
+      'The right view is an extremum per band, and a band is not a spine. The temptation comes straight from the boundary row: that walk already knows how to descend by taking one side, and dropping its leaves looks like a side view. On the tree 1 2 3 null 4 the right spine is 1 3 while the right view is 1 3 4, because the node 4 hangs under the left child and the band that holds it is not empty. The shallower the dead end, the bigger the miss: on 1 2 5 null 3 null null null 4 the spine stops at 1 5 and the view is 1 5 3 4.' +
+      'Two constructions are worth having because they cost different memory. Breadth-first: take each band as a unit - a loop over the current queue length - and read its last cell for the right view and its first for the left, which makes both views one walk. Depth-first: carry the depth and keep a map from depth to one value, either recording the first sighting of a depth while walking root-right-left or overwriting on every visit while walking root-left-right. Both are O(n) time; the queue costs the widest band, the map costs the height.' +
+      'The depth-first version rests on a fact worth stating exactly, because it is the reason this row has no ordering trap. Preorder, inorder and postorder all visit the nodes of one band from left to right: a node in the left half of a band finishes its whole subtree before a node in the right half is entered, so no depth-first order can interleave two bands. That is the opposite of the column views, where the key is not a walk order at all and depths have to be compared. Across 900 randomly grown trees the right-first keep-first walk, the left-first overwrite walk and the inorder overwrite walk each reproduced the band listing with zero disagreements.' +
+      'The push-order trap is the one that survives careless testing. Build each next band by pushing the right child before the left and the band comes out reversed, so reading its last cell prints the left view from code that says right view. It differs from the truth on 342 of the 900 trees, and the reason it looks safe is that the two views coincide on the other 558: whenever every band holds exactly one node, the left view, the right view and both spines are the same listing. A band of width two is the only witness, and the perfect tree is the smallest one.' +
+      'Place it in the family: the right view is the last node of each band, the top view is the first node of each column, and on 1 2 5 null 3 null null null 4 the two listings differ for different reasons - the right view is 1 5 3 4 while the bottom view of the same tree is 2 3 4. Measured the same way as the previous rows: on the 900 trees the view length equalled the height plus one without an exception, 179 trees were empty and 99 held a single node, and the nodes hidden behind the right view peaked at 6 and summed to 1172 over the 721 trees with a band at all.',
+    walkthrough:
+      'Perfect tree, cells 1 2 3 4 5 6 7. The bands are 1, then 2 3, then 4 5 6 7, so the right view reads 1 3 7 and the left view reads 1 2 4 - four of the seven nodes sit behind one of the two edges. Tree 1 2 3 4 5: the bands are 1, 2 3, 4 5, so the right view is 1 3 5 while the right spine walks 1 3 and stops, because 3 has no children and 5 hangs under 2. Push order: taking the children right-then-left turns every band into its mirror image, and reading the same last cell prints 1 2 4.',
+    commonMistake:
+      'Walking down the right child of every node and falling back to the left, or building a band by pushing the right child first and still reading its last cell.',
+    whyWrong:
+      'A spine walk stops as soon as the preferred side runs out and the view has no such stop: on 1 2 3 null 4 the spine is 1 3 against a view of 1 3 4, and on 1 2 5 null 3 null null null 4 the spine is 1 5 against 1 5 3 4. ' +
+      'Reversing the push order is the more dangerous error because it is invisible: the listing it produces is a perfectly valid view - the left one - and on 558 of the 900 trees the two views are the same string, so the bug passes every example that was tried.',
+    followUps:
+      [
+        'Print both views from one pass over the bands. Which two cells of each band do you read, and what is the smallest tree where the answers differ?',
+        'The top view keys on a column instead of a depth. Rewrite the depth-first map with the column key and compare its output with the band listing on 1 2 5 null 3 null null null 4.',
+        'Report the nodes that are visible from neither side. Which set difference is that, and what does the perfect tree report?',
+        'Do the walk without the queue-length loop by pushing a marker between bands. What breaks when the marker is read as a node?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function bandsOf(root) {\n' +
+      '  const bands = [];\n' +
+      '  let frontier = root === null ? [] : [root];\n' +
+      '  while (frontier.length > 0) {\n' +
+      '    bands.push(frontier);\n' +
+      '    const next = [];\n' +
+      '    for (const node of frontier) {\n' +
+      '      if (node.left !== null) next.push(node.left);\n' +
+      '      if (node.right !== null) next.push(node.right);\n' +
+      '    }\n' +
+      '    frontier = next;\n' +
+      '  }\n' +
+      '  return bands;\n' +
+      '}\n' +
+      '\n' +
+      'function rightView(root) {\n' +
+      '  return bandsOf(root).map((band) => String(band[band.length - 1].val)).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function leftView(root) {\n' +
+      '  return bandsOf(root).map((band) => String(band[0].val)).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function rightViewPushRightFirst(root) {\n' +
+      '  const rows = [];\n' +
+      '  let frontier = root === null ? [] : [root];\n' +
+      '  while (frontier.length > 0) {\n' +
+      '    rows.push(String(frontier[frontier.length - 1].val));\n' +
+      '    const next = [];\n' +
+      '    for (const node of frontier) {\n' +
+      '      if (node.right !== null) next.push(node.right);\n' +
+      '      if (node.left !== null) next.push(node.left);\n' +
+      '    }\n' +
+      '    frontier = next;\n' +
+      '  }\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function rightViewBySpine(root) {\n' +
+      '  const rows = [];\n' +
+      '  let node = root;\n' +
+      '  while (node !== null) {\n' +
+      '    rows.push(String(node.val));\n' +
+      '    node = node.right !== null ? node.right : node.left;\n' +
+      '  }\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function leftViewBySpine(root) {\n' +
+      '  const rows = [];\n' +
+      '  let node = root;\n' +
+      '  while (node !== null) {\n' +
+      '    rows.push(String(node.val));\n' +
+      '    node = node.left !== null ? node.left : node.right;\n' +
+      '  }\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function rightViewDepthRightFirst(root) {\n' +
+      '  const seen = new Map();\n' +
+      '  const walk = (node, depth) => {\n' +
+      '    if (node === null) return;\n' +
+      '    if (!seen.has(depth)) seen.set(depth, node.val);\n' +
+      '    walk(node.right, depth + 1);\n' +
+      '    walk(node.left, depth + 1);\n' +
+      '  };\n' +
+      '  walk(root, 0);\n' +
+      '  return Array.from(seen.keys()).sort((a, b) => a - b).map((key) => String(seen.get(key))).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function rightViewDepthLeftFirstOverwrite(root) {\n' +
+      '  const seen = new Map();\n' +
+      '  const walk = (node, depth) => {\n' +
+      '    if (node === null) return;\n' +
+      '    seen.set(depth, node.val);\n' +
+      '    walk(node.left, depth + 1);\n' +
+      '    walk(node.right, depth + 1);\n' +
+      '  };\n' +
+      '  walk(root, 0);\n' +
+      '  return Array.from(seen.keys()).sort((a, b) => a - b).map((key) => String(seen.get(key))).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function rightViewInorderOverwrite(root) {\n' +
+      '  const seen = new Map();\n' +
+      '  const walk = (node, depth) => {\n' +
+      '    if (node === null) return;\n' +
+      '    walk(node.left, depth + 1);\n' +
+      '    seen.set(depth, node.val);\n' +
+      '    walk(node.right, depth + 1);\n' +
+      '  };\n' +
+      '  walk(root, 0);\n' +
+      '  return Array.from(seen.keys()).sort((a, b) => a - b).map((key) => String(seen.get(key))).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function bandWidths(root) {\n' +
+      '  return bandsOf(root).map((band) => band.length).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function viewsAgree(root) {\n' +
+      '  return leftView(root) === rightView(root);\n' +
+      '}\n' +
+      '\n' +
+      'function hiddenFromRight(root) {\n' +
+      '  const rows = rightView(root);\n' +
+      '  const shown = rows === "" ? 0 : rows.split(" ").length;\n' +
+      '  return nodeCount(root) - shown;\n' +
+      '}\n' +
+      '\n' +
+      'function rightViewLine(root) {\n' +
+      '  return "right=" + rightView(root) + " left=" + leftView(root) + " spine=" + rightViewBySpine(root) + " leftSpine=" + leftViewBySpine(root) + " pushRightFirst=" + rightViewPushRightFirst(root) + " dfsRightFirst=" + rightViewDepthRightFirst(root) + " dfsLeftOverwrite=" + rightViewDepthLeftFirstOverwrite(root) + " inorderOverwrite=" + rightViewInorderOverwrite(root) + " bands=[" + bandWidths(root) + "] height=" + heightOf(root) + " hidden=" + hiddenFromRight(root) + " nodes=" + nodeCount(root);\n' +
+      '}',
+    modify: 'Print the silhouette: the left view top-down followed by the right view bottom-up. Which node does the perfect tree report twice, and which tree reports none twice?',
+  },
+  {
+    step: 13,
+    name: 'Symmetric Binary Tree',
+    difficulty: 'Easy',
+    topicSlug: TREES,
+    stem: 'Decide whether a binary tree is a mirror image of itself, and explain why "the left subtree is identical to the right subtree" is the wrong test in both directions.',
+    brief: 'Input: a binary tree. Output: whether it is symmetric about its vertical axis, meaning mirrored positions hold equal values and mirrored absences line up. Deliver the mirrored pair comparison, its iterative pair-queue form, and the two false tests - identical halves and the per-level palindrome - each with the tree that breaks it.',
+    concepts:
+      [
+        'dsa-symmetry-is-a-mirrored-comparison',
+        'dsa-identical-is-shape-and-value-together',
+        'dsa-tree-cells-carry-shape',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Compare two nodes the way an axis would: they are mirrors when their values match, the left one left child mirrors the right one right child, and the left one right child mirrors the right one left child. The tree is symmetric when the two children of the root are mirrors. O(n) time, O(height) stack, and the iterative form pushes pairs onto a queue. The test is not "the halves are identical": that says false on 1 2 2 3 null null 3, which is symmetric, and true on 1 2 2 null 3 null 3, which is not.' +
+      'Checking that each level reads the same backwards is also wrong unless the missing children are counted, because a palindrome of values says nothing about which half each value came from.',
+    idealAnswer:
+      'Symmetry is a relation between two nodes, not a property of one, so the recursion needs a helper that takes a pair - the two nodes standing at mirrored positions. Its three lines are the whole definition: both null is fine, exactly one null fails, and otherwise the values must match while the pairs cross over, left with right and right with left. The root is compared with nothing, which is why the empty tree and the single node answer true without argument.' +
+      'The identical test fails in both directions and the two witnesses are tiny. On 1 2 2 3 null null 3 the left half is a node with a left child and the right half is a node with a right child: the tree is a mirror of itself, and identical answers false because it pairs left with left. On 1 2 2 null 3 null 3 the halves are genuinely identical - each is a 2 with a right child 3 - and the tree is not symmetric, because the left 3 is not at the mirrored position. A test that is wrong on both kinds of example is not a conservative approximation of the answer, it is a different question.' +
+      'The per-level palindrome is the popular wrong answer and the more dangerous one, because it looks like a proof. Reading each band as a list of values and checking that it is a palindrome is necessary for symmetry and not sufficient: on 1 2 2 null 3 null 3 the bands are 1, then 2 2, then 3 3, every one reading the same backwards, while the shape is not mirrored. Dropping the nulls is what lets it through. Keeping them is a different matter - a band of placeholders two to the depth wide is the complete-tree picture, and the palindrome test on it is correct: it agreed with the pair recursion on all 900 randomly grown trees. It is still the wrong algorithm, because it pays for the padding. A mirror chain of depth 8 holds 17 nodes and the padded walk reads 1023 cells.' +
+      'The queue form keeps the pair logic without a stack: push the two children of the root as a pair, then for every popped pair push four children as two mirrored pairs - a left with b right, then a right with b left. That push order is the entire content of the iterative answer. A queue that pushes single nodes and compares the ends of each band has quietly become the palindrome test again, and it will report the same false positives.' +
+      'Cost and census: the mirrored comparison touches each pair once, O(n) time with O(height) stack or O(width) queue. On the 900 random trees the value-palindrome test accepted 280 of the trees the pair test rejected, and 278 of the 900 are symmetric at all - every one of them an empty tree or a single node, because the labels are distinct and mirrored positions therefore never match. 279 trees are symmetric as shapes, and the first of them, 1 7 4 null 3 6 null null 5 2, is rejected only by its values, which is the cleanest way to see that symmetry is two conditions rather than one.',
+    walkthrough:
+      'Tree 1 2 2 3 4 4 3, the classic yes. The pairs are (2,2) first, then (3,3) and (4,4) across the axis: three pair comparisons for seven nodes, and each value sits where its mirror value sits. Tree 1 2 2 null 3 null 3, the classic no. The pairs are (2,2) and then (null,3) - the left child of the left 2 against the right child of the right 2 - and one side is empty, so it fails at depth 2, which is what the depth report returns. The mirror chain of depth 5 - 1 with two 2s, each 2 turning outward to a 3, each 3 turning outward to a 4, and so on - is symmetric on 11 nodes while the padded band walk reads 127 cells.',
+    commonMistake:
+      'Comparing the two halves with the identical test, or checking that the values on each level read the same forwards and backwards.',
+    whyWrong:
+      'The identical test pairs left with left, which is the opposite of what an axis does: it rejects 1 2 2 3 null null 3, whose halves are mirror images, and accepts 1 2 2 null 3 null 3, whose halves are copies standing in the wrong places. The band palindrome is weaker still - it looks at the values of a band without looking at which half each one came from - and it accepted 280 of the 900 random trees that are not symmetric.',
+    followUps:
+      [
+        'Report the depth of the first band that breaks the mirror instead of a boolean. Which depth is it on 1 2 2 null 3 null 3, and what does a symmetric tree report?',
+        'Write the iterative pair-queue version. Which four children go on the queue for a popped pair, and in what order?',
+        'Separate shape symmetry from value symmetry. Which of 1 7 4 null 3 6 null null 5 2 and 1 2 2 3 null null 3 passes each of the two tests?',
+        'Count the pair comparisons the recursion makes. Why is that not the node count, and what does it reach on a mirror chain of depth d?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function isMirror(a, b) {\n' +
+      '  if (a === null && b === null) return true;\n' +
+      '  if (a === null || b === null) return false;\n' +
+      '  return a.val === b.val && isMirror(a.left, b.right) && isMirror(a.right, b.left);\n' +
+      '}\n' +
+      '\n' +
+      'function isSymmetricRecursive(root) {\n' +
+      '  if (root === null) return true;\n' +
+      '  return isMirror(root.left, root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function identical(a, b) {\n' +
+      '  if (a === null && b === null) return true;\n' +
+      '  if (a === null || b === null) return false;\n' +
+      '  return a.val === b.val && identical(a.left, b.left) && identical(a.right, b.right);\n' +
+      '}\n' +
+      '\n' +
+      'function isSymmetricByIdentical(root) {\n' +
+      '  if (root === null) return true;\n' +
+      '  return identical(root.left, root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function isSymmetricIterative(root) {\n' +
+      '  const queue = root === null ? [] : [root.left, root.right];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const a = queue[cursor];\n' +
+      '    const b = queue[cursor + 1];\n' +
+      '    cursor += 2;\n' +
+      '    if (a === null && b === null) continue;\n' +
+      '    if (a === null || b === null) return false;\n' +
+      '    if (a.val !== b.val) return false;\n' +
+      '    queue.push(a.left, b.right, a.right, b.left);\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function readsBackwards(values) {\n' +
+      '  for (let i = 0; i < values.length; i += 1) {\n' +
+      '    if (values[i] !== values[values.length - 1 - i]) return false;\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function isSymmetricByValueBands(root) {\n' +
+      '  if (root === null) return true;\n' +
+      '  let frontier = [root];\n' +
+      '  while (frontier.length > 0) {\n' +
+      '    const values = frontier.map((node) => String(node.val));\n' +
+      '    if (!readsBackwards(values)) return false;\n' +
+      '    const next = [];\n' +
+      '    for (const node of frontier) {\n' +
+      '      if (node.left !== null) next.push(node.left);\n' +
+      '      if (node.right !== null) next.push(node.right);\n' +
+      '    }\n' +
+      '    frontier = next;\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function paddedBandsWork(root) {\n' +
+      '  if (root === null) return { symmetric: true, cells: 0 };\n' +
+      '  let frontier = [root];\n' +
+      '  let cells = 0;\n' +
+      '  while (frontier.length > 0) {\n' +
+      '    const values = frontier.map((node) => (node === null ? "null" : String(node.val)));\n' +
+      '    cells += frontier.length;\n' +
+      '    if (!readsBackwards(values)) return { symmetric: false, cells: cells };\n' +
+      '    let allNull = true;\n' +
+      '    const next = [];\n' +
+      '    for (const node of frontier) {\n' +
+      '      if (node === null) {\n' +
+      '        next.push(null, null);\n' +
+      '        continue;\n' +
+      '      }\n' +
+      '      allNull = false;\n' +
+      '      next.push(node.left, node.right);\n' +
+      '    }\n' +
+      '    frontier = allNull ? [] : next;\n' +
+      '  }\n' +
+      '  return { symmetric: true, cells: cells };\n' +
+      '}\n' +
+      '\n' +
+      'function isSymmetricByPaddedBands(root) {\n' +
+      '  return paddedBandsWork(root).symmetric;\n' +
+      '}\n' +
+      '\n' +
+      'function firstAsymmetricDepth(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  let frontier = [root];\n' +
+      '  let depth = 0;\n' +
+      '  while (frontier.length > 0) {\n' +
+      '    const values = frontier.map((node) => (node === null ? "null" : String(node.val)));\n' +
+      '    if (!readsBackwards(values)) return depth;\n' +
+      '    let allNull = true;\n' +
+      '    const next = [];\n' +
+      '    for (const node of frontier) {\n' +
+      '      if (node === null) {\n' +
+      '        next.push(null, null);\n' +
+      '        continue;\n' +
+      '      }\n' +
+      '      allNull = false;\n' +
+      '      next.push(node.left, node.right);\n' +
+      '    }\n' +
+      '    frontier = allNull ? [] : next;\n' +
+      '    depth += 1;\n' +
+      '  }\n' +
+      '  return -1;\n' +
+      '}\n' +
+      '\n' +
+      'function mirrorPairs(root) {\n' +
+      '  let pairs = 0;\n' +
+      '  const walk = (a, b) => {\n' +
+      '    if (a === null && b === null) return;\n' +
+      '    pairs += 1;\n' +
+      '    if (a === null || b === null) return;\n' +
+      '    walk(a.left, b.right);\n' +
+      '    walk(a.right, b.left);\n' +
+      '  };\n' +
+      '  if (root !== null) walk(root.left, root.right);\n' +
+      '  return pairs;\n' +
+      '}\n' +
+      '\n' +
+      'function isStructureMirror(a, b) {\n' +
+      '  if (a === null && b === null) return true;\n' +
+      '  if (a === null || b === null) return false;\n' +
+      '  return isStructureMirror(a.left, b.right) && isStructureMirror(a.right, b.left);\n' +
+      '}\n' +
+      '\n' +
+      'function isStructurallySymmetric(root) {\n' +
+      '  if (root === null) return true;\n' +
+      '  return isStructureMirror(root.left, root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function mirrorChain(depth) {\n' +
+      '  const root = { val: 1, left: null, right: null };\n' +
+      '  let left = root;\n' +
+      '  let right = root;\n' +
+      '  for (let level = 2; level <= depth + 1; level += 1) {\n' +
+      '    const a = { val: level, left: null, right: null };\n' +
+      '    const b = { val: level, left: null, right: null };\n' +
+      '    left.left = a;\n' +
+      '    right.right = b;\n' +
+      '    left = a;\n' +
+      '    right = b;\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function symmetricLine(root) {\n' +
+      '  const padded = paddedBandsWork(root);\n' +
+      '  return "recursive=" + isSymmetricRecursive(root) + " identical=" + isSymmetricByIdentical(root) + " iterative=" + isSymmetricIterative(root) + " valueBands=" + isSymmetricByValueBands(root) + " padded=" + padded.symmetric + " shape=" + isStructurallySymmetric(root) + " depth=" + firstAsymmetricDepth(root) + " pairs=" + mirrorPairs(root) + " cells=" + padded.cells + " nodes=" + nodeCount(root) + " tree=[" + serializeLevel(root) + "]";\n' +
+      '}',
+    modify: 'Generalise to an n-ary tree, where symmetric means the child lists mirror each other. Which comparison replaces the crossed pair, and what does a node with children a, b, a answer?',
+  },
+  {
+    step: 13,
+    name: 'Root to Node Path in Binary Tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Return the values from the root down to a given node value, and say what the answer means when the same value sits at two nodes.',
+    brief: 'Input: a binary tree and a target value. Output: the root-to-node path as a listing, or nothing when the target is absent. Deliver the depth-first walk with backtracking and the breadth-first parent map, the forgotten-pop bug with the tree that exposes it, and the ambiguity that appears when values repeat.',
+    concepts:
+      [
+        'dsa-path-is-a-stack-that-must-unwind',
+        'dsa-stack-order-decides-visit-order',
+        'dsa-tree-cells-carry-shape',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Walk down from the root pushing values and pop on the way out of any branch that did not hold the target; the stack that survives is the path. On 1 2 3 4 5 6 7 the path to 7 is 1->3->7. O(n) time and O(height) stack. A breadth-first parent map answers the same question by recording each node parent, walking up from the target and reversing - O(n) time and O(n) memory, and with repeated values it returns the shallowest copy where the depth-first walk returns the first in visit order.' +
+      'A walk that pushes and never pops returns the nodes it visited rather than the nodes above the target, and it returns a listing even for a value that is not in the tree.',
+    idealAnswer:
+      'The path is the recursion stack, which is why the list has to be pushed on the way down and popped on the way out of a branch that failed. The no-pop version is one line shorter and wrong in a specific way: it reports the nodes visited before the target rather than its ancestors. On the perfect tree the path to 7 is 1->3->7 while the no-pop walk reports 1->2->4->5->3->6->7. Asked for a value that is not in the tree it reports a listing for a question with no answer: of the 900 random trees, 721 held at least one node, the correct walk answered nothing for an absent value on all 900, and the no-pop walk answered a listing on all 721 of them and disagreed with the correct path on 313 of the trees it was asked about.' +
+      'Two honest constructions. Depth-first with backtracking: push the value, stop if it is the target, otherwise try the left and then the right, and pop if both failed - the first answer wins and the structure costs O(height). Breadth-first with a parent map: record the parent of every node while scanning level by level, then climb from the target to the root and reverse - O(n) memory, and the route it returns is the shallowest one to that value.' +
+      'The two agree whenever values are unique, which is what most test data supplies and the reason the difference stays hidden. With repeated values they split. On 1 2 4 3 null null null 4 the value 4 is the right child of the root at depth 1 and also three levels down the left side, so the depth-first answer is 1->2->3->4 and the parent map answers 1->4. On 1 2 3 4 null null 4 the value 4 sits at depth 2 on both sides, and asking the depth-first walk to start right gives 1->3->4 where the left-first walk gives 1->2->4 - the same length, a different node. In a second population of 900 trees whose labels came from an alphabet of four, 540 held a repeated value, and over the 1208 repeated-value queries the parent map differed from the depth-first listing on 72 and the right-first walk on 132, with one value reaching as many as 8 nodes.' +
+      'The same walk with one line moved answers the leaf listing the next rows ask for: record at a leaf instead of at a match, and the paths out are the root-to-leaf routes. The count of them is the number of leaves, and each costs its own length in output, which is why an all-paths answer is O(n times height) rather than O(n) - on the 900 random trees the leaves summed to 1499 while the path to a single node averaged four cells with a longest of 6.' +
+      'What to say out loud: the return value is a path to a node, not a path to a number. Once a value repeats, the path to it is undefined until the caller names which node, and every listing above is a correct answer to a question that was not well posed. A signature that takes a node reference removes the ambiguity and removes two branches from the code; a signature that takes an int inherits it, and the honest move is to state the convention - first in preorder, or shallowest - instead of presenting one answer.',
+    walkthrough:
+      'Perfect tree, cells 1 2 3 4 5 6 7, target 7. The walk goes 1, 2, 4 - a dead end - pops 4, visits 5 - a dead end - pops 5, pops 2, then descends 3 and 7 and stops with 1->3->7 on the stack. Every value it popped was visited and is not an ancestor. Tree 1 2 3 4 null null 4: two nodes hold 4, one under the left child and one under the right, both at depth 2, and the answer 1->2->4 is only the answer because the walk looked left first. Absent target 999 on the perfect tree: the stack is emptied on the way back out and the result is nothing.',
+    commonMistake:
+      'Pushing on the way down without popping on the way out, or presenting the first listing found for a repeated value as the unique path.',
+    whyWrong:
+      'The stack shrinks only if the failed branch pops: without it the perfect tree returns 1->2->4->5->3->6->7 where the path is 1->3->7, and an absent value returns a listing instead of nothing - 721 of the 900 random trees produced one. And when the target appears twice the walk is answering a question the caller never specified, so the listing is a convention of the traversal rather than a property of the tree.',
+    followUps:
+      [
+        'Return the path from the root to every leaf. Which line moves, and what does the perfect tree list?',
+        'Give the depth of a value from the same walk. Why is it the path length minus one, and what should it report for a value that is absent?',
+        'Answer with the parent map instead. On which tree does it disagree with the depth-first walk, and which rule is each one following?',
+        'Print the route from the root to the deepest leaf without building any list. What does the walk have to compare at each step, and what does it cost?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function pathArray(root, target) {\n' +
+      '  const held = [];\n' +
+      '  const walk = (node) => {\n' +
+      '    if (node === null) return false;\n' +
+      '    held.push(node.val);\n' +
+      '    if (node.val === target) return true;\n' +
+      '    if (walk(node.left)) return true;\n' +
+      '    if (walk(node.right)) return true;\n' +
+      '    held.pop();\n' +
+      '    return false;\n' +
+      '  };\n' +
+      '  return walk(root) ? held : [];\n' +
+      '}\n' +
+      '\n' +
+      'function pathToValue(root, target) {\n' +
+      '  return pathArray(root, target).join("->");\n' +
+      '}\n' +
+      '\n' +
+      'function pathToValueRightFirst(root, target) {\n' +
+      '  const held = [];\n' +
+      '  const walk = (node) => {\n' +
+      '    if (node === null) return false;\n' +
+      '    held.push(node.val);\n' +
+      '    if (node.val === target) return true;\n' +
+      '    if (walk(node.right)) return true;\n' +
+      '    if (walk(node.left)) return true;\n' +
+      '    held.pop();\n' +
+      '    return false;\n' +
+      '  };\n' +
+      '  return walk(root) ? held.join("->") : "";\n' +
+      '}\n' +
+      '\n' +
+      'function pathToValueNoUndo(root, target) {\n' +
+      '  const held = [];\n' +
+      '  const walk = (node) => {\n' +
+      '    if (node === null) return false;\n' +
+      '    held.push(node.val);\n' +
+      '    if (node.val === target) return true;\n' +
+      '    if (walk(node.left)) return true;\n' +
+      '    if (walk(node.right)) return true;\n' +
+      '    return false;\n' +
+      '  };\n' +
+      '  walk(root);\n' +
+      '  return held.join("->");\n' +
+      '}\n' +
+      '\n' +
+      'function pathToValueByParentMap(root, target) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const parent = new Map();\n' +
+      '  parent.set(root, null);\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let hit = null;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node.val === target) {\n' +
+      '      hit = node;\n' +
+      '      break;\n' +
+      '    }\n' +
+      '    if (node.left !== null) {\n' +
+      '      parent.set(node.left, node);\n' +
+      '      queue.push(node.left);\n' +
+      '    }\n' +
+      '    if (node.right !== null) {\n' +
+      '      parent.set(node.right, node);\n' +
+      '      queue.push(node.right);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  if (hit === null) return "";\n' +
+      '  const held = [];\n' +
+      '  let walk = hit;\n' +
+      '  while (walk !== null && walk !== undefined) {\n' +
+      '    held.push(walk.val);\n' +
+      '    walk = parent.get(walk);\n' +
+      '  }\n' +
+      '  return held.reverse().join("->");\n' +
+      '}\n' +
+      '\n' +
+      'function leafPaths(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  if (root.left === null && root.right === null) return [String(root.val)];\n' +
+      '  const held = [];\n' +
+      '  if (root.left !== null) held.push(...leafPaths(root.left));\n' +
+      '  if (root.right !== null) held.push(...leafPaths(root.right));\n' +
+      '  return held.map((row) => String(root.val) + "->" + row);\n' +
+      '}\n' +
+      '\n' +
+      'function allLeafPaths(root) {\n' +
+      '  return leafPaths(root).join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function leafCount(root) {\n' +
+      '  return leafPaths(root).length;\n' +
+      '}\n' +
+      '\n' +
+      'function ancestorsOf(root, target) {\n' +
+      '  const rows = pathArray(root, target);\n' +
+      '  return rows.slice(0, Math.max(0, rows.length - 1)).join("->");\n' +
+      '}\n' +
+      '\n' +
+      'function depthOfValue(root, target) {\n' +
+      '  const rows = pathArray(root, target);\n' +
+      '  return rows.length === 0 ? -1 : rows.length - 1;\n' +
+      '}\n' +
+      '\n' +
+      'function pathLine(root, target) {\n' +
+      '  return "target=" + target + " path=" + pathToValue(root, target) + " rightFirst=" + pathToValueRightFirst(root, target) + " noUndo=" + pathToValueNoUndo(root, target) + " byMap=" + pathToValueByParentMap(root, target) + " ancestors=" + ancestorsOf(root, target) + " depth=" + depthOfValue(root, target) + " leaves=[" + allLeafPaths(root) + "] leafCount=" + leafCount(root) + " nodes=" + nodeCount(root) + " tree=[" + serializeLevel(root) + "]";\n' +
+      '}',
+    modify: 'Take a node reference instead of a value so a repeated value cannot be ambiguous. Which two branches disappear, and what does the parent-map version keep?',
+  },
+  {
+    step: 13,
+    name: 'LCA in Binary Tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Find the lowest common ancestor of two nodes of a binary tree that is not a search tree, and say what the answer means when one node is the other ancestor or is not in the tree at all.',
+    brief: 'Input: a binary tree and two nodes of it. Output: their lowest common ancestor - the deepest node that has both on or below it. Deliver the three-case postorder answer, the path and parent-map alternatives, the ancestor case, the absent-node case, and the identity problem a value keyed signature carries.',
+    concepts:
+      [
+        'dsa-lca-is-where-two-routes-diverge',
+        'dsa-postorder-is-the-bottom-up-recording-time',
+        'dsa-path-is-a-stack-that-must-unwind',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'One postorder walk with three cases: a node answers as itself when it holds one of the pair, as its own node when the two searches below it both report, and as whichever side reported otherwise. The first case is what makes the ancestor pair correct - when one node sits above the other, the higher one answers and no split happens. O(n) time and O(height) stack, with no auxiliary structure. The alternatives are the two root-to-node paths read against each other, or a parent map: mark one chain, climb the other until a marked node appears.' +
+      'The plain recursion cannot report absence, so it returns the node it did find when the other one is not in the tree; a presence check or a count of what the walk saw is the fix.',
+    idealAnswer:
+      'The recursion is three cases, and the interesting one is where the ancestor pair falls. A node that is itself one of the pair returns itself without looking further down, so the caller above sees a single reporting side and never reaches the split rule - the answer stays the ancestor, which is what the definition asks for. The version people write first demands that the two nodes be found in different subtrees, and for a pair where one is above the other there is no such node. Across all 15580 unordered pairs of the value-distinct random trees, 11450 are ancestor pairs, and that variant disagreed with the correct answer on exactly those 11450 and on none of the remaining 4130 - the failure is not an edge case, it is most of the input space, because a root and any descendant is already one.' +
+      'The two alternatives are worth writing because they answer the follow-ups the recursion cannot. Root-to-node paths: find both paths and read them together until they differ - the last shared value is the ancestor, and the two lengths plus its depth give the distance as the bonus the sheet asks for next. Parent map: build it once with a breadth-first scan, mark the whole chain above one node in a set, then climb from the other until a marked node appears. Each is O(n) time; the path method costs O(height) extra per query and the map costs O(n) memory once and then answers many queries.' +
+      'Absence is the second honest question, and the plain recursion cannot ask it. It returns the node it found, so on 1 2 3 4 the pair (1, 5) answers 1 although 5 is nowhere in the tree, and on every one of the 622 random trees tried with a half-absent pair it answered with the value that existed. The fix is either a presence check for both values before the walk or a count of how many of the pair the walk actually saw, and with it in place an absent pair answers nothing - which is what the parent map does by construction, since it cannot climb from a node it never found.' +
+      'The signature is the trap that is easiest to miss. A tree with repeated values has no well-defined answer for a pair of values, because being an ancestor is a relation between nodes. On 1 2 3 4 null null 4 the two 4s sit in opposite subtrees, so a value keyed walk asked for the pair (4, 4) reports the root, while a node keyed climb reports the first 4 it met. Asked for (2, 4) on the same tree, the value keyed recursion reports the root - both subtrees contain a 4 - and the climb reports 2, which is the truth. Over a random population whose labels came from an alphabet of four the two methods split on 23 of 991 repeated-value pairs. The move is to state the assumption before writing the code: unique values, or node references.' +
+      'Cost: one postorder visit per node, O(n) time, O(height) stack, and the tree gives up no ordering to exploit because it is not a search tree. On the 900 value-distinct random trees the recursion, the path comparison and the parent-map climb agreed on every pair of distinct values - zero disagreements over 15580 pairs - and the distance derived from the ancestor was never negative on a pair the map could answer and always nothing on a pair it could not.',
+    walkthrough:
+      'Perfect tree, cells 1 2 3 4 5 6 7, pair (4, 7). The search from 2 finds 4 on its left and nothing on its right, so 2 passes 4 upward; the search from 3 finds 7; at the root both sides report, so the root answers 1, and the distance is 4. Pair (1, 7) on the same tree: the root holds one of the pair and returns itself immediately, so the split rule never fires and the answer is 1 - the case that a two-sided rule reports as nothing. Half-absent pair (7, 999): the plain recursion reports 7, the presence-checked version reports nothing.',
+    commonMistake:
+      'Answering only when the two nodes are found in different subtrees, or trusting the result when one of the two values may be absent from the tree.',
+    whyWrong:
+      'A pair where one node is above the other has no split node, so the strict version returns nothing for 11450 of the 15580 pairs it is asked about, and the ordinary reading of the definition makes the higher node the answer. The absence half fails in the opposite direction: the plain recursion never says not found, it says the value it did find, so a pair (1, 5) on 1 2 3 4 answers 1 with no hint that 5 is not there.',
+    followUps:
+      [
+        'Answer many pairs on one tree. Which structure survives a single breadth-first pass, and what does each query then cost?',
+        'Return the distance between the two nodes. Which two depths and which one subtraction give it, and what does the perfect tree report for (4, 7)?',
+        'Suppose the tree is a binary search tree. What does the walk stop needing, and what does it stop being able to answer?',
+        'Both values may be absent. Add the check with as few extra passes as possible and say what it costs in the worst case.',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function lcaRecursive(root, a, b) {\n' +
+      '  if (root === null) return null;\n' +
+      '  if (root.val === a || root.val === b) return root.val;\n' +
+      '  const left = lcaRecursive(root.left, a, b);\n' +
+      '  const right = lcaRecursive(root.right, a, b);\n' +
+      '  if (left !== null && right !== null) return root.val;\n' +
+      '  return left !== null ? left : right;\n' +
+      '}\n' +
+      '\n' +
+      'function subtreeHas(node, target) {\n' +
+      '  if (node === null) return false;\n' +
+      '  if (node.val === target) return true;\n' +
+      '  return subtreeHas(node.left, target) || subtreeHas(node.right, target);\n' +
+      '}\n' +
+      '\n' +
+      'function lcaRequiresDifferentSides(root, a, b) {\n' +
+      '  if (root === null) return null;\n' +
+      '  const left = lcaRequiresDifferentSides(root.left, a, b);\n' +
+      '  const right = lcaRequiresDifferentSides(root.right, a, b);\n' +
+      '  if (left !== null || right !== null) return left !== null ? left : right;\n' +
+      '  const aLeft = subtreeHas(root.left, a);\n' +
+      '  const bLeft = subtreeHas(root.left, b);\n' +
+      '  const aRight = subtreeHas(root.right, a);\n' +
+      '  const bRight = subtreeHas(root.right, b);\n' +
+      '  if ((aLeft && bRight) || (aRight && bLeft)) return root.val;\n' +
+      '  return null;\n' +
+      '}\n' +
+      '\n' +
+      'function lcaByPaths(root, a, b) {\n' +
+      '  const pathArray = (node, target) => {\n' +
+      '    const held = [];\n' +
+      '    const walk = (cell) => {\n' +
+      '      if (cell === null) return false;\n' +
+      '      held.push(cell.val);\n' +
+      '      if (cell.val === target) return true;\n' +
+      '      if (walk(cell.left)) return true;\n' +
+      '      if (walk(cell.right)) return true;\n' +
+      '      held.pop();\n' +
+      '      return false;\n' +
+      '    };\n' +
+      '    return walk(node) ? held : [];\n' +
+      '  };\n' +
+      '  const pa = pathArray(root, a);\n' +
+      '  const pb = pathArray(root, b);\n' +
+      '  if (pa.length === 0 || pb.length === 0) return null;\n' +
+      '  let best = null;\n' +
+      '  for (let i = 0; i < pa.length && i < pb.length; i += 1) {\n' +
+      '    if (pa[i] !== pb[i]) break;\n' +
+      '    best = pa[i];\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}\n' +
+      '\n' +
+      'function parentMap(root) {\n' +
+      '  const parent = new Map();\n' +
+      '  if (root === null) return parent;\n' +
+      '  parent.set(root, null);\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node.left !== null) {\n' +
+      '      parent.set(node.left, node);\n' +
+      '      queue.push(node.left);\n' +
+      '    }\n' +
+      '    if (node.right !== null) {\n' +
+      '      parent.set(node.right, node);\n' +
+      '      queue.push(node.right);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return parent;\n' +
+      '}\n' +
+      '\n' +
+      'function findNode(root, target) {\n' +
+      '  const queue = root === null ? [] : [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node.val === target) return node;\n' +
+      '    if (node.left !== null) queue.push(node.left);\n' +
+      '    if (node.right !== null) queue.push(node.right);\n' +
+      '  }\n' +
+      '  return null;\n' +
+      '}\n' +
+      '\n' +
+      'function lcaByParentMap(root, a, b) {\n' +
+      '  const first = findNode(root, a);\n' +
+      '  const second = findNode(root, b);\n' +
+      '  if (first === null || second === null) return null;\n' +
+      '  const parent = parentMap(root);\n' +
+      '  const ancestors = new Set();\n' +
+      '  let walk = first;\n' +
+      '  while (walk !== null && walk !== undefined) {\n' +
+      '    ancestors.add(walk);\n' +
+      '    walk = parent.get(walk);\n' +
+      '  }\n' +
+      '  let climb = second;\n' +
+      '  while (climb !== null && climb !== undefined) {\n' +
+      '    if (ancestors.has(climb)) return climb.val;\n' +
+      '    climb = parent.get(climb);\n' +
+      '  }\n' +
+      '  return null;\n' +
+      '}\n' +
+      '\n' +
+      'function presentBoth(root, a, b) {\n' +
+      '  if (root === null) return false;\n' +
+      '  return subtreeHas(root, a) && subtreeHas(root, b);\n' +
+      '}\n' +
+      '\n' +
+      'function lcaWithPresenceCheck(root, a, b) {\n' +
+      '  if (!presentBoth(root, a, b)) return null;\n' +
+      '  return lcaRecursive(root, a, b);\n' +
+      '}\n' +
+      '\n' +
+      'function depthByMap(root, target) {\n' +
+      '  const parent = parentMap(root);\n' +
+      '  const node = findNode(root, target);\n' +
+      '  if (node === null) return -1;\n' +
+      '  let depth = 0;\n' +
+      '  let walk = parent.get(node);\n' +
+      '  while (walk !== null && walk !== undefined) {\n' +
+      '    depth += 1;\n' +
+      '    walk = parent.get(walk);\n' +
+      '  }\n' +
+      '  return depth;\n' +
+      '}\n' +
+      '\n' +
+      'function distanceBetween(root, a, b) {\n' +
+      '  const ancestor = lcaByParentMap(root, a, b);\n' +
+      '  if (ancestor === null) return -1;\n' +
+      '  return depthByMap(root, a) + depthByMap(root, b) - 2 * depthByMap(root, ancestor);\n' +
+      '}\n' +
+      '\n' +
+      'function isAncestorValue(root, a, b) {\n' +
+      '  const path = (target) => {\n' +
+      '    const held = [];\n' +
+      '    const walk = (cell) => {\n' +
+      '      if (cell === null) return false;\n' +
+      '      held.push(cell.val);\n' +
+      '      if (cell.val === target) return true;\n' +
+      '      if (walk(cell.left)) return true;\n' +
+      '      if (walk(cell.right)) return true;\n' +
+      '      held.pop();\n' +
+      '      return false;\n' +
+      '    };\n' +
+      '    return walk(root) ? held : [];\n' +
+      '  };\n' +
+      '  const pb = path(b);\n' +
+      '  return pb.indexOf(a) !== -1;\n' +
+      '}\n' +
+      '\n' +
+      'function lcaLine(root, a, b) {\n' +
+      '  return "pair=" + a + "," + b + " recursive=" + lcaRecursive(root, a, b) + " byPaths=" + lcaByPaths(root, a, b) + " byMap=" + lcaByParentMap(root, a, b) + " bothSides=" + lcaRequiresDifferentSides(root, a, b) + " checked=" + lcaWithPresenceCheck(root, a, b) + " distance=" + distanceBetween(root, a, b) + " nodes=" + nodeCount(root) + " tree=[" + serializeLevel(root) + "]";\n' +
+      '}',
+    modify: 'Take node references instead of values. Which implementation changes behaviour on 1 2 3 4 null null 4, and what does the pair (4, 4) mean afterwards?',
   },
 ];
 
