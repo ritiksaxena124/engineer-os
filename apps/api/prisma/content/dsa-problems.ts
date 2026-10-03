@@ -1709,6 +1709,34 @@ export const DSA_CONCEPTS = {
     terms: ['record on push is preorder', 'arrival is not completion', 'inorder writes after the left descent', 'postorder has no single pop moment', 'same walk, different line'],
     weight: 4,
   },
+  'dsa-one-stack-postorder-needs-the-finished-child': {
+    slug: 'dsa-one-stack-postorder-needs-the-finished-child',
+    name: 'One stack cannot say which child just finished, so the walk carries a previous pointer',
+    detail: 'Postorder records a node only after both subtrees are done, and a stack top that was reached twice looks identical both times. The extra variable - the node visited just before - is what distinguishes arriving from coming back from the left, and coming back from the left from coming back from the right. Drop it and the walk descends the same left spine again instead of returning, which is a loop, not a wrong listing.',
+    terms: ['arriving is not returning', 'previous node is the state', 'left done is not right done', 'drop the pointer and the walk re-descends', 'peak stays height shaped'],
+    weight: 4,
+  },
+  'dsa-stacked-state-markers-emit-all-three-orders': {
+    slug: 'dsa-stacked-state-markers-emit-all-three-orders',
+    name: 'Push the node with a number, and one walk records preorder, inorder and postorder',
+    detail: 'The recursive walk meets a node three times, so an explicit stack can carry the meeting number alongside the node and pop three entries per node instead of one. Order 1 records and schedules the left side, order 2 records and schedules the right, order 3 records only. The whole mechanism is push order: the marker for the next meeting has to sit under the child that must be finished first, so a marker pushed on top of its child writes the parent before its own left subtree.',
+    terms: ['node plus meeting number', 'three pops per node', 'marker sits under its child', 'one walk, three listings', 'push order is the schedule'],
+    weight: 4,
+  },
+  'dsa-height-is-the-longest-downward-path': {
+    slug: 'dsa-height-is-the-longest-downward-path',
+    name: 'Height is the deepest depth reached, so nulls and the counting convention decide the number',
+    detail: 'Height answers how far down the tree reaches, which makes it a maximum over both children - not the length of whichever path the walk happens to take first. The two conventions differ by exactly one: edges from the root gives an empty tree -1 and a single node 0, nodes counted gives 0 and 1. Neither is wrong, but mixing them puts an off-by-one in every balance, depth and width answer built on top.',
+    terms: ['maximum of both children', 'edges versus nodes', 'empty is minus one or zero', 'a single path is not the maximum', 'level order measures it too'],
+    weight: 3,
+  },
+  'dsa-balance-is-a-property-of-every-subtree': {
+    slug: 'dsa-balance-is-a-property-of-every-subtree',
+    name: 'Balanced means every subtree, so the check travels with the height',
+    detail: 'A root whose two children differ by one can still sit above a subtree that differs by three, so the test has to hold at every node, not at the top. The cheap version asks for the height at each node and pays for the same subtrees over and over. The fold returns height and worst imbalance together in one postorder pass, and a sentinel lets it stop early - which is the difference between a linear check and a height-times-n one.',
+    terms: ['holds at every subtree', 'root difference is not enough', 'carry height with the answer', 'sentinel lets the fold bail', 'recomputing heights costs'],
+    weight: 4,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -22371,6 +22399,801 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return hasTwoChildNode(root.left) || hasTwoChildNode(root.right);\n' +
       '}',
     modify: 'Rewrite the walk to print the postorder listing of the mirrored tree using the same two stacks and no extra reversal. Which two lines move?',
+  },
+  {
+    step: 13,
+    name: 'Postorder Traversal using 1 Stack',
+    difficulty: 'Hard',
+    topicSlug: TREES,
+    stem: 'List a binary tree in postorder using one stack and a constant number of extra variables, and name the state the stack cannot supply by itself.',
+    brief: 'Input: a binary tree. Output: the postorder listing from a single stack that walks with a previous pointer. Deliver the walk, its push count and peak, the behaviour when the pointer is dropped, and the buffered walks it replaces.',
+    concepts:
+      [
+        'dsa-one-stack-postorder-needs-the-finished-child',
+        'dsa-postorder-is-the-bottom-up-recording-time',
+        'dsa-stack-peak-is-path-plus-pending-siblings',
+        'dsa-tree-cells-carry-shape',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'One stack plus one variable: the node the walk visited just before. A node is finished only when both its children are, and the stack top looks identical whether the left side just ended or the node has only just been reached - so the walk compares the previous node with the top. If the top is the previous node or its parent, descend: left first, right only when there is no left. If the previous node was the top - left child, the right side is next, and the top is recordable when there is none. If the previous node was the right child, record and pop. ' +
+      'O(n) time, O(h) space: every node is pushed exactly once and the stack never holds more than height plus one entries.',
+    idealAnswer:
+      'Postorder is the only one of the three orders whose recording moment is not an event a stack produces on its own. Preorder records on arrival, which is a pop. Inorder records once the left descent is exhausted, which is also a pop, because the descent is the left side. Postorder records once both sides are exhausted, and a stack top that has just had its left subtree finished is the same object, with the same contents underneath it, as a stack top that has just been arrived at. Nothing inside the stack distinguishes the two. So the honest one-stack answer carries one extra variable, and the whole of this row is what that variable means. ' +
+      'Call it previous: the node the walk reached most recently, before the current top. Comparing it with the top gives three cases, and exactly one of them fires at every step. If previous is null, or the top is previous - parent, the walk is arriving, so it descends - left first, because left is the subtree that has to finish first, and right only where there is no left. If previous is the top - left child, the left side is done, so the right side is next when one exists and the top is ready to be recorded when it does not. If previous is the top - right child, both sides are done and the top is recorded and popped. Each node is pushed once and popped once: the push count is the node count, 7 on the perfect tree and 6 on the gap tree, and the peak is the depth of the deepest node plus one - 3 on the perfect tree with a height of 2, and 3 on the right chain 1, null, 2, null, 3, which is the bound met exactly. Across 900 randomly shaped trees the peak never exceeded height plus one and the push count never differed from the node count. ' +
+      'The reason this is asked after the two-stack row is the contrast in what each buys. The two-stack walk trades the previous pointer for memory: it buffers every node in the second stack, so it does twice the moves - 14 on the perfect tree against the 7 pushes here - and its extra space is the node count rather than the height. The reversed-mirrored-preorder identity needs no previous test either and agreed with the recursive walk on all 900 random trees, but it produces a listing built backwards: the unshift variant in this row is correct on every tree and moves every entry already written to make room for the next one, which is quadratic in a language where unshift copies. One stack with a pointer is the only version that is simultaneously linear, height-bounded in space and able to print as it goes. ' +
+      'Dropping the pointer does not produce a wrong listing - it produces no listing. Without it the walk cannot tell arriving from returning, so after recording a leaf it finds the parent still on top with its left child present, descends again, and re-records the same leaf. The guarded version in this row reports that as a stuck walk: it fails to terminate on 622 of the 900 random trees, and the 278 that do finish are the empty tree and the 99 single-node trees, where there is no child to descend into twice. A candidate who reports an iterative postorder that prints the same value forever has at least given a detectable failure; the more expensive outcome is the one that quietly returns a mirrored preorder. ' +
+      'Edges: the empty tree leaves the stack empty and prints nothing; a single node is pushed, found childless, recorded, and popped with a peak of 1; a chain - either direction - peaks at the full length of the chain, because the walk descends through it, so the height bound is tight rather than merely an upper limit.',
+    walkthrough:
+      'On the perfect tree the stack runs [1], arrives and descends to [1, 2], then [1, 2, 4]. Node 4 has no children, so it is recorded and popped, leaving top 2 with previous 4: 4 is the left child of 2, so the walk descends right to [1, 2, 5], records 5, pops, and now previous is 5, the right child of 2, so 2 is recorded. The listing so far is 4 5 2 with the stack back to [1] and previous 2, which is the left child of 1, so the same three steps run on the right side: 6, then 7, then 3, then 1 - giving 4 5 2 6 7 3 1 with a peak of 3 and 7 pushes. ' +
+      'On the gap tree the listing is 4 2 6 5 3 1 with a peak of 4 against a height of 3, because the descent down 1, 3, 5, 6 has nowhere to go but deeper.',
+    commonMistake:
+      'Writing the walk without the previous pointer - usually by popping and pushing right then left, which is the two-stack algorithm with its second stack missing - or recording the node when it is pushed rather than when both children are finished.',
+    whyWrong:
+      'Without the pointer there is no state that distinguishes arriving from returning, so the walk re-descends a left spine it has already finished and never terminates: guarded, it reports stuck on 622 of 900 random trees and prints a correct listing only on the empty tree and single nodes. Recording on push is the preorder listing again, and it is the same mistake the iterative inorder row makes - with the difference that inorder at least terminates.',
+    followUps:
+      [
+        'Replace the previous pointer with stack entries that carry a flag saying which child just finished. Which version is easier to get right under interview pressure, and how many entries does each hold at the peak?',
+        'Free every node of a tree after its children. Why is one-stack postorder the right shape for that job, and which reference does the walk have to keep while it releases the node above it?',
+        'Morris postorder reaches constant extra space by threading instead of stacking. Which recording moment does it use to print a finished subtree, and why does it print a run of right edges backwards?',
+        'Compare this walk against recursion on a chain of 100000 nodes. Both are height-bounded in entries - so which one actually survives in JavaScript, and which number has to be stated to answer?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function postorderRecursive(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  return [postorderRecursive(root.left), postorderRecursive(root.right), root.val].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function step(stack, previous) {\n' +
+      '  const current = stack[stack.length - 1];\n' +
+      '  if (previous === null || previous.left === current || previous.right === current) {\n' +
+      '    if (current.left !== null) return "descend";\n' +
+      '    if (current.right !== null) return "descend";\n' +
+      '    return "record";\n' +
+      '  }\n' +
+      '  if (previous === current.left) {\n' +
+      '    if (current.right !== null) return "descend";\n' +
+      '    return "record";\n' +
+      '  }\n' +
+      '  return "record";\n' +
+      '}\n' +
+      '\n' +
+      'function nextChild(stack, previous) {\n' +
+      '  const current = stack[stack.length - 1];\n' +
+      '  if (previous === null || previous.left === current || previous.right === current) {\n' +
+      '    if (current.left !== null) return current.left;\n' +
+      '    return current.right;\n' +
+      '  }\n' +
+      '  if (previous === current.left) return current.right;\n' +
+      '  return null;\n' +
+      '}\n' +
+      '\n' +
+      'function postorderOneStack(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const out = [];\n' +
+      '  const stack = [root];\n' +
+      '  let previous = null;\n' +
+      '  while (stack.length > 0) {\n' +
+      '    const current = stack[stack.length - 1];\n' +
+      '    if (step(stack, previous) === "record") {\n' +
+      '      out.push(String(stack.pop().val));\n' +
+      '    } else {\n' +
+      '      stack.push(nextChild(stack, previous));\n' +
+      '    }\n' +
+      '    previous = current;\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function postorderOneStackPeak(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  let peak = 0;\n' +
+      '  const stack = [root];\n' +
+      '  let previous = null;\n' +
+      '  while (stack.length > 0) {\n' +
+      '    const current = stack[stack.length - 1];\n' +
+      '    peak = Math.max(peak, stack.length);\n' +
+      '    if (step(stack, previous) === "record") stack.pop();\n' +
+      '    else stack.push(nextChild(stack, previous));\n' +
+      '    previous = current;\n' +
+      '  }\n' +
+      '  return peak;\n' +
+      '}\n' +
+      '\n' +
+      'function postorderOneStackPushes(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  let pushes = 1;\n' +
+      '  const stack = [root];\n' +
+      '  let previous = null;\n' +
+      '  while (stack.length > 0) {\n' +
+      '    const current = stack[stack.length - 1];\n' +
+      '    if (step(stack, previous) === "record") stack.pop();\n' +
+      '    else {\n' +
+      '      stack.push(nextChild(stack, previous));\n' +
+      '      pushes += 1;\n' +
+      '    }\n' +
+      '    previous = current;\n' +
+      '  }\n' +
+      '  return pushes;\n' +
+      '}\n' +
+      '\n' +
+      'function oneStackWalkLog(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const stack = [root];\n' +
+      '  let previous = null;\n' +
+      '  while (stack.length > 0) {\n' +
+      '    const current = stack[stack.length - 1];\n' +
+      '    if (step(stack, previous) === "record") {\n' +
+      '      stack.pop();\n' +
+      '      rows.push("record " + current.val + " stack " + (stack.length === 0 ? "empty" : stack.map((node) => node.val).join(",")));\n' +
+      '    } else {\n' +
+      '      stack.push(nextChild(stack, previous));\n' +
+      '      rows.push("descend " + current.val + " stack " + stack.map((node) => node.val).join(","));\n' +
+      '    }\n' +
+      '    previous = current;\n' +
+      '  }\n' +
+      '  return rows.join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function postorderOneStackWithoutPrev(root, limit) {\n' +
+      '  const out = [];\n' +
+      '  const stack = root === null ? [] : [root];\n' +
+      '  let steps = 0;\n' +
+      '  while (stack.length > 0 && steps < limit) {\n' +
+      '    steps += 1;\n' +
+      '    const current = stack[stack.length - 1];\n' +
+      '    if (current.left !== null) stack.push(current.left);\n' +
+      '    else if (current.right !== null) stack.push(current.right);\n' +
+      '    else out.push(String(stack.pop().val));\n' +
+      '  }\n' +
+      '  return { listing: out.join(" "), stuck: stack.length > 0 };\n' +
+      '}\n' +
+      '\n' +
+      'function postorderUnshift(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const out = [];\n' +
+      '  const stack = [root];\n' +
+      '  while (stack.length > 0) {\n' +
+      '    const node = stack.pop();\n' +
+      '    out.unshift(String(node.val));\n' +
+      '    if (node.left !== null) stack.push(node.left);\n' +
+      '    if (node.right !== null) stack.push(node.right);\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function mirroredPreorder(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  return [root.val, mirroredPreorder(root.right), mirroredPreorder(root.left)].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function reversed(text) {\n' +
+      '  return text === "" ? "" : text.split(" ").reverse().join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function postorderByReverseOfMirrored(root) {\n' +
+      '  return reversed(mirroredPreorder(root));\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}',
+    modify: 'Make the single-stack walk record only the leaves, in postorder, using the same previous pointer. Which of the three cases becomes the record condition, and what stops an internal node from being written?',
+  },
+  {
+    step: 13,
+    name: 'Preorder, Inorder, and Postorder in one traversal',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Produce all three depth-first listings of a binary tree from a single explicit walk, without running the traversal three times.',
+    brief: 'Input: a binary tree. Output: the preorder, inorder and postorder listings from one walk over node-and-meeting pairs. Deliver the walk, the counts that show each node is met three times, and the variant that pushes the next meeting on top of the child it has to wait for.',
+    concepts:
+      [
+        'dsa-stacked-state-markers-emit-all-three-orders',
+        'dsa-three-orders-one-walk',
+        'dsa-stack-order-decides-visit-order',
+        'dsa-tree-cells-carry-shape',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Iterate the recursion instead of the listing. The recursive walk meets every node three times - on arrival, once the left side is done, once both are - so the stack holds pairs of a node and a meeting number and pops three entries per node. Meeting 1 writes the preorder value, pushes the node back as meeting 2, then pushes the left child as meeting 1. Meeting 2 writes inorder, pushes meeting 3, then the right child. Meeting 3 writes postorder and schedules nothing. The ' +
+      'three listings are one walk read at three moments. O(n) time, O(h) stack, three pops and at most three pushes per node.',
+    idealAnswer:
+      'This row is the payoff of the claim the three easy traversal rows share: the orders are not three algorithms, they are one algorithm with three recording times. Doing them in a single pass makes the claim mechanical rather than rhetorical. There is exactly one walk here, and the only difference between the three outputs is which line runs when a particular entry pops. ' +
+      'The stack stops holding nodes and starts holding work. Each entry is either meet this node at stage 1, 2 or 3, and a node is pushed once as somebody - s child and rescheduled twice as its own later stages, so the pops come to exactly three times the node count - 21 on the perfect tree, 18 on the gap tree, 9 on a three node chain, 3 on a single node - and the pushes match the pops entry for entry. The peak is bounded by three entries per level rather than one: it reaches 3 on the perfect tree and 4 on the gap tree, and on 900 randomly shaped trees it never exceeded three times the height plus one. That is the honest price of the trick, and it is still height-shaped, so the walk scales the way the recursion does. ' +
+      'The scheduling rule is the same rule preorder and inorder fight about, now with an extra degree of freedom: whatever must happen later goes deeper. When meeting 1 has written the preorder value, two items are pending - the same node at stage 2, and its left child at stage 1 - and the child has to pop first, so the stage marker goes on the stack and the child goes on top of it. Push them the other way and the node writes its inorder value before its left subtree has been walked at all. That variant is nasty in exactly the way the mirrored-preorder bug is not: its preorder listing is still produced by the same three-stage machinery and stays correct, so a test that prints only the first listing passes. Measured against the three recursive walks it disagreed on the inorder listing for 609 of 900 random trees, on the postorder listing for 622, and - because pushing the child before the marker also mirrors the descent - on the preorder listing for 342. The correct order disagreed with none of the three, on any tree. ' +
+      'Why bother with one walk: everything that needs two or three orders at once wants this shape. Building a tree from an order pair, printing a tree with subtree summaries beside each value, computing size and height and balance together - all of them are the same three-stage stack with a different line at each stage. Once the entry carries a number, adding a stage that carries a child answer upward is the mechanism that turns this row into every bottom-up computation later in the step, which is why it sits immediately after the three single-order rows rather than at the end. ' +
+      'Edges: the empty tree pushes nothing and yields three empty listings; a single node pops three times and writes itself into all three listings; and on a chain that only turns right, preorder and inorder are the same string - 1 2 3 for 1, null, 2, null, 3 - and postorder is their reverse, so no listing pair on that shape can tell the two descending walks apart. What a chain does catch is the marker bug: its inorder is exactly the arrival order the broken walk prints, which is why all 112 right chains in the random set agree with the true inorder while the branched trees do not. The smallest tree that separates all three listings is a root with two children.',
+    walkthrough:
+      'On the perfect tree the stack starts as [[1, 1]]. That pop writes 1 into preorder, pushes [1, 2], then pushes [2, 1] on top of it, so the next pop is the left child: 2 is written into preorder, [2, 2] is pushed and [4, 1] on top of it. Node 4 is a leaf, so its three stages pop in order and it writes 4 into preorder, then 4 into inorder, then 4 into postorder, and the stack returns to [2, 2]. Popping that writes 2 into inorder and pushes [2, 3] with [5, 1] above it; 5 runs its three stages, then [2, 3] writes 2 into postorder. The first values are pre 1 2 4 5, in 4 2 5, post 4 5 2 - node 2 recorded at exactly the three moments the recursion would have met it. ' +
+      'Read the same walk on the gap tree and the three listings are 1 2 4 3 5 6, 2 4 1 6 5 3 and 4 2 6 5 3 1 from 18 pops.',
+    commonMistake:
+      'Running the three recursive walks one after another and calling the result one traversal, or pushing the stage marker on top of the child it is supposed to wait for.',
+    whyWrong:
+      'Three walks is three times the stack traffic and three chances to re-derive the same shape, and the row exists to show the walk is shared and only the recording differs. The marker-on-top ordering breaks the wait: the parent - s stage 2 pops before its left subtree is walked, so the inorder listing turns into an arrival-order listing that still contains every value exactly once - it disagreed with the true inorder on 609 of 900 random trees and agreed on the 112 chains, while printing nothing at all for the 179 empty trees, which is how a bug like that survives a hand-written suite.',
+    followUps:
+      [
+        'Add a stage that carries the size of each subtree upward instead of writing a value. Which listing becomes a list of subtree sizes, and where does the parent read the two child answers?',
+        'Print the three listings of a tree that is 100000 nodes deep using this walk. Which number decides whether it survives, and how does it compare with the recursion limit?',
+        'Construct the tree from its preorder and inorder listings. Why is the three-stage walk the natural way to check the reconstruction afterwards, and which two listings are enough to make the shape unique?',
+        'Do the same with four stacks, one per order, and no stage numbers. What does each walk have to recompute that the single three-stage walk computes once?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function preorder(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  return [root.val, preorder(root.left), preorder(root.right)].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function inorder(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  return [inorder(root.left), root.val, inorder(root.right)].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function postorder(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  return [postorder(root.left), postorder(root.right), root.val].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function ordersWalked(root, markerOnTop) {\n' +
+      '  const pre = [];\n' +
+      '  const mid = [];\n' +
+      '  const post = [];\n' +
+      '  const stack = root === null ? [] : [[root, 1]];\n' +
+      '  let pops = 0;\n' +
+      '  let pushes = root === null ? 0 : 1;\n' +
+      '  let peak = 0;\n' +
+      '  while (stack.length > 0) {\n' +
+      '    peak = Math.max(peak, stack.length);\n' +
+      '    const entry = stack.pop();\n' +
+      '    pops += 1;\n' +
+      '    const node = entry[0];\n' +
+      '    const meeting = entry[1];\n' +
+      '    if (meeting === 1) {\n' +
+      '      pre.push(String(node.val));\n' +
+      '      if (markerOnTop) {\n' +
+      '        if (node.left !== null) {\n' +
+      '          stack.push([node.left, 1]);\n' +
+      '          pushes += 1;\n' +
+      '        }\n' +
+      '        stack.push([node, 2]);\n' +
+      '        pushes += 1;\n' +
+      '      } else {\n' +
+      '        stack.push([node, 2]);\n' +
+      '        pushes += 1;\n' +
+      '        if (node.left !== null) {\n' +
+      '          stack.push([node.left, 1]);\n' +
+      '          pushes += 1;\n' +
+      '        }\n' +
+      '      }\n' +
+      '    } else if (meeting === 2) {\n' +
+      '      mid.push(String(node.val));\n' +
+      '      if (markerOnTop) {\n' +
+      '        if (node.right !== null) {\n' +
+      '          stack.push([node.right, 1]);\n' +
+      '          pushes += 1;\n' +
+      '        }\n' +
+      '        stack.push([node, 3]);\n' +
+      '        pushes += 1;\n' +
+      '      } else {\n' +
+      '        stack.push([node, 3]);\n' +
+      '        pushes += 1;\n' +
+      '        if (node.right !== null) {\n' +
+      '          stack.push([node.right, 1]);\n' +
+      '          pushes += 1;\n' +
+      '        }\n' +
+      '      }\n' +
+      '    } else {\n' +
+      '      post.push(String(node.val));\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return { pre: pre.join(" "), in: mid.join(" "), post: post.join(" "), pops: pops, pushes: pushes, peak: peak };\n' +
+      '}\n' +
+      '\n' +
+      'function allThreeOrders(root) {\n' +
+      '  return ordersWalked(root, false);\n' +
+      '}\n' +
+      '\n' +
+      'function allThreeOrdersMarkerOnTop(root) {\n' +
+      '  return ordersWalked(root, true);\n' +
+      '}\n' +
+      '\n' +
+      'function threeOrdersLine(root) {\n' +
+      '  const walked = allThreeOrders(root);\n' +
+      '  return "pre=" + walked.pre + " | in=" + walked.in + " | post=" + walked.post;\n' +
+      '}\n' +
+      '\n' +
+      'function popsForWalk(root) {\n' +
+      '  return allThreeOrders(root).pops;\n' +
+      '}\n' +
+      '\n' +
+      'function pushesForWalk(root) {\n' +
+      '  return allThreeOrders(root).pushes;\n' +
+      '}\n' +
+      '\n' +
+      'function stackPeakForWalk(root) {\n' +
+      '  return allThreeOrders(root).peak;\n' +
+      '}',
+    modify: 'Add a fourth stage that collects, for each node, the number of nodes in its subtree. Which stage gets the child answers, and which of the three listings already arrives in the order a bottom-up computation needs?',
+  },
+  {
+    step: 13,
+    name: 'Height of Binary Tree',
+    difficulty: 'Easy',
+    topicSlug: TREES,
+    stem: 'Return how far down a binary tree reaches, and say which convention the number is measured in.',
+    brief: 'Input: a binary tree given as level-order cells. Output: the height - the deepest depth reached - measured in edges from the root and in nodes on the longest path, plus the same number read from a level-order walk and from an explicit stack. Deliver both conventions, a readout that shows they differ by exactly one, and the measurement that proves the height is not the length of the left spine.',
+    concepts:
+      [
+        'dsa-height-is-the-longest-downward-path',
+        'dsa-postorder-is-the-bottom-up-recording-time',
+        'dsa-bfs-needs-the-band-boundary',
+        'dsa-tree-cells-carry-shape',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'One postorder fold: the height of a node is one more than the taller of its two children, and an empty child counts as -1 so a leaf lands on 0. Two lines - return -1 for null, return 1 plus the maximum of the two recursive calls otherwise - and the walk is done in O(n) time with O(h) call frames. ' +
+      'Whether the answer for a seven node perfect tree is 2 or 3 is pure convention: edges from the root makes the empty tree -1 and a single node 0, while counting the nodes on the longest path makes them 0 and 1. Pick one, state it out loud, and never mix the two inside one comparison.',
+    idealAnswer:
+      'Height is the only tree measurement that is this small and this frequently mis-stated, because there are two honest numbers and interviews accept either. The algorithm is the same either way: a node is as tall as its taller child plus one edge, so the recursion reads like the postorder fold from the previous rows - the answer is assembled after both children have returned, and the two-line function is exactly the recording time at which a subtree is finished. ' +
+      'The conventions differ by exactly one, always. Edges from the root: 2 on the perfect tree, 2 on a three node chain, 3 on the gap tree, 3 on the wide one, 0 on a single node. Nodes on the path: 3, 3, 4, 4, 1. Measured against each other on 900 randomly shaped trees the node count was height plus one every single time, including the 179 empty ones where the pair is 0 and -1. That is the whole difference, so the real skill is knowing which one the rest of the answer is using: a balance check that subtracts two heights is convention-free because the plus-one cancels, while a printed depth is not. ' +
+      'The same number falls out of two walks that have nothing in common with the recursion. Breadth-first order measures it as a count of bands minus one - the depth of the last band - and returns 2 on the perfect tree and 3 on the gap tree. An explicit stack carrying a node and its depth measures it as the largest depth ever pushed and agrees. Across the 900 random trees both iterative readings matched the recursive height on every tree, which is the point: height is a property of the shape, and three unrelated walks reading the same number is the strongest cheap evidence that the shape was actually walked. The longest path itself is a fourth reading: 1 3 5 6 on the gap tree and 1 2 5 7 on the wide one, and on every random tree its value count equals the node convention - so a path of length equal to the height would be off by one, and the bug is invisible unless the path is printed. ' +
+      'The cost is one visit per node plus one per empty child: 2n plus 1 calls, 15 on the perfect tree, 13 on the gap tree, 1 on the empty tree. Nothing is recomputed, which is why this fold is the substrate for everything after it in the step - diameter, balance, maximum path sum, burn time are all the same downward-then-upward answer with one more field carried along. What makes height expensive is calling it repeatedly, and that is a different row. ' +
+      'The trap the row exists for is the left spine. Walking cursor.left until null is O(h) and O(1) space and it returns the right answer on a perfect tree, on a left chain, and on any tree whose deepest route happens to go left every time. It under-reads the height on 327 of the 900 random trees - the first was 4 1 null 8 7 null null 9 2 null null 3 10 6 5, where the left spine is 2 edges and the tree reaches 5. The shallowest leaf is the mirror mistake: never deeper than the height (0 violations across the set) but strictly shallower on a lopsided tree, which is the 1 against 2 on the tree that serializes as 1 2 3 4. Edges worth stating: the empty tree is -1 under the edge convention and 0 under the node convention; a single node is 0 edges; the depth of the root is 0 and the depth of a value that is not in the tree is -1, so a missing node and a root are only distinguishable if the sentinel is chosen before the search starts.',
+    walkthrough:
+      'Take the gap tree, cells 1 2 3 null 4 5 null null null 6: root 1, left child 2 with only a right child 4, right child 3 with only a left child 5, and 5 carrying a left child 6. heightOf(1) waits on both sides. The left side reaches 4 through a null and a node: 4 is a leaf, so it is 1 + max(-1, -1) = 0, and 2 is 1 + max(-1, 0) = 1. ' +
+      'The right side is the deeper one: 6 is a leaf at 0, 5 is 1 + max(0, -1) = 1, and 3 is 1 + max(1, -1) = 2. Node 1 then takes the maximum - 2 - and adds one edge, giving 3, while levelsOf on the same tree adds the extra node and reports 4. Reading the bands instead: the queue starts with 1, then 2 and 3, then 4 and 5, then 6 - four bands, so depth 3. The deepest path 1 3 5 6 has four values, which is the node convention, and the left spine from 1 has only one edge.',
+    commonMistake:
+      'Reporting the length of the left spine, or quoting a height without its convention - and then comparing that node-count number against an edge-count number inside a balance or depth check.',
+    whyWrong:
+      'A spine is one route down, not the deepest one, and nothing about going left every time is guaranteed by a tree being roughly balanced; the walk that returns 2 edges on the tree 4 1 null 8 7 null null 9 2 null null 3 10 6 5 where the height is 5 is O(h) and looks like an optimisation, which is why it survives review until a lopsided tree shows up. ' +
+      'Mixing the conventions is quieter: each individual function is correct, and every difference between a node-counted height and an edge-counted height is exactly one, so a comparison that subtracts two heights of different conventions fails by one on every tree of the wrong shape rather than on none.',
+    followUps:
+      [
+        'Return the height of every node in one walk instead of only the root. Which listing of the tree does that produce, and at which of the three recording times does each node become answerable?',
+        'The tree is 100000 nodes in a single chain. Which of the readings in this row still works, which one throws, and what is the difference between the two failure modes?',
+        'Report the diameter - the longest path between any two nodes - from the same single fold. Why does the height alone not give it, and which two values have to travel upward together?',
+        'Count the nodes at the deepest level only. Does that need the height first, and how many passes over the shape does your answer make?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function levelsOf(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + Math.max(levelsOf(root.left), levelsOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function heightFromTheBands(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  let depth = -1;\n' +
+      '  let current = [root];\n' +
+      '  while (current.length > 0) {\n' +
+      '    depth += 1;\n' +
+      '    const following = [];\n' +
+      '    for (const node of current) {\n' +
+      '      if (node.left !== null) following.push(node.left);\n' +
+      '      if (node.right !== null) following.push(node.right);\n' +
+      '    }\n' +
+      '    current = following;\n' +
+      '  }\n' +
+      '  return depth;\n' +
+      '}\n' +
+      '\n' +
+      'function deepestDepthIterative(root) {\n' +
+      '  let best = -1;\n' +
+      '  const stack = root === null ? [] : [[root, 0]];\n' +
+      '  while (stack.length > 0) {\n' +
+      '    const entry = stack.pop();\n' +
+      '    if (entry[1] > best) best = entry[1];\n' +
+      '    if (entry[0].left !== null) stack.push([entry[0].left, entry[1] + 1]);\n' +
+      '    if (entry[0].right !== null) stack.push([entry[0].right, entry[1] + 1]);\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}\n' +
+      '\n' +
+      'function pathLength(text) {\n' +
+      '  return text === "" ? 0 : text.split(" ").length;\n' +
+      '}\n' +
+      '\n' +
+      'function deepestPath(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const left = deepestPath(root.left);\n' +
+      '  const right = deepestPath(root.right);\n' +
+      '  const deeper = pathLength(left) >= pathLength(right) ? left : right;\n' +
+      '  return [String(root.val), deeper].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function leftSpineHeight(root) {\n' +
+      '  let steps = -1;\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    steps += 1;\n' +
+      '    cursor = cursor.left;\n' +
+      '  }\n' +
+      '  return steps;\n' +
+      '}\n' +
+      '\n' +
+      'function shallowestLeafDepth(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  if (root.left === null && root.right === null) return 0;\n' +
+      '  if (root.left === null) return 1 + shallowestLeafDepth(root.right);\n' +
+      '  if (root.right === null) return 1 + shallowestLeafDepth(root.left);\n' +
+      '  return 1 + Math.min(shallowestLeafDepth(root.left), shallowestLeafDepth(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function depthOfNode(root, value) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  if (root.val === value) return 0;\n' +
+      '  const left = depthOfNode(root.left, value);\n' +
+      '  if (left !== -1) return 1 + left;\n' +
+      '  const right = depthOfNode(root.right, value);\n' +
+      '  if (right !== -1) return 1 + right;\n' +
+      '  return -1;\n' +
+      '}\n' +
+      '\n' +
+      'let heightFrames = 0;\n' +
+      '\n' +
+      'function countedHeight(root) {\n' +
+      '  heightFrames += 1;\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(countedHeight(root.left), countedHeight(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function framesForHeight(root) {\n' +
+      '  heightFrames = 0;\n' +
+      '  countedHeight(root);\n' +
+      '  return heightFrames;\n' +
+      '}\n' +
+      '\n' +
+      'function heightReadout(root) {\n' +
+      '  return "edges=" + heightOf(root) + " levels=" + levelsOf(root) + " bands=" + heightFromTheBands(root) + " stack=" + deepestDepthIterative(root) + " frames=" + framesForHeight(root) + " nodes=" + nodeCount(root);\n' +
+      '}',
+    modify: 'Report the height of every node in a single walk and the deepest band as a listing of values. Which line changes when the empty tree stops being -1 and starts being 0, and which of the other readings changes with it?',
+  },
+  {
+    step: 13,
+    name: 'Check if Binary Tree is Balanced',
+    difficulty: 'Easy',
+    topicSlug: TREES,
+    stem: 'Decide whether every node in a binary tree has two subtrees whose heights differ by at most one.',
+    brief: 'Input: a binary tree given as level-order cells. Output: whether the tree is height-balanced, computed once as a bottom-up fold and once as the naive per-node height comparison, with the call counts that separate them, the variant that only checks the root, and the largest single-node difference in the tree.',
+    concepts:
+      [
+        'dsa-balance-is-a-property-of-every-subtree',
+        'dsa-height-is-the-longest-downward-path',
+        'dsa-postorder-is-the-bottom-up-recording-time',
+        'dsa-tree-cells-carry-shape',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Balanced is a property of every subtree, so the test has to travel upward with the height: return -2 as a sentinel when a subtree is already broken, otherwise 1 plus the maximum of the two child answers, and the tree is balanced exactly when the root did not come back as -2. ' +
+      'That is one postorder fold, O(n) time and O(h) frames. The naive version asks the question at every node and calls height inside each test, so it recomputes the same subtrees all the way down - O(n times h), quadratic on a chain. Both return the same boolean on every tree; only the cost differs.',
+    idealAnswer:
+      'The definition has a quantifier in it - every node - and the first attempt almost always drops it. A root whose two children differ by one can sit above a subtree that differs by three. The gap tree is the counterexample: cells 1 2 3 null 4 5 null null null 6 give the root a left side of height 1 and a right side of height 2, so the difference at the top is exactly one and the root passes, while node 3 holds 5 which holds 6 with nothing beside it - a difference of two, so the tree is not balanced. Checking only the root returns true there, and it returns the wrong answer on 5 of 900 randomly grown trees, all of them failures buried below the top. ' +
+      'The fold is the fix: instead of asking a node for its height twice, ask each child for the pair it knows and combine once. A returned -2 means somewhere below, a difference exceeded one, and the parent propagates it without looking at the numbers, which is what lets the walk bail as soon as the answer is decided - 13 frames on the gap tree rather than the 24 the naive version spends there. The honest bound is 2n plus 1 frames - one visit per node and one per empty child - and that ceiling was never exceeded on any of the 900 trees, while the sentinel let the walk stop short of it on 461 of them. ' +
+      'The naive version is not wrong, just wasteful, and worth writing once so the cost is visible. On a perfect tree it spends 34 height calls against the fold with 15 frames; on the bst shape 34 against 15; on the wide tree 44 against 17; on the gap tree 24 against 13. Across the random set the naive walk was the costlier of the two on 379 trees and passed the 2n plus 1 ceiling of the fold on 73 of them, the largest gap being 23 calls on the twelve node tree 3 10 9 11 null 7 null null 6 2 null 5 null 4 null 1 12 8. The direction is not absolute and that is the interesting part: on a chain the naive test returns false after one comparison at the root and costs 6 calls while the fold spends 7, because the fold keeps descending until the sentinel surfaces. Just under two fifths of a random population is balanced here - 346 of 900 - so a bail-out that fires at the root is common, and the fold wins on the trees that pass, which are the ones a test suite with only failures will never measure. ' +
+      'When the question is how far from balanced a tree is rather than whether it is, replace the sentinel with a pair. balanceReport returns the height of the subtree together with the worst difference found anywhere inside it, in one pass with no magic value, and maxImbalance reads the second field: 0 on the perfect tree and the bst, 1 on the wide tree and on two nodes, 2 on the chain, on the left chain, on the gap tree and on the crooked shape. The boolean answer is then worst difference at most 1, and the two agree on all 900 trees - the sentinel version and the pair version are the same fold with different luggage. ' +
+      'Edges worth stating: the empty tree is balanced - the fold returns -1, the worst difference is 0, and no comparison was ever made; a single node is balanced with 3 frames against 2 naive height calls; two nodes are balanced with a difference of 1; and the whole test is convention-free, which is the one place in this part of the step where the edge-versus-node argument does not matter. Adding one to both sides of every comparison cancels, so a tree whose balance depends on which convention was used is a tree whose comparison was mis-coded somewhere else.',
+    walkthrough:
+      'Fold over the gap tree, cells 1 2 3 null 4 5 null null null 6. Node 1 asks its left child 2, which has no left child and a right child 4; 4 is a leaf - both children -1, difference 0, so it returns 0 - and 2 returns 1 with a difference of 1 against its empty side, which passes. ' +
+      'Then node 1 asks its right child 3. Going down: 6 is a leaf at 0, so 5 returns 1, and 3 has a left answer of 1 and an empty right side at -1. That difference is 2, so 3 returns -2 without a height, and node 1 propagates it. Thirteen frames, and the walk never needed the height of the whole tree. The naive version at node 1 computes the left height and the right height - which is every node below, twice over - then recurses into both children and computes those heights again, spending 24 calls to reach the same false.',
+    commonMistake:
+      'Comparing the two child heights at the root and calling that the balance test, or keeping the naive per-node version and describing it as linear because the height function inside it is linear.',
+    whyWrong:
+      'The quantifier is the definition: a local pass at the top says nothing about a subtree two levels down, and the gap tree fails exactly there - root difference 1, real answer false, and 5 of 900 random trees are shaped that way. ' +
+      'The naive version fails the other way: it is correct, and its cost is not the height function but the number of times the same subtrees are measured inside it, which is why it spends 44 calls on eight nodes where the fold spends 17. Quoting O(n) for it is quoting the complexity of a function that is called n times.',
+    followUps:
+      [
+        'Return the worst imbalance anywhere in the tree instead of a boolean, in one pass. Which field travels upward with the height, and what does a broken subtree return so a parent cannot mistake it for a height?',
+        'Balance is defined with a difference of at most one. Change the allowance to at most two and measure how many of the 900 random shapes that saves - which node decides the count for a tree?',
+        'The tree is a chain of 100000 nodes. What does the fold cost, what does the naive version cost, and which of the two can be told apart by a call counter rather than a stopwatch?',
+        'Use the same fold to answer whether the tree is complete - every band full except possibly the last. Why does height alone not settle it, and which two numbers per node do you need instead?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function rawHeight(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(rawHeight(root.left), rawHeight(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'let steps = 0;\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  steps += 1;\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function naiveCheck(root) {\n' +
+      '  if (root === null) return true;\n' +
+      '  if (Math.abs(heightOf(root.left) - heightOf(root.right)) > 1) return false;\n' +
+      '  return naiveCheck(root.left) && naiveCheck(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function isBalancedNaive(root) {\n' +
+      '  return naiveCheck(root);\n' +
+      '}\n' +
+      '\n' +
+      'function naiveSteps(root) {\n' +
+      '  steps = 0;\n' +
+      '  naiveCheck(root);\n' +
+      '  return steps;\n' +
+      '}\n' +
+      '\n' +
+      'const UNBALANCED = -2;\n' +
+      '\n' +
+      'function balancedHeight(root) {\n' +
+      '  steps += 1;\n' +
+      '  if (root === null) return -1;\n' +
+      '  const left = balancedHeight(root.left);\n' +
+      '  if (left === UNBALANCED) return UNBALANCED;\n' +
+      '  const right = balancedHeight(root.right);\n' +
+      '  if (right === UNBALANCED) return UNBALANCED;\n' +
+      '  if (Math.abs(left - right) > 1) return UNBALANCED;\n' +
+      '  return 1 + Math.max(left, right);\n' +
+      '}\n' +
+      '\n' +
+      'function isBalanced(root) {\n' +
+      '  return balancedHeight(root) !== UNBALANCED;\n' +
+      '}\n' +
+      '\n' +
+      'function foldSteps(root) {\n' +
+      '  steps = 0;\n' +
+      '  balancedHeight(root);\n' +
+      '  return steps;\n' +
+      '}\n' +
+      '\n' +
+      'function balanceReport(root) {\n' +
+      '  if (root === null) return { height: -1, worst: 0 };\n' +
+      '  const left = balanceReport(root.left);\n' +
+      '  const right = balanceReport(root.right);\n' +
+      '  return {\n' +
+      '    height: 1 + Math.max(left.height, right.height),\n' +
+      '    worst: Math.max(Math.abs(left.height - right.height), left.worst, right.worst),\n' +
+      '  };\n' +
+      '}\n' +
+      '\n' +
+      'function maxImbalance(root) {\n' +
+      '  return balanceReport(root).worst;\n' +
+      '}\n' +
+      '\n' +
+      'function reportHeight(root) {\n' +
+      '  return balanceReport(root).height;\n' +
+      '}\n' +
+      '\n' +
+      'function isBalancedAtRootOnly(root) {\n' +
+      '  if (root === null) return true;\n' +
+      '  return Math.abs(rawHeight(root.left) - rawHeight(root.right)) <= 1;\n' +
+      '}\n' +
+      '\n' +
+      'function balanceLine(root) {\n' +
+      '  return "balanced=" + isBalanced(root) + " foldFrames=" + foldSteps(root) + " naive=" + isBalancedNaive(root) + " naiveFrames=" + naiveSteps(root) + " worst=" + maxImbalance(root) + " nodes=" + nodeCount(root) + " height=" + rawHeight(root);\n' +
+      '}',
+    modify: 'Make the fold return the node whose subtree is the worst imbalance instead of a count. Which extra field has to travel upward with the height, and what does a subtree that already failed hand to its parent?',
   },
 ];
 
