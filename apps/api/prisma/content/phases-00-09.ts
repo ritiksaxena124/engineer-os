@@ -68,6 +68,7 @@ export const PHASES_00_09: PhaseSpec[] = [
       t('hash-tables', 'Hash Tables', 'buckets, collisions, load factor, why hashing is the default O(1) answer.', 'system-design', ['complexity-analysis'], ['js-values-references']),
       t('trees-and-indexes', 'Trees and B-Trees', 'balanced trees, B-tree fanout, why disk structures differ from memory ones.', 'postgresql', ['complexity-analysis'], ['memory-hierarchy']),
       t('heaps-priority-queues', 'Heaps and Priority Queues', 'scheduling, top-K, timers, delayed jobs.', 'system-design', ['trees-and-indexes'], ['event-loop']),
+      t('binary-trees', 'Binary Trees and Traversals', 'the three depth-first orders are one walk recorded at three moments, and the breadth-first order reads the same shape by depth instead.', 'javascript', ['recursion']),
       t('recursion', 'Recursion', 'stack frames, base cases, tail calls that never came, iterative rewrites.', 'javascript', ['closures-scope', 'how-programs-run']),
       t('sorting-algorithms', 'Comparison Sorting', 'selection, bubble, insertion, merge, quick: what each pass guarantees and what it costs.', 'javascript', ['array-techniques', 'recursion']),
       t('binary-search', 'Binary Search and Ordered Boundaries', 'halving a window, the index the loop exits on, and searching a matrix without flattening it.', 'javascript', ['array-techniques'], ['sorting-algorithms']),
