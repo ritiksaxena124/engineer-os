@@ -1576,6 +1576,34 @@ export const DSA_CONCEPTS = {
     terms: ['keep the flexible unit', 'larger note first', 'small notes serve every request', 'future demand decides', 'both branches stay correct'],
     weight: 3,
   },
+  'dsa-wildcard-is-an-interval-of-depths': {
+    slug: 'dsa-wildcard-is-an-interval-of-depths',
+    name: 'A character with three readings is one interval, not three branches',
+    detail: 'Track the lowest and highest nesting level any reading of the prefix can produce: an opener moves both, a closer moves both down, a wildcard widens the interval by one and drops the low end toward zero where it is floored, because a reading with negative openers does not exist. The string is valid exactly when zero is still inside the interval, and the walk dies the moment the high end goes negative.',
+    terms: ['interval of depths', 'floor the low at zero', 'high going negative is fatal', 'three readings one pass', 'zero inside decides'],
+    weight: 4,
+  },
+  'dsa-earliest-finish-leaves-the-most-room': {
+    slug: 'dsa-earliest-finish-leaves-the-most-room',
+    name: 'The interval that ends first is the one a schedule can afford',
+    detail: 'The exchange for maximum compatible intervals is on the end, not the start or the length: replacing the first chosen interval with one that finishes no later cannot make anything afterwards impossible, so sorting by finish and taking every interval that starts at or after the running end is optimal, while start order and length order both lose answers.',
+    terms: ['sort by finish', 'running end', 'exchange on the end', 'start order loses', 'length order loses'],
+    weight: 4,
+  },
+  'dsa-sweep-counts-the-live-set': {
+    slug: 'dsa-sweep-counts-the-live-set',
+    name: 'The peak is the size of the live set, not a count of overlapping pairs',
+    detail: 'Sweep a sorted timeline with one add and one remove per item and take the largest prefix: which pairs overlap never needs naming. Only the tie at a boundary matters - a release at the same instant as a claim frees the resource before it is wanted - so equal times must be ordered release first, or the peak is one too high.',
+    terms: ['live set', 'largest prefix', 'release before claim on a tie', 'pairs are never named', 'two sorted halves suffice'],
+    weight: 3,
+  },
+  'dsa-deadline-is-a-slot-not-a-duration': {
+    slug: 'dsa-deadline-is-a-slot-not-a-duration',
+    name: 'Buy the richest job first and give it the latest slot it may use',
+    detail: 'Unit-time jobs with deadlines compete for slots, so the greedy takes jobs by profit and places each in the highest free slot not past its deadline; the latest slot is the one that costs the schedule least, because every earlier deadline can still be served by the slots below it. Sorting by deadline answers whether a set fits, not what it is worth.',
+    terms: ['profit order', 'latest free slot', 'deadline caps the slot', 'slot is the resource', 'find-the-next-free'],
+    weight: 4,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -19150,6 +19178,711 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return [...states].join(" ");\n' +
       '}',
     modify: 'A customer arrives with a 50, the till also keeps 20s, and lemonade still costs 5. What does the state become, and which of the two payment shapes survives the generalisation?',
+  },
+  {
+    step: 12,
+    name: 'Valid Parenthesis String',
+    difficulty: 'Medium',
+    topicSlug: DP,
+    stem: 'Decide whether a string over (, ) and * is a balanced parenthesis sequence when every star can be read as an opener, a closer or nothing at all.',
+    brief: 'Input: a string of (, ) and *. Output: whether at least one reading of the stars balances. Deliver the two-integer interval walk, the reachable-depth set it stands in for, the index-stack match, and the two readings that reject valid strings.',
+    concepts: ['dsa-wildcard-is-an-interval-of-depths', 'dsa-parenthesis-depth', 'dsa-bracket-matching-stack', 'dsa-reachability-set', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Track the interval of open counts the prefix can still mean rather than a single count: an opener lifts both ends, a closer drops both, a star lifts the top ' +
+      'one and drops the bottom one, with the bottom floored at zero because a reading with negative openers does not exist. The string is valid exactly when the ' +
+      'top never goes negative and zero is still inside the interval at the end - one pass, two integers, O(1) space.',
+    idealAnswer:
+      'Three readings per star is a 3 to the n search, and the interval walk avoids it on one fact: the set of open counts a prefix can reach is always a ' +
+      'contiguous run, so its two ends carry everything the membership test needs. Enumerating the real set for every string over (, ) and * up to length 10 - ' +
+      '88572 strings - finds no gap in any of them and no disagreement with the two-end walk either. An opener moves both ends up, a closer moves both down, and ' +
+      'a star moves the top up and the bottom down, because its third reading - nothing - leaves both ends where they were and sits inside that move for free. ' +
+      'The floor on the bottom is the line the proof rests on. After a closer-heavy prefix the raw low goes negative and only the range from zero upward is real; ' +
+      'leaving it negative makes the closing low === 0 test wrong on 27516 of those 88572 strings, the first being (((())))* , which is valid and which the ' +
+      'unfloored walk rejects. Deciding each star as a closer while passing it is the same mistake in a louder form: ()* becomes false and 22731 strings of length ' +
+      'at most 10 are rejected. The top end carries the other test: the moment it drops below zero even the most generous reading has more closers than openers, ' +
+      'no suffix can undo that, and the walk returns false without reading the rest. ' +
+      'Two honest alternatives are worth writing once each. The depth-set walk keeps the real reachable set, drops the readings that go negative, and answers by ' +
+      'testing zero for membership; it is the referee the interval claim is checked against, and it costs O(n squared) time and O(n) space because the set holds ' +
+      'up to n counts. The index-stack walk is the second linear algorithm and the one that grows out of plain bracket matching: push opener and star positions, ' +
+      'on a closer pop an opener if one is there, else pop a star, else fail; then close every leftover opener with a star sitting after it. Positions rather than ' +
+      'counts are what that last step needs - in *( the opener and the star are one each and only their order says the star cannot close it, while (* is valid. ' +
+      'Both alternatives agree with the interval walk on all 88572 strings. Cost of the walk is O(n) time and O(1) space, which is the answer to the inevitable ' +
+      'why-not-a-DP-table: the interval is that table with the contiguity fact already spent, so a variant whose stars reach a disjoint set of depths has to go ' +
+      'back to the set. Edges: the empty string is valid, a lone star is valid, ( and )* are not, (*) is valid, and (*)) is valid only with the star read as an ' +
+      'opener, which is the four character case that sinks the stars-as-closers walk. 41492 of the enumerated strings have no reachable depth at all - the set ' +
+      'walk returns it empty and the interval walk returns false at the character that drives the top negative.',
+    walkthrough:
+      'Trace "(*))" as ranges: the opener gives 1..1, the star widens it to 0..2, the first closer pulls it to 0..1 and the second to 0..0, so zero is still in ' +
+      'the interval and the answer is true - the star was an opener and the string is (()). Trace "())": 1..1, then 0..0, then the third character drives the top ' +
+      'to -1 and the walk returns false before the rest is read. Trace "(*)": 1..1, 0..2, 0..1 - true, with the star read as nothing.',
+    commonMistake:
+      'Forgetting to floor the low end at zero, or committing to a reading for each star while walking and never revisiting it.',
+    whyWrong:
+      'Both forms reject valid strings and neither throws. Unfloored, the low end carries readings that cannot exist, so the final low === 0 test is wrong on ' +
+      '27516 of the 88572 strings up to length 10, (((())))* among them. Stars spent as closers are wrong on 22731 of the same set and on the four character ' +
+      'case (*)), whose only working reading is an opener.',
+    followUps:
+      [
+        'State the contiguity claim as an invariant over the reachable depth set. Which readings make it true, and name a variant where the reachable depths stop being a run.',
+        'Count the readings that balance the string instead of deciding whether one exists. What does the interval throw away that that question needs?',
+        'Make the index-stack walk return the positions it used, then write out one actual balanced reading of the string.',
+        'A third character may be an opener or nothing but never a closer. Which end of the interval stops moving, and which test changes?',
+      ],
+    solution:
+      'function checkValidString(s) {\n' +
+      '  let low = 0;\n' +
+      '  let high = 0;\n' +
+      '  for (const character of s) {\n' +
+      '    if (character === "(") {\n' +
+      '      low += 1;\n' +
+      '      high += 1;\n' +
+      '    } else if (character === ")") {\n' +
+      '      low -= 1;\n' +
+      '      high -= 1;\n' +
+      '    } else {\n' +
+      '      low -= 1;\n' +
+      '      high += 1;\n' +
+      '    }\n' +
+      '    if (high < 0) return false;\n' +
+      '    low = low < 0 ? 0 : low;\n' +
+      '  }\n' +
+      '  return low === 0;\n' +
+      '}\n' +
+      '\n' +
+      'function checkValidWithoutFloor(s) {\n' +
+      '  let low = 0;\n' +
+      '  let high = 0;\n' +
+      '  for (const character of s) {\n' +
+      '    if (character === "(") {\n' +
+      '      low += 1;\n' +
+      '      high += 1;\n' +
+      '    } else if (character === ")") {\n' +
+      '      low -= 1;\n' +
+      '      high -= 1;\n' +
+      '    } else {\n' +
+      '      low -= 1;\n' +
+      '      high += 1;\n' +
+      '    }\n' +
+      '    if (high < 0) return false;\n' +
+      '  }\n' +
+      '  return low === 0;\n' +
+      '}\n' +
+      '\n' +
+      'function checkValidStarsAsClosers(s) {\n' +
+      '  let depth = 0;\n' +
+      '  for (const character of s) {\n' +
+      '    depth += character === "(" ? 1 : -1;\n' +
+      '    if (depth < 0) return false;\n' +
+      '  }\n' +
+      '  return depth === 0;\n' +
+      '}\n' +
+      '\n' +
+      'function rangeTrace(s) {\n' +
+      '  const rows = [];\n' +
+      '  let low = 0;\n' +
+      '  let high = 0;\n' +
+      '  for (const character of s) {\n' +
+      '    if (character === "(") {\n' +
+      '      low += 1;\n' +
+      '      high += 1;\n' +
+      '    } else if (character === ")") {\n' +
+      '      low -= 1;\n' +
+      '      high -= 1;\n' +
+      '    } else {\n' +
+      '      low -= 1;\n' +
+      '      high += 1;\n' +
+      '    }\n' +
+      '    if (high < 0) {\n' +
+      '      rows.push(character + " dead");\n' +
+      '      break;\n' +
+      '    }\n' +
+      '    low = low < 0 ? 0 : low;\n' +
+      '    rows.push(character + " " + low + ".." + high);\n' +
+      '  }\n' +
+      '  return rows.join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function reachableDepths(s) {\n' +
+      '  let depths = new Set([0]);\n' +
+      '  for (const character of s) {\n' +
+      '    const options = character === "(" ? [1] : character === ")" ? [-1] : [-1, 0, 1];\n' +
+      '    const next = new Set();\n' +
+      '    for (const depth of depths) {\n' +
+      '      for (const option of options) {\n' +
+      '        if (depth + option >= 0) next.add(depth + option);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    depths = next;\n' +
+      '  }\n' +
+      '  return [...depths].sort((first, second) => first - second);\n' +
+      '}\n' +
+      '\n' +
+      'function checkValidByDepths(s) {\n' +
+      '  return reachableDepths(s).includes(0);\n' +
+      '}\n' +
+      '\n' +
+      'function checkValidByStacks(s) {\n' +
+      '  const open = [];\n' +
+      '  const star = [];\n' +
+      '  for (let index = 0; index < s.length; index += 1) {\n' +
+      '    if (s[index] === "(") open.push(index);\n' +
+      '    else if (s[index] === "*") star.push(index);\n' +
+      '    else if (open.length > 0) open.pop();\n' +
+      '    else if (star.length > 0) star.pop();\n' +
+      '    else return false;\n' +
+      '  }\n' +
+      '  while (open.length > 0 && star.length > 0) {\n' +
+      '    if (star[star.length - 1] > open[open.length - 1]) {\n' +
+      '      open.pop();\n' +
+      '      star.pop();\n' +
+      '    } else {\n' +
+      '      return false;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return open.length === 0;\n' +
+      '}',
+    modify: 'A star may be read as an opener or as nothing, never as a closer. Which end of the interval stops moving, and does the closing test stay low === 0?',
+  },
+  {
+    step: 12,
+    name: 'N meetings in one room',
+    difficulty: 'Medium',
+    topicSlug: DP,
+    stem: 'Count the largest number of meetings one room can host when a meeting that ends at time t leaves the room free for a meeting that starts at t.',
+    brief: 'Input: parallel start and end arrays. Output: the maximum number of meetings that fit without overlapping, half-open at both ends. Deliver the finish-order walk, the two orderings that lose meetings, the back-to-back boundary, the bitmask referee, and the index bookkeeping a count does not need.',
+    concepts: ['dsa-earliest-finish-leaves-the-most-room', 'dsa-index-order-loss', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Sort the meetings by end time and walk them with a running end: every meeting that starts at or after that end is taken and moves it. The exchange is on ' +
+      'the finish, so the earliest ending meeting is always affordable, while start order and duration order both lose answers - they report 2 and 3 where the ' +
+      'sample six meetings allow 4.',
+    idealAnswer:
+      'The order is the whole problem, and the exchange puts it on the end: take the meeting that finishes first, then every meeting that starts at or after the ' +
+      'running end. If an optimal schedule opens with some other meeting, swapping in the earliest finisher keeps every later meeting possible, because the room ' +
+      'is free no later than it was. Sorting by start is the intuitive wrong answer - on the sample six it takes the 0 to 6 meeting first and reports 2 where the ' +
+      'answer is 4, and across 600 random sets it loses on 70, the first being starts 6,4,5,2,13,13,11 against ends 10,6,13,7,18,16,13, where it says 3 and the ' +
+      'answer is 4. Duration order loses more often still, on 332 of the same 600, and reports 1 instead of 3 for starts 4,9,14,6,5 against ends 6,11,15,10,12, ' +
+      'because a short meeting parked in the middle of the day blocks the two longer ones on either side of it. ' +
+      'Two conventions are worth stating out loud since each is one character. The test start >= freeAt makes the interval half-open, so a meeting ending at 1 ' +
+      'and one starting at 1 share the room and 0-1 with 1-2 gives 2; tightening it to > refuses every back-to-back pair, answers 1 for that pair instead of 2, and disagrees with the walk on 181 of the 600 random sets below. The tie-break among equal ' +
+      'ends only bites once zero-length meetings exist: starts 5,9 against ends 9,9 gives 2 when the earlier start is considered first, since the 5 to 9 meeting ' +
+      'frees the room exactly when the instant meeting wants it, and 1 in the other order - so end then start is what makes the count stable. Counting overlapping ' +
+      'pairs is a different question entirely: the sample six has 6 overlapping pairs and hosts 4 meetings, and a pair count never names which meetings to run. ' +
+      'The subset search is the referee worth writing once - enumerate, test pairwise non-overlap with the same half-open comparison, keep the largest - and it ' +
+      'agrees with the walk on all 600 random sets and on every hand case here. Naming the meetings needs the original index carried through the sort ' +
+      '(0,1,3,4 on the sample), which is the bookkeeping a plain count does not need and the thing that is silently lost when parallel arrays are zipped into ' +
+      'pairs and then sorted. Edges: no meetings answer 0, one meeting answers 1 including the degenerate start 0 end 0, two identical 1 to 2 meetings answer 1, ' +
+      'and three meetings all starting at 0 with ends 1,2,3 answer 1 because the walk takes the earliest ender and every other starts before the room is free. ' +
+      'Cost is n log n for the sort plus one linear pass and O(1) running state, against 2 to the n subsets for the referee.',
+    walkthrough:
+      'The sample six sorted by end walks as take 0(1-2), take 1(3-4), skip 2(0-6) which starts before the room is free at 4, take 3(5-7), skip 5(5-9) which ' +
+      'starts before 7, take 4(8-9) - four meetings, and the brute force agrees. Add a seventh meeting running 0 to 1 and the same walk opens with take 6(0-1), ' +
+      'take 0(1-2) and reaches 5.',
+    commonMistake:
+      'Ordering by start time or by duration instead of by end time, or refusing a meeting that starts exactly when the previous one ends.',
+    whyWrong:
+      'Both lose meetings and neither throws. Start order reports 2 where the answer is 4 on the sample six, and 3 instead of 4 on 70 of 600 random sets; ' +
+      'duration order reports 3 instead of 4 there and loses on 332 of the same 600. The strict comparison reports 1 instead of 2 for the back-to-back pair 0-1 ' +
+      'and 1-2, and 1 instead of 2 for 5-9 together with the zero-length 9-9.',
+    followUps:
+      [
+        'The room now needs ten minutes between meetings to reset. Which comparison changes, and does the sort key change with it?',
+        'Two rooms are available and each meeting must be named with the room it ran in. What structure does that need that the count does not?',
+        'Meetings arrive as a stream and every accept or refuse decision is final. Is any greedy still optimal, and what does refusing cost?',
+        'Maximise the total hours hosted instead of the number of meetings. Does end order still work, and what replaces the running end?',
+      ],
+    solution:
+      'function orderedByEnd(start, end) {\n' +
+      '  return start\n' +
+      '    .map((value, index) => ({ index, start: value, end: end[index] }))\n' +
+      '    .sort((first, second) => first.end - second.end || first.start - second.start);\n' +
+      '}\n' +
+      '\n' +
+      'function maxMeetings(start, end) {\n' +
+      '  let freeAt = -Infinity;\n' +
+      '  let taken = 0;\n' +
+      '  for (const meeting of orderedByEnd(start, end)) {\n' +
+      '    if (meeting.start >= freeAt) {\n' +
+      '      taken += 1;\n' +
+      '      freeAt = meeting.end;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return taken;\n' +
+      '}\n' +
+      '\n' +
+      'function selectedMeetings(start, end) {\n' +
+      '  let freeAt = -Infinity;\n' +
+      '  const chosen = [];\n' +
+      '  for (const meeting of orderedByEnd(start, end)) {\n' +
+      '    if (meeting.start >= freeAt) {\n' +
+      '      chosen.push(meeting.index);\n' +
+      '      freeAt = meeting.end;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return chosen;\n' +
+      '}\n' +
+      '\n' +
+      'function meetingLog(start, end) {\n' +
+      '  let freeAt = -Infinity;\n' +
+      '  const rows = [];\n' +
+      '  for (const meeting of orderedByEnd(start, end)) {\n' +
+      '    const label = meeting.index + "(" + meeting.start + "-" + meeting.end + ")";\n' +
+      '    if (meeting.start >= freeAt) {\n' +
+      '      rows.push("take " + label);\n' +
+      '      freeAt = meeting.end;\n' +
+      '    } else {\n' +
+      '      rows.push("skip " + label + " starts before free " + freeAt);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return rows.join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function maxMeetingsByStart(start, end) {\n' +
+      '  const ordered = start\n' +
+      '    .map((value, index) => ({ index, start: value, end: end[index] }))\n' +
+      '    .sort((first, second) => first.start - second.start || first.end - second.end);\n' +
+      '  let freeAt = -Infinity;\n' +
+      '  let taken = 0;\n' +
+      '  for (const meeting of ordered) {\n' +
+      '    if (meeting.start >= freeAt) {\n' +
+      '      taken += 1;\n' +
+      '      freeAt = meeting.end;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return taken;\n' +
+      '}\n' +
+      '\n' +
+      'function maxMeetingsByShortest(start, end) {\n' +
+      '  const ordered = start\n' +
+      '    .map((value, index) => ({ index, start: value, end: end[index], length: end[index] - value }))\n' +
+      '    .sort((first, second) => first.length - second.length || first.end - second.end);\n' +
+      '  let freeAt = -Infinity;\n' +
+      '  let taken = 0;\n' +
+      '  for (const meeting of ordered) {\n' +
+      '    if (meeting.start >= freeAt) {\n' +
+      '      taken += 1;\n' +
+      '      freeAt = meeting.end;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return taken;\n' +
+      '}\n' +
+      '\n' +
+      'function maxMeetingsStrictTouch(start, end) {\n' +
+      '  let freeAt = -Infinity;\n' +
+      '  let taken = 0;\n' +
+      '  for (const meeting of orderedByEnd(start, end)) {\n' +
+      '    if (meeting.start > freeAt) {\n' +
+      '      taken += 1;\n' +
+      '      freeAt = meeting.end;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return taken;\n' +
+      '}\n' +
+      '\n' +
+      'function maxMeetingsBrute(start, end) {\n' +
+      '  const n = start.length;\n' +
+      '  let best = 0;\n' +
+      '  for (let mask = 0; mask < (1 << n); mask += 1) {\n' +
+      '    const chosen = [];\n' +
+      '    for (let index = 0; index < n; index += 1) if (mask & (1 << index)) chosen.push(index);\n' +
+      '    let fits = true;\n' +
+      '    for (let i = 0; i < chosen.length && fits; i += 1) {\n' +
+      '      for (let j = i + 1; j < chosen.length; j += 1) {\n' +
+      '        if (start[chosen[i]] < end[chosen[j]] && start[chosen[j]] < end[chosen[i]]) {\n' +
+      '          fits = false;\n' +
+      '          break;\n' +
+      '        }\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (fits && chosen.length > best) best = chosen.length;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}\n' +
+      '\n' +
+      'function overlappingPairs(start, end) {\n' +
+      '  let pairs = 0;\n' +
+      '  for (let i = 0; i < start.length; i += 1) {\n' +
+      '    for (let j = i + 1; j < start.length; j += 1) {\n' +
+      '      if (start[i] < end[j] && start[j] < end[i]) pairs += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return pairs;\n' +
+      '}',
+    modify: 'Each meeting now carries a profit and the room is judged on total value rather than the number of meetings hosted. Which order stops being enough, and what replaces the running end?',
+  },
+  {
+    step: 12,
+    name: 'Minimum platforms required for a railway',
+    difficulty: 'Medium',
+    topicSlug: DP,
+    stem: 'Given the arrival and departure times of trains at a station, find the fewest platforms it needs so that no train ever waits for one.',
+    brief: 'Input: parallel arrival and departure arrays written as HHMM clock readings. Output: the largest number of trains at the station in one instant. Deliver the two-sorted-halves sweep, the min-heap version that keeps the pairing, the quadratic referee, the release-tie that changes the answer, and the arithmetic trap in the clock format.',
+    concepts: ['dsa-sweep-counts-the-live-set', 'dsa-interval-sweep', 'dsa-tie-broken-on-one-side', 'dsa-sort-then-two-pointer', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Sort arrivals and departures separately and sweep the two halves: the next event either frees a platform - a departure at or before the next arrival - or ' +
+      'wants one, and the largest live count reached is the answer. Two sorts, one linear pass, and O(1) running state beyond the two copies.',
+    idealAnswer:
+      'The answer is the size of the live set, not a count of overlapping pairs: the sample timetable has 4 overlapping pairs and needs 3 platforms, and a pair ' +
+      'count never says how many trains sit at the station together. The sweep reads the live set off two sorted halves without pairing each arrival to its own ' +
+      'departure, which is the saving move - at any instant only how many trains have come and how many have gone matter. Since a train never departs before it ' +
+      'arrives, the release pointer cannot legitimately pass the claim pointer, and the gone < train guard is there for exactly the case where it would: a row ' +
+      'whose departure equals its arrival, which would otherwise free a platform before claiming it. ' +
+      'Only the tie at a boundary is a real decision. A train leaving at 1000 frees the platform for a train arriving at 1000, so 900-1000 together with 1000-1100 ' +
+      'needs 1 platform, and the same reading holds for 900-940 with 940-1000; changing the release test from <= to < makes both answer 2, and on an hour grid, ' +
+      'where claims and releases coincide constantly, the strict walk differs from the sweep on 164 of 700 random timetables - the first being arrivals ' +
+      '1300,300,900,2200,1900,1200,1600,1200 against departures 1400,400,1100,2300,2000,1400,1700,1300, where 2 platforms suffice and the strict walk asks for 3. ' +
+      'Read as an event sort rather than two halves, that is the same rule stated as ordering: at an equal timestamp the release has to be processed first, or ' +
+      'the peak is one too high. ' +
+      'The heap version is the online one and costs the insight the sweep gets free: pair each arrival with its own departure, walk trains in arrival order, pop ' +
+      'every departure at or before the current arrival, push the current one, and take the largest heap size. It needs the pairing, and it is the version to ' +
+      'extend when the question wants to know which platform each train stood on. The quadratic referee counts, for each arrival instant, how many trains are ' +
+      'present there - arrived at or before it and departing strictly after - and it agrees with the sweep on all 700 random timetables, as does the heap version. ' +
+      'The clock format is where the real bugs live: these readings are not minutes, so 950 plus 40 is 990 while the time is 1030, and comparisons still sort ' +
+      'correctly as integers only while the minutes stay below 60. A 40 minute hold past 950 recorded as 990 sorts before every 10xx arrival, so the sweep frees ' +
+      'the platform early and 900-1030 with 1000-1100 reports 1 platform where the honest timetable says 2. Edges: no trains answer 0, one train answers 1, two ' +
+      'trains both 100 to 200 answer 2, two rows of 100 to 100 answer 1 with the guard and 2 without it, and cost is n log n plus n with O(1) extra state for the ' +
+      'sweep against the same asymptotics with O(n) state for the heap.',
+    walkthrough:
+      'The sample sweep walks claim 900 to 1 live, free 910 to 0, claim 940 to 1, claim 950 to 2, claim 1100 to 3, free 1120 to 2, free 1130 to 1, free 1200 to ' +
+      '0, claim 1500 to 1, claim 1800 to 2, and the peak is 3 - which is also what the heap version and the quadratic count return. The same six trains produce 4 ' +
+      'overlapping pairs, and no pair count names a platform requirement.',
+    commonMistake:
+      'Releasing a platform only when the departure is strictly earlier than the next arrival, or doing elapsed-time arithmetic directly on HHMM readings.',
+    whyWrong:
+      'Both give a wrong number and neither throws. The strict release overcounts: 2 instead of 1 for 900-1000 with 1000-1100, 3 instead of 2 on the first fuzz ' +
+      'counterexample, and it differs from the sweep on 164 of 700 random timetables. Clock arithmetic undercounts instead: holding a train 40 minutes past 950 ' +
+      'and writing 990 makes the sweep free that platform before 1000, so 900-1030 with 1000-1100 answers 1 where the true answer is 2 - the platform a train ' +
+      'actually needs is the one it never got.',
+    followUps:
+      [
+        'Name the platform number each train stands on and reuse it when the train leaves. What does the sweep have to remember that the count throws away, and what does the heap version give you for free?',
+        'The station has k platforms and a train that finds none is cancelled. Which instant decides the answer, and does the greedy change at all?',
+        'Timetables arrive as a stream that cannot be sorted. What structure replaces the two sorted halves, and what does each update cost?',
+        'Times are bounded by a day. Which sort disappears once events are bucketed by minute, and what does the sweep become?',
+      ],
+    solution:
+      'function minPlatforms(arrivals, departures) {\n' +
+      '  const inOrder = arrivals.slice().sort((first, second) => first - second);\n' +
+      '  const outOrder = departures.slice().sort((first, second) => first - second);\n' +
+      '  let live = 0;\n' +
+      '  let peak = 0;\n' +
+      '  let train = 0;\n' +
+      '  let gone = 0;\n' +
+      '  while (train < inOrder.length) {\n' +
+      '    if (gone < train && outOrder[gone] <= inOrder[train]) {\n' +
+      '      live -= 1;\n' +
+      '      gone += 1;\n' +
+      '    } else {\n' +
+      '      live += 1;\n' +
+      '      if (live > peak) peak = live;\n' +
+      '      train += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return peak;\n' +
+      '}\n' +
+      '\n' +
+      'function minPlatformsStrictOnTie(arrivals, departures) {\n' +
+      '  const inOrder = arrivals.slice().sort((first, second) => first - second);\n' +
+      '  const outOrder = departures.slice().sort((first, second) => first - second);\n' +
+      '  let live = 0;\n' +
+      '  let peak = 0;\n' +
+      '  let train = 0;\n' +
+      '  let gone = 0;\n' +
+      '  while (train < inOrder.length) {\n' +
+      '    if (gone < train && outOrder[gone] < inOrder[train]) {\n' +
+      '      live -= 1;\n' +
+      '      gone += 1;\n' +
+      '    } else {\n' +
+      '      live += 1;\n' +
+      '      if (live > peak) peak = live;\n' +
+      '      train += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return peak;\n' +
+      '}\n' +
+      '\n' +
+      'function platformSweep(arrivals, departures) {\n' +
+      '  const inOrder = arrivals.slice().sort((first, second) => first - second);\n' +
+      '  const outOrder = departures.slice().sort((first, second) => first - second);\n' +
+      '  const rows = [];\n' +
+      '  let live = 0;\n' +
+      '  let peak = 0;\n' +
+      '  let train = 0;\n' +
+      '  let gone = 0;\n' +
+      '  while (train < inOrder.length) {\n' +
+      '    if (gone < train && outOrder[gone] <= inOrder[train]) {\n' +
+      '      live -= 1;\n' +
+      '      gone += 1;\n' +
+      '      rows.push("free " + outOrder[gone - 1] + " -> " + live);\n' +
+      '    } else {\n' +
+      '      live += 1;\n' +
+      '      if (live > peak) peak = live;\n' +
+      '      train += 1;\n' +
+      '      rows.push("claim " + inOrder[train - 1] + " -> " + live);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return rows.join(" | ") + " | peak " + peak;\n' +
+      '}\n' +
+      '\n' +
+      'function heapPushMin(heap, value) {\n' +
+      '  heap.push(value);\n' +
+      '  let index = heap.length - 1;\n' +
+      '  while (index > 0) {\n' +
+      '    const parent = (index - 1) >> 1;\n' +
+      '    if (heap[parent] <= heap[index]) break;\n' +
+      '    const hold = heap[parent];\n' +
+      '    heap[parent] = heap[index];\n' +
+      '    heap[index] = hold;\n' +
+      '    index = parent;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function heapPopMin(heap) {\n' +
+      '  const top = heap[0];\n' +
+      '  const last = heap.pop();\n' +
+      '  if (heap.length > 0) {\n' +
+      '    heap[0] = last;\n' +
+      '    let index = 0;\n' +
+      '    for (;;) {\n' +
+      '      const left = 2 * index + 1;\n' +
+      '      const right = left + 1;\n' +
+      '      let small = index;\n' +
+      '      if (left < heap.length && heap[left] < heap[small]) small = left;\n' +
+      '      if (right < heap.length && heap[right] < heap[small]) small = right;\n' +
+      '      if (small === index) break;\n' +
+      '      const hold = heap[small];\n' +
+      '      heap[small] = heap[index];\n' +
+      '      heap[index] = hold;\n' +
+      '      index = small;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return top;\n' +
+      '}\n' +
+      '\n' +
+      'function minPlatformsByHeap(arrivals, departures) {\n' +
+      '  const trains = arrivals\n' +
+      '    .map((value, index) => ({ arrival: value, departure: departures[index] }))\n' +
+      '    .sort((first, second) => first.arrival - second.arrival || first.departure - second.departure);\n' +
+      '  const leaving = [];\n' +
+      '  let peak = 0;\n' +
+      '  for (const train of trains) {\n' +
+      '    while (leaving.length > 0 && leaving[0] <= train.arrival) heapPopMin(leaving);\n' +
+      '    heapPushMin(leaving, train.departure);\n' +
+      '    if (leaving.length > peak) peak = leaving.length;\n' +
+      '  }\n' +
+      '  return peak;\n' +
+      '}\n' +
+      '\n' +
+      'function platformsBrute(arrivals, departures) {\n' +
+      '  let peak = 0;\n' +
+      '  for (let index = 0; index < arrivals.length; index += 1) {\n' +
+      '    let live = 0;\n' +
+      '    for (let other = 0; other < arrivals.length; other += 1) {\n' +
+      '      if (arrivals[other] <= arrivals[index] && departures[other] > arrivals[index]) live += 1;\n' +
+      '    }\n' +
+      '    if (live > peak) peak = live;\n' +
+      '  }\n' +
+      '  return peak;\n' +
+      '}\n' +
+      '\n' +
+      'function overlappingPairs(arrivals, departures) {\n' +
+      '  let pairs = 0;\n' +
+      '  for (let i = 0; i < arrivals.length; i += 1) {\n' +
+      '    for (let j = i + 1; j < arrivals.length; j += 1) {\n' +
+      '      if (arrivals[i] < departures[j] && arrivals[j] < departures[i]) pairs += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return pairs;\n' +
+      '}\n' +
+      '\n' +
+      'function toMinutes(hhmm) {\n' +
+      '  return Math.floor(hhmm / 100) * 60 + (hhmm % 100);\n' +
+      '}\n' +
+      '\n' +
+      'function toHHMM(minutes) {\n' +
+      '  return Math.floor(minutes / 60) * 100 + (minutes % 60);\n' +
+      '}',
+    modify: 'A platform now needs five clear minutes before it can take the next train. Which comparison gains the margin, and what do 900-1000 with 1000-1100 and the 940 crossing become?',
+  },
+  {
+    step: 12,
+    name: 'Job Sequencing Problem',
+    difficulty: 'Medium',
+    topicSlug: DP,
+    stem: 'Schedule unit-time jobs, each with a deadline and a profit, one job per slot, to earn as much as possible; a job pays only if it runs in a slot at or before its deadline.',
+    brief: 'Input: jobs as [id, deadline, profit] triples. Output: the profit earned, how many jobs ran and the slot map. Deliver the profit-order latest-free-slot greedy, the disjoint-set version of the same walk, the two orderings that lose money, and the subset referee that proves them wrong.',
+    concepts: ['dsa-deadline-is-a-slot-not-a-duration', 'dsa-mark-unmark-occupancy', 'dsa-feasibility-scan', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Sort jobs by profit descending and hand each one the latest free slot at or before its deadline, dropping the job when no slot is left. The latest slot is ' +
+      'the cheap one - every tighter deadline can still be served by the slots beneath it - so the walk never owes a reversal. O(n log n) for the order plus the ' +
+      'slot scan, or near-linear in total with a disjoint set over the slots.',
+    idealAnswer:
+      'There are two decisions here and only one of them is subtle. Which job to buy is settled by the shape of the feasible sets: a set of jobs fits exactly when ' +
+      'no more than t of them have deadline at most t, for every t, and that condition makes them the independent sets of a matroid, so taking jobs in weight ' +
+      'order is optimal: at every step the richest job that still fits belongs to some optimal schedule, and no group of poorer jobs can outrank it together. ' +
+      'Where to put the job is the part that makes the greedy constructive rather than lucky: the latest free slot at or below the ' +
+      'deadline is the one that costs the schedule least, since every job whose deadline reaches that far can still use the slots underneath. Placing it at the ' +
+      'earliest free slot instead burns exactly the slots the tight deadlines need - on jobs 1-2-100, 2-1-90, 3-2-50 the earliest-slot walk earns 150 while the ' +
+      'answer is 190, and the lost 40 is the job with deadline 1 that found slot 1 already taken. ' +
+      'Sorting by deadline is the other false friend. Run as a feasibility test it is correct and it is what the subset referee uses: order the chosen jobs by ' +
+      'deadline, let each take the next unit slot, and the set fits if every job lands at or before its deadline. Run as a rule about which job to buy it answers the wrong ' +
+      'question, because it fills slots in deadline order without regard to what the slots are worth - on the eight job set 1-4-1, 2-2-34, 3-1-7, 4-4-33, 5-4-7, ' +
+      '6-5-18, 7-2-25, 8-1-6 it earns 99 and the earliest-slot walk earns 92, while profit order with latest slots earns 117, which is what brute force over all ' +
+      'subsets returns. Across 500 random job sets the disjoint-set version matched the slot scan and the brute force on every one, while the earliest-slot rule ' +
+      'lost on 273 and the deadline order on 96. ' +
+      'The disjoint-set version replaces the backwards scan with find: parent[t] names the highest free slot at or below t, and after slot t is used, parent[t] ' +
+      'points at find(t - 1), so a filled run is skipped in nearly constant time. That matters because the scan is O(n times the largest deadline) in the worst ' +
+      'case even though only n slots ever fill, and because the slot array is sized by the largest deadline rather than by the job count - a caller passing ' +
+      'deadline 1000000000 asks for a billion entries, while clamping every deadline at n changes nothing, since at most n jobs can run; on the fuzz sets ' +
+      'clamping returns the same profit and the same job count. Edges: no jobs give 0 profit, 0 jobs and an empty schedule; one job with deadline 3 lands in slot ' +
+      '3, written -,-,1, not in slot 1, which is the latest-slot rule showing through the printout; two jobs both with deadline 1 keep only the richer, profit 20 ' +
+      'from one job.',
+    walkthrough:
+      'The sample jobs 1-4-20, 2-1-10, 3-1-40, 4-1-30 walk in profit order as job 3 taking slot 1, job 4 dropped because its deadline is 1 and slot 1 is gone, job ' +
+      '1 taking slot 4, and job 2 dropped. Profit is 60 from two jobs, scheduled 3,-,-,1 - and the job placed at slot 4 is the one with the loosest deadline, ' +
+      'which is the whole trick.',
+    commonMistake:
+      'Placing each job in the earliest slot it may use, or sorting by deadline and calling that walk a greedy for maximum profit.',
+    whyWrong:
+      'Both return a plausible total and neither throws. Earliest slots give 150 instead of 190 on 1-2-100, 2-1-90, 3-2-50 because the deadline-1 job arrives to ' +
+      'find slot 1 taken by the richest job, and they differ from the correct answer on 273 of 500 random sets. Deadline order gives 99 instead of 117 on the ' +
+      'eight job set above, and differs on 96 of the same 500 - it is a feasibility test wearing a profit hat.',
+    followUps:
+      [
+        'Jobs now take d slots of machine time. Does profit order survive, and what does the fit test become?',
+        'Return the schedule from the disjoint-set version too. Where does the slot number come from, and what has to be recorded before the parent is overwritten?',
+        'Prove the clamp: why does replacing every deadline with min(deadline, n) leave the profit and the count unchanged, and what does it do to the worst case?',
+        'A job may run late at a penalty of p per slot past its deadline. Which half of the greedy - the order or the placement - breaks first?',
+      ],
+    solution:
+      'function jobSequence(jobs) {\n' +
+      '  const byProfit = jobs.slice().sort((first, second) => second[2] - first[2] || first[1] - second[1]);\n' +
+      '  const horizon = byProfit.length === 0 ? 0 : Math.max(...byProfit.map((job) => job[1]));\n' +
+      '  const slot = new Array(horizon + 1).fill(0);\n' +
+      '  let profit = 0;\n' +
+      '  let count = 0;\n' +
+      '  for (const job of byProfit) {\n' +
+      '    for (let time = Math.min(job[1], horizon); time >= 1; time -= 1) {\n' +
+      '      if (slot[time] === 0) {\n' +
+      '        slot[time] = job[0];\n' +
+      '        profit += job[2];\n' +
+      '        count += 1;\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return { profit, count, schedule: slot.slice(1).map((id) => (id === 0 ? "-" : String(id))) };\n' +
+      '}\n' +
+      '\n' +
+      'function jobSequenceEarliestSlot(jobs) {\n' +
+      '  const byProfit = jobs.slice().sort((first, second) => second[2] - first[2] || first[1] - second[1]);\n' +
+      '  const horizon = byProfit.length === 0 ? 0 : Math.max(...byProfit.map((job) => job[1]));\n' +
+      '  const slot = new Array(horizon + 1).fill(0);\n' +
+      '  let profit = 0;\n' +
+      '  let count = 0;\n' +
+      '  for (const job of byProfit) {\n' +
+      '    for (let time = 1; time <= Math.min(job[1], horizon); time += 1) {\n' +
+      '      if (slot[time] === 0) {\n' +
+      '        slot[time] = job[0];\n' +
+      '        profit += job[2];\n' +
+      '        count += 1;\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return { profit, count };\n' +
+      '}\n' +
+      '\n' +
+      'function jobSequenceByDeadlineOrder(jobs) {\n' +
+      '  const byDeadline = jobs.slice().sort((first, second) => first[1] - second[1] || second[2] - first[2]);\n' +
+      '  const horizon = byDeadline.length === 0 ? 0 : Math.max(...byDeadline.map((job) => job[1]));\n' +
+      '  const slot = new Array(horizon + 1).fill(0);\n' +
+      '  let profit = 0;\n' +
+      '  let count = 0;\n' +
+      '  for (const job of byDeadline) {\n' +
+      '    for (let time = 1; time <= Math.min(job[1], horizon); time += 1) {\n' +
+      '      if (slot[time] === 0) {\n' +
+      '        slot[time] = job[0];\n' +
+      '        profit += job[2];\n' +
+      '        count += 1;\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return { profit, count };\n' +
+      '}\n' +
+      '\n' +
+      'function jobSequenceByFreeSlot(jobs) {\n' +
+      '  const byProfit = jobs.slice().sort((first, second) => second[2] - first[2] || first[1] - second[1]);\n' +
+      '  const horizon = byProfit.length === 0 ? 0 : Math.max(...byProfit.map((job) => job[1]));\n' +
+      '  const parent = new Array(horizon + 1).fill(0);\n' +
+      '  for (let time = 0; time <= horizon; time += 1) parent[time] = time;\n' +
+      '  const find = (time) => {\n' +
+      '    if (parent[time] === time) return time;\n' +
+      '    parent[time] = find(parent[time]);\n' +
+      '    return parent[time];\n' +
+      '  };\n' +
+      '  let profit = 0;\n' +
+      '  let count = 0;\n' +
+      '  for (const job of byProfit) {\n' +
+      '    const free = find(Math.min(job[1], horizon));\n' +
+      '    if (free > 0) {\n' +
+      '      profit += job[2];\n' +
+      '      count += 1;\n' +
+      '      parent[free] = find(free - 1);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return { profit, count };\n' +
+      '}\n' +
+      '\n' +
+      'function slotLog(jobs) {\n' +
+      '  const byProfit = jobs.slice().sort((first, second) => second[2] - first[2] || first[1] - second[1]);\n' +
+      '  const horizon = byProfit.length === 0 ? 0 : Math.max(...byProfit.map((job) => job[1]));\n' +
+      '  const slot = new Array(horizon + 1).fill(0);\n' +
+      '  const rows = [];\n' +
+      '  for (const job of byProfit) {\n' +
+      '    let placed = 0;\n' +
+      '    for (let time = Math.min(job[1], horizon); time >= 1; time -= 1) {\n' +
+      '      if (slot[time] === 0) {\n' +
+      '        slot[time] = job[0];\n' +
+      '        placed = time;\n' +
+      '        break;\n' +
+      '      }\n' +
+      '    }\n' +
+      '    rows.push("job " + job[0] + " p" + job[2] + " d" + job[1] + " -> " + (placed === 0 ? "dropped" : "slot " + placed));\n' +
+      '  }\n' +
+      '  return rows.join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function feasibleSubset(jobs, chosen) {\n' +
+      '  const sorted = chosen\n' +
+      '    .map((index) => jobs[index])\n' +
+      '    .slice()\n' +
+      '    .sort((first, second) => first[1] - second[1]);\n' +
+      '  let time = 0;\n' +
+      '  for (const job of sorted) {\n' +
+      '    time += 1;\n' +
+      '    if (time > job[1]) return false;\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function jobSequenceBrute(jobs) {\n' +
+      '  const n = jobs.length;\n' +
+      '  let best = 0;\n' +
+      '  for (let mask = 0; mask < (1 << n); mask += 1) {\n' +
+      '    const chosen = [];\n' +
+      '    let profit = 0;\n' +
+      '    for (let index = 0; index < n; index += 1) {\n' +
+      '      if (mask & (1 << index)) {\n' +
+      '        chosen.push(index);\n' +
+      '        profit += jobs[index][2];\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (feasibleSubset(jobs, chosen) && profit > best) best = profit;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}',
+    modify: 'Slots now start at 0 instead of 1 and a job may run on or before its deadline. Which two lines shift, and what becomes of a job whose deadline is 0?',
   },
 ];
 
