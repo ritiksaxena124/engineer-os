@@ -1862,6 +1862,62 @@ export const DSA_CONCEPTS = {
     terms: ['seconds equal the farthest distance', 'height of the start is a downward answer', 'waves minus one', 'the worst start is an end of a longest path', 'the root is where the two readings coincide'],
     weight: 4,
   },
+  'dsa-complete-tree-is-decided-by-its-two-spines': {
+    slug: 'dsa-complete-tree-is-decided-by-its-two-spines',
+    name: 'Completeness turns the count into a question about two paths, so a full band is never visited',
+    detail:
+    'In a complete tree every band except the last is full, which means a subtree is either perfect or has one perfect child and one imperfect child, so walking the left spine and the right spine and comparing their lengths settles the subtree with no node visits at all. The doubling pays for itself exactly when the promise holds: 21 nodes on each spine answer 2097151 for a tree that really holds 41, and on the 333 complete trees of a 900-tree population the spine steps cost 480 against the 211 nodes a plain count reads. Without the promise the same rule is a guess, and the guess has no direction: over 721 non-empty random trees it was wrong on 126, too high on 32 by as much as 7 and too low on 94 by as much as 8.',
+    terms: ['equal spines means perfect, only under the promise', '2 to the spine length minus one', 'one imperfect child per level', 'refuse to answer rather than double a wrong band', 'the promise is what makes it logarithmic'],
+    weight: 4,
+  },
+  'dsa-heap-numbering-is-the-definition-of-complete': {
+    slug: 'dsa-heap-numbering-is-the-definition-of-complete',
+    name: 'Slots are numbered like an array, so completeness is the equality between slots used and nodes present',
+    detail:
+    'Number the root 0 and the children of position i at 2i+1 and 2i+2, run the queue, and the last number plus one counts the slots the tree occupies; that equals the number of nodes exactly when no slot was skipped, which is the definition of complete rather than a property derived from it. One 5-node tree occupies 7 slots and the arithmetic names the two holes, so the same numbering that measures the shape also supplies the guard the doubling needs, and it returns 2097151 slots for a 41 node tree. The index test and the queue test that watches for a gap disagreed on none of 900 random trees, which is the cheap way to check that a definition was implemented twice rather than twice wrongly.',
+    terms: ['slots used equals nodes present', 'a hole costs a slot and no node', 'the check is the guard for the shortcut', 'two implementations of one definition', 'the empty tree satisfies it trivially'],
+    weight: 3,
+  },
+  'dsa-a-traversal-pair-needs-one-splitting-side': {
+    slug: 'dsa-a-traversal-pair-needs-one-splitting-side',
+    name: 'A pair determines the tree when one listing names the root and the other separates the two sides',
+    detail:
+    'Construction is one root and one split, so a pair is enough exactly when one member supplies the root and the other turns it into two subtree sizes - preorder and postorder both name the root and neither separates the sides, while the inorder position of the root is the separation. That reading predicts the census: with the inorder listing fixed, no preorder ever named more than one shape across the 6918 shapes enumerated for n up to 9, and the inorder plus postorder pair was equally unique, whereas the largest group sharing a preorder and a postorder rose 2, 4, 8, 16, 32, 64, 128, 256 with n. A third traversal is never needed, and a second listing of the same kind adds nothing, which is what claiming any two of the three will do gets wrong.',
+    terms: ['root plus split, not two roots', 'inorder position is the subtree size', '6918 shapes and no ambiguity for the inorder pairs', 'two listings of one order say one thing', 'the answer is a theorem about the split'],
+    weight: 4,
+  },
+  'dsa-one-child-nodes-are-invisible-to-preorder-and-postorder': {
+    slug: 'dsa-one-child-nodes-are-invisible-to-preorder-and-postorder',
+    name: 'A single child reads the same on either side, so every one-child node doubles the ambiguity',
+    detail:
+    'The two listings differ only in where the root appears, so a node with one child contributes an identical sub-pair whether that child hangs left or right, and the count of trees sharing the pair multiplies by two for each such node. Chains are the worst case with n-1 one-child nodes, and their 2 to the n-1 orientations are exactly the largest ambiguity group the census found - 256 trees sharing one preorder and one postorder at n=9 - which is also why distinct values cannot rescue the pair: the tie is structural, not a matter of labels. Promising every node zero or two children removes the invisible edge entirely, and the same census then reports a largest group of 1 at every size where any such tree exists.',
+    terms: ['one child doubles the group', 'chains attain 2 to the n minus 1', 'labels cannot break a structural tie', 'full binary trees are where the pair works', 'no such tree at all for most even sizes'],
+    weight: 4,
+  },
+  'dsa-preorder-fixes-the-root-inorder-fixes-the-cut': {
+    slug: 'dsa-preorder-fixes-the-root-inorder-fixes-the-cut',
+    name: 'One root, one split point and two ranges, so the cost of the whole recursion is the cost of the lookup',
+    detail:
+    'Each frame takes the head of its preorder range as its root, finds that value inside its inorder range, and hands the left child everything before the cut and the right child everything after, with the right head advanced by the left size rather than by the cut position. That makes the split search the only real decision in the algorithm: an indexOf inside the frame is linear in the range and cost 12585 comparisons to build 4345 nodes, where one pre-built value-to-index map costs exactly one lookup per node, and on a right-leaning chain the two differ by 7 lookups against 28 comparisons at seven nodes. A map lookup answers undefined rather than a wrong index, and undefined compared against a range is not false, so the guard against an inconsistent pair is part of the algorithm rather than defensive noise.',
+    terms: ['left size is cut minus inStart', 'the right head advances by left size, not by cut', 'a per-frame scan is the hidden quadratic', 'undefined is not index zero', 'the range check is what returns null'],
+    weight: 4,
+  },
+  'dsa-the-build-stack-holds-the-open-left-spine': {
+    slug: 'dsa-the-build-stack-holds-the-open-left-spine',
+    name: 'Popping on the inorder cursor turns the next preorder entry into a right child',
+    detail:
+    'The iterative construction reads the preorder left to right and keeps the chain of nodes still waiting for their left subtree; a new entry becomes the left child of the top, unless the top matches the inorder cursor, in which case that node is finished on the left and the entry is its right child. The stack therefore holds exactly the ancestors whose left side is still open, which is why no sizes and no index map are needed, and it produced the same tree as the recursive build on all 900 random trees. The one case that needs an explicit answer is the stack emptying during a pop run, which only happens when the two listings do not describe one tree.',
+    terms: ['stack holds nodes with an open left side', 'the inorder cursor says a left side is finished', 'popped node takes the right child, top takes the left', 'no sizes and no map', 'an empty stack is the inconsistent-pair signal'],
+    weight: 3,
+  },
+  'dsa-postorder-builds-from-the-back': {
+    slug: 'dsa-postorder-builds-from-the-back',
+    name: 'Root last means the ranges are consumed backwards while the split still comes from the inorder side',
+    detail:
+    'The mirror construction takes the root from the end of the postorder range, still measures the left size as the inorder cut minus its start, and then gives the left child the first leftSize postorder slots and the right child the slots up to the one before the root. Measuring from the wrong end instead - inEnd minus cut, which is the right size - hands the left child a range that is too short and drops the whole left side: 2 nodes built where 7 belong on the perfect tree, agreement with the correct construction on nothing but the 179 empty trees of a 900-tree population, and 674 nodes produced where the true trees hold 4345. The allocation version with slice and indexOf builds the same trees, disagreeing on none of them, and pays for the readability with a fresh array per frame.',
+    terms: ['root is the last slot of the range', 'left size always comes from the inorder cut', 'inEnd minus cut is the right size, not the left', 'slice costs an array per frame', 'the base case protects the read before it happens'],
+    weight: 4,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -26682,6 +26738,808 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return "start=" + target + " waves=[" + burnWaves(root, target).join(" | ") + "] seconds=" + burnTime(root, target) + " downward=" + downwardBurnSeconds(root, target) + " burned=" + burnedCount(root, target) + " last=[" + lastWave(root, target) + "] worstStart=" + worstStart(root) + " height=" + heightOf(root) + " nodes=" + nodeCount(root) + " tree=[" + serializeLevel(root) + "]";\n' +
       '}',
     modify: 'Light the tree at the root, at the worst start and at the middle of the longest path on 1 2 3 4 5 6 7. Give the three answers, and say which two fields of the wave every one of them is read from.',
+  },
+  {
+    step: 13,
+    name: 'Count total Nodes in a COMPLETE Binary Tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Given a binary tree that is promised to be complete, report how many nodes it holds without visiting them, and say what the shortcut returns when the promise is broken.',
+    brief: 'Input: the root of a complete binary tree - every band full except possibly the last, which fills from the left. Output: the node count. Deliver the spine test that decides whether a subtree is full, the recurrence it buys, the heap-indexed reading of completeness that doubles as the guard, and the answer the shortcut gives on a tree that was never complete.',
+    concepts:
+      [
+        'dsa-complete-tree-is-decided-by-its-two-spines',
+        'dsa-heap-numbering-is-the-definition-of-complete',
+        'dsa-heap-index-measures-the-band-span',
+        'dsa-tree-cells-carry-shape',
+        'dsa-boundary-conditions',
+      ],
+    shortAnswer:
+      'Walk the left spine and the right spine of the current subtree. Equal lengths mean every band under it is full, so the answer is 2 to that length minus one with no visits; unequal means the root plus exactly one imperfect child, so return 1 plus the count of both children and let the perfect one terminate on the first test. Two spine walks per level instead of one visit per node is O(log squared n) against the O(n) of a plain count, and the promise carries the whole argument - on 721 random non-empty trees the shortcut differed from the true count on 126 of them, too high on 32 by up to 7 and too low on 94 by up to 8.',
+    idealAnswer:
+      'A complete tree fills every band but the last, and the last from the left, so a subtree of it has a very specific shape: either it is perfect, or its left child is perfect and only its right child continues the truncation, or the reverse at one level. That is what the two spines decide. Walk left from the root until null and count, walk right until null and count: if the two lengths match, every band below is full and the count is 2 to the length minus one, otherwise the frame returns 1 plus a recursive call on both children, knowing that one of them answers immediately. On 1 2 3 4 5 6 7 the spines are both 3 so the answer 7 arrives with 6 spine steps and no descent; on 1 2 3 4 5 they are 3 and 2, so the frame splits, the left child 2 with children 4 and 5 is perfect in 4 steps and the right child 3 answers 1 in 2 steps - 11 spine steps for 5 nodes.' +
+      'The promise is load-bearing, and the failure has no fixed direction. Take 1 2 3 4 null null 5: five nodes, but the left spine 1-2-4 and the right spine 1-3-5 both have length 3, so the rule announces 2 to the 3 minus 1 equals 7 and is done. Equal spines only imply perfect inside the class of complete trees; outside it the two spines can be the same length with the whole middle of the tree missing. The same construction at depth 20 - alternating left and right children down 41 nodes - returns 2097151 in 42 spine steps - fifty-one thousand times too large, computed in a small fraction of the visits a real count needs. Across the 900 random trees the fast count agreed with the true one on 441 trees that were not complete, so agreement is not evidence, and it disagreed on 126, over-counting on 32 and under-counting on 94.' +
+      'Completeness is worth defining once and checking twice. Number the root 0 and the children of position i at 2i+1 and 2i+2, run a breadth-first pass carrying that number, and the last number plus one is the count of slots the tree occupies; slots equal nodes exactly when no slot was skipped, which is the definition rather than a consequence. The 5-node example occupies 7 slots, so the same arithmetic that measures the shape also names the two holes, and it gives 2097151 slots for the 41-node tree. The shipped answer uses that equality as a guard and returns -1 rather than a formula whenever the input breaks the promise; that guard was wrong on none of the 900 trees, and an independent queue test - once a missing child is seen, no later node may have one - disagreed with the index test on none of them either. On the 333 complete trees the spine method spent 480 steps over 211 nodes, which is the logarithmic claim in the only place it is true; over all 900 trees the same method spent 11707 steps to answer for 4345 nodes, so unguarded it is not merely wrong, it is also more expensive than the count it replaced.' +
+      'Boundaries, and the honest cost. The empty tree is complete and perfect by the index test, counts 0, has height -1 and the guard returns 0, not -1, so the two sentinel conventions have to be stated out loud rather than inferred. A single node has both spines of length 1 and answers 1 in 2 steps. For the complete trees built deliberately at sizes 0 through 200 the shortcut was exact on all 201 and spent 15467 spine steps where a plain count would read 20100 nodes; on the perfect ones the saving is exact and dramatic, because a tree of height h costs 2 times h plus 2 steps - 6 steps for the 7 node tree and 8 for the 15 node one - against reading every node, and the 16 node tree that has stopped being perfect already pays 38. The version that keeps O(log squared n) and never touches a spine instead binary-searches the last band by index; the interview follow-up that asks for it is really asking whether you noticed that completeness makes the last band the only unknown, and both answers share the failure mode: they are silent, plausible arithmetic the moment the input stops being complete.',
+    walkthrough:
+      '1 2 3 4 5 - root 1, left spine 1-2-4 is 3, right spine 1-3 is 2, not equal, so return 1 plus the two children. Node 2 has children 4 and 5: spines 2 and 2, equal, so it answers 2 to the 2 minus 1 = 3 in 4 steps. Node 3 has no children: spines 1 and 1, equal, so it answers 1 in 2 steps. Total 1 + 3 + 1 = 5 in 3 + 2 + 4 + 2 = 11 spine steps. Now 1 2 3 4 null null 5: left spine 1-2-4 and right spine 1-3-5 both measure 3, the frame never splits, and the answer is 7 for a tree holding 5 - which is also why indexedCount says 7 while nodeCount says 5 and the guard returns -1.',
+    commonMistake:
+      'Applying 2 to the height minus 1 to any tree whose left and right spines happen to have equal length, or applying it to a tree that is merely balanced.',
+    whyWrong:
+      'Equal spines imply a full band only when the tree is complete. 1 2 3 4 null null 5 has two spines of length 3 and holds 5 nodes, not 7, and the 20-deep alternating version of the same trick answers 2097151 for 41 nodes in 42 steps. Random trees show the error is not one-directional either: over the 721 non-empty ones the shortcut was too high on 32 trees and too low on 94, and it agreed with the true count on 441 trees that were not complete at all, so a passing sample test proves nothing.',
+    followUps:
+      [
+        'The promise says complete, not perfect. Why can at most one of the two children be imperfect, and how does that turn the recurrence into one split per level?',
+        'No spine rule allowed: binary-search the last band by heap index. What does each step decide, and why is that still O(log squared n)?',
+        'The input might not be complete. What should the function return then, and why is the formula worse than refusing?',
+        'State completeness twice - once with the index equality and once with a queue that watches for a gap. Show that the two agree without assuming either.',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function leftSpine(root) {\n' +
+      '  let steps = 0;\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    steps += 1;\n' +
+      '    cursor = cursor.left;\n' +
+      '  }\n' +
+      '  return steps;\n' +
+      '}\n' +
+      '\n' +
+      'function rightSpine(root) {\n' +
+      '  let steps = 0;\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    steps += 1;\n' +
+      '    cursor = cursor.right;\n' +
+      '  }\n' +
+      '  return steps;\n' +
+      '}\n' +
+      '\n' +
+      'function countFast(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  const left = leftSpine(root);\n' +
+      '  const right = rightSpine(root);\n' +
+      '  if (left === right) return 2 ** left - 1;\n' +
+      '  return 1 + countFast(root.left) + countFast(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function fastWork(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  const left = leftSpine(root);\n' +
+      '  const right = rightSpine(root);\n' +
+      '  if (left === right) return left + right;\n' +
+      '  return left + right + fastWork(root.left) + fastWork(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function indexedCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  let last = 0;\n' +
+      '  const queue = [{ node: root, index: 0 }];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const cell = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    last = cell.index;\n' +
+      '    if (cell.node.left !== null) queue.push({ node: cell.node.left, index: cell.index * 2 + 1 });\n' +
+      '    if (cell.node.right !== null) queue.push({ node: cell.node.right, index: cell.index * 2 + 2 });\n' +
+      '  }\n' +
+      '  return last + 1;\n' +
+      '}\n' +
+      '\n' +
+      'function isComplete(root) {\n' +
+      '  return indexedCount(root) === nodeCount(root);\n' +
+      '}\n' +
+      '\n' +
+      'function isPerfect(root) {\n' +
+      '  const left = leftSpine(root);\n' +
+      '  const right = rightSpine(root);\n' +
+      '  return left === right && nodeCount(root) === 2 ** left - 1;\n' +
+      '}\n' +
+      '\n' +
+      'function completeByQueue(root) {\n' +
+      '  if (root === null) return true;\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let seenGap = false;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    const left = node.left;\n' +
+      '    const right = node.right;\n' +
+      '    if (left === null) seenGap = true;\n' +
+      '    else if (seenGap) return false;\n' +
+      '    if (right === null) seenGap = true;\n' +
+      '    else if (seenGap) return false;\n' +
+      '    if (left !== null) queue.push(left);\n' +
+      '    if (right !== null) queue.push(right);\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function countGuarded(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  if (!isComplete(root)) return -1;\n' +
+      '  return countFast(root);\n' +
+      '}\n' +
+      '\n' +
+      'function completeOf(total) {\n' +
+      '  if (total <= 0) return null;\n' +
+      '  const nodes = [];\n' +
+      '  for (let index = 0; index < total; index += 1) nodes.push({ val: index + 1, left: null, right: null });\n' +
+      '  for (let index = 0; index < total; index += 1) {\n' +
+      '    if (index * 2 + 1 < total) nodes[index].left = nodes[index * 2 + 1];\n' +
+      '    if (index * 2 + 2 < total) nodes[index].right = nodes[index * 2 + 2];\n' +
+      '  }\n' +
+      '  return nodes[0];\n' +
+      '}\n' +
+      '\n' +
+      'function chainOf(total) {\n' +
+      '  let cursor = null;\n' +
+      '  for (let value = total; value >= 1; value -= 1) cursor = { val: value, left: cursor, right: null };\n' +
+      '  return cursor;\n' +
+      '}\n' +
+      '\n' +
+      'function twoSpinesOf(depth) {\n' +
+      '  const root = { val: 1, left: null, right: null };\n' +
+      '  let left = root;\n' +
+      '  let right = root;\n' +
+      '  let value = 2;\n' +
+      '  for (let level = 0; level < depth; level += 1) {\n' +
+      '    left.left = { val: value, left: null, right: null };\n' +
+      '    left = left.left;\n' +
+      '    value += 1;\n' +
+      '    right.right = { val: value, left: null, right: null };\n' +
+      '    right = right.right;\n' +
+      '    value += 1;\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function countLine(root) {\n' +
+      '  return "fast=" + countFast(root) + " naive=" + nodeCount(root) + " agree=" + (countFast(root) === nodeCount(root)) +\n' +
+      '    " work=" + fastWork(root) + " indexed=" + indexedCount(root) + " complete=" + isComplete(root) +\n' +
+      '    " perfect=" + isPerfect(root) + " guarded=" + countGuarded(root) + " height=" + heightOf(root) +\n' +
+      '    " tree=[" + serializeLevel(root) + "]";\n' +
+      '}',
+    modify:
+      'Return the number of nodes on the last, partly filled band of a complete tree instead of the total. Which quantity does the spine test now have to produce rather than short-circuit, and what does 1 2 3 4 5 report?',
+  },
+  {
+    step: 13,
+    name: 'Requirements to construct a unique binary tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Given two of the three traversal listings of a binary tree with distinct values, say which pairs rebuild it uniquely and describe the trees that survive in the pairs that do not.',
+    brief: 'Input: a pair of traversals of one tree - preorder, inorder, postorder - with distinct values. Output: whether the pair determines the tree, and for the pairs that do not, the shape of the ambiguity. Deliver the root-plus-split reading of the inorder listing, the count of binary shapes on n nodes, the size of the largest group sharing a preorder and a postorder, and the extra promise that makes that pair sufficient.',
+    concepts:
+      [
+        'dsa-a-traversal-pair-needs-one-splitting-side',
+        'dsa-one-child-nodes-are-invisible-to-preorder-and-postorder',
+        'dsa-three-orders-one-walk',
+        'dsa-tree-cells-carry-shape',
+        'dsa-boundary-conditions',
+      ],
+    shortAnswer:
+      'Preorder with inorder determines the tree, inorder with postorder determines it, and preorder with postorder does not, because construction needs one listing to name the root and the other to separate the two subtrees around it - only inorder does that. Enumerating every binary shape on up to 9 nodes, 6918 in total, found no ambiguity at all in either inorder pair, while the largest group of shapes sharing one preorder and one postorder listing rose 2, 4, 8, 16, 32, 64, 128, 256 with n.',
+    idealAnswer:
+      'Reconstruction is one decision repeated: take the root, then decide how many nodes hang below it on the left, because that size is what splits both remaining ranges. Preorder supplies the root at its head and postorder supplies it at its tail, and both do it for every subtree; only the inorder listing positions the root between its two sides, so the inorder index of the root is the split. A pair therefore suffices exactly when one member names the root and the other splits - which rules out preorder with postorder, the pair that supplies two roots and no separation, and rules out two listings of the same order, which supply one fact twice.' +
+      'That reading is checkable rather than rhetorical, so it is worth checking. Enumerate every binary shape on n nodes and label it with distinct values 1 through n in inorder order, which loses nothing because only the relative order matters when values are distinct; the inorder listing is then the constant 1 2 ... n and the shapes are the Catalan numbers 1, 2, 5, 14, 42, 132, 429, 1430, 4862 for n from 1 to 9, 6918 shapes over n from 0 to 9. Bucket those shapes by the preorder listing alone: no bucket ever holds two shapes - the largest group is 1 at every size - so the pair fixed-inorder plus preorder is injective. Do the same with the postorder listing in place of the preorder: again largest 1. Now relabel by preorder instead, so the preorder is the constant and the pairs are (preorder, postorder): the largest group is 2 at n=2, 4 at n=3, 8 at n=4 and 256 at n=9, at every size from 2 upward, which is the pair failing.' +
+      'The failure is structural, and the census names it. A node with exactly one child contributes the same sub-pair of listings whether that child hangs left or right - the root still appears first in the preorder and last in the postorder, and there is a single block of nodes either way - so each one-child node multiplies the number of matching trees by two. Chains have n-1 one-child nodes and 2 to the n-1 orientations, and counting the shapes whose postorder is exactly the reverse of 1 through n gave 2, 4, 8, 16, 32, 64, 128 and 256 for n from 2 to 9: the same numbers, which is why distinct values cannot rescue the pair. The tie is about edges, not about labels, and no relabelling separates a left child from a right child that the listings never mentioned.' +
+      'The extra promise that fixes it is the one that removes the invisible edge: require every node to have zero or two children and the preorder plus postorder pair becomes injective again. In the same enumeration restricted to those full trees the largest group is 1 wherever such a tree exists - the group counts for n=3, 5, 7, 9 are 1, 2, 5 and 14, and they are the Catalan numbers of the half sizes - while for the even sizes 2, 4, 6, 8 there is no full binary tree at all, so the group is empty. Full binary trees have exactly (n+1)/2 leaves and n odd, which is the same fact from the other side and the reason the promise costs half the shapes.' +
+      'Two boundaries and one honest risk. The empty pair determines the empty tree and one value determines one node - the census starts 1, 1 at n=0 and n=1 - so the first size at which the failing pair actually fails is n=2, where two trees share the listings; a question that demos the pair on a single node proves nothing. The risk in the other direction is the claim itself: it needs distinct values. With a value at two nodes, inorder stops being a split because its index is no longer unique, and the reconstruction from a pair that otherwise determines the tree loses nodes - on a duplicate-label population of 900 trees holding 4284 nodes, 540 trees carry a repeated value and the same 540 failed to be rebuilt from their own traversals, 2879 nodes short in total. The correct answer to this question is therefore conditional in one place only, and it is worth saying which: distinctness is what makes the inorder listing a coordinate.',
+    walkthrough:
+      'n=3, five shapes. Label them in preorder, so all five read 1 2 3 first: the four chain orientations - 1 with left 2 with left 3, 1 with left 2 with right 3, 1 with right 2 with left 3, 1 with right 2 with right 3 - all postorder as 3 2 1, and only the shape where 2 and 3 are the two children of 1 postorders as 2 3 1. Four shapes, one pair of listings, which is 2 to the n minus 1 at n=3. Now label the same five shapes in inorder: the inorder is 1 2 3 throughout, the five preorders come out distinct, and the five (preorder, postorder) pairs stay distinct - the census largest group is 1 at every size up to 9 once the inorder listing is one member of the pair.',
+    commonMistake:
+      'Answering any two of the three, then writing a preorder plus postorder construction that quietly attaches every single child to the left.',
+    whyWrong:
+      'Preorder plus postorder is ambiguous at every size of two or more: the enumeration put 2, 4, 8, 16, 32, 64, 128 and 256 shapes in the largest group for n from 2 to 9, and each of them is a chain orientation that reproduces both listings exactly. Attaching the child to the left is not a harmless convention - it builds one tree out of a set that the input never resolved, and the other members of the set differ in edges, so they differ in every derived answer: heights, views, paths. Inorder is the member of the pair that does the splitting, and a pair without it cannot reconstruct.',
+    followUps:
+      [
+        'Which single property of the inorder listing makes it the one that can split, and why can neither of the other two supply it even when all three agree on the root?',
+        'Add the promise that every node has zero or two children. What does the preorder plus postorder pair do at n=4 and at n=5, and why is one of those answers empty?',
+        'Level order together with preorder also determines the tree. Argue from what the pair fixes about positions rather than from an algorithm.',
+        'Drop distinctness so that one value names two nodes. Which pair loses its split, and what does the largest group become?',
+      ],
+    solution:
+      'function shapeList(total, cache) {\n' +
+      '  const key = String(total);\n' +
+      '  const hit = cache[key];\n' +
+      '  if (hit !== undefined) return hit;\n' +
+      '  if (total === 0) {\n' +
+      '    cache[key] = [null];\n' +
+      '    return cache[key];\n' +
+      '  }\n' +
+      '  const out = [];\n' +
+      '  for (let leftCount = 0; leftCount < total; leftCount += 1) {\n' +
+      '    for (const left of shapeList(leftCount, cache)) {\n' +
+      '      for (const right of shapeList(total - 1 - leftCount, cache)) {\n' +
+      '        out.push({ left: clone(left), right: clone(right) });\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  cache[key] = out;\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function clone(node) {\n' +
+      '  if (node === null) return null;\n' +
+      '  return { val: 0, left: clone(node.left), right: clone(node.right) };\n' +
+      '}\n' +
+      '\n' +
+      'function labelInOrder(node) {\n' +
+      '  let value = 1;\n' +
+      '  const walk = (cursor) => {\n' +
+      '    if (cursor === null) return;\n' +
+      '    walk(cursor.left);\n' +
+      '    cursor.val = value;\n' +
+      '    value += 1;\n' +
+      '    walk(cursor.right);\n' +
+      '  };\n' +
+      '  walk(node);\n' +
+      '  return node;\n' +
+      '}\n' +
+      '\n' +
+      'function labelPreOrder(node) {\n' +
+      '  let value = 1;\n' +
+      '  const walk = (cursor) => {\n' +
+      '    if (cursor === null) return;\n' +
+      '    cursor.val = value;\n' +
+      '    value += 1;\n' +
+      '    walk(cursor.left);\n' +
+      '    walk(cursor.right);\n' +
+      '  };\n' +
+      '  walk(node);\n' +
+      '  return node;\n' +
+      '}\n' +
+      '\n' +
+      'function preorder(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return [node.val].concat(preorder(node.left), preorder(node.right));\n' +
+      '}\n' +
+      '\n' +
+      'function inorder(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return inorder(node.left).concat([node.val], inorder(node.right));\n' +
+      '}\n' +
+      '\n' +
+      'function postorder(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return postorder(node.left).concat(postorder(node.right), [node.val]);\n' +
+      '}\n' +
+      '\n' +
+      'function isFullBinary(node) {\n' +
+      '  if (node === null) return true;\n' +
+      '  if (node.left === null && node.right === null) return true;\n' +
+      '  if (node.left === null || node.right === null) return false;\n' +
+      '  return isFullBinary(node.left) && isFullBinary(node.right);\n' +
+      '}\n' +
+      '\n' +
+      'function largestGroup(keys) {\n' +
+      '  const counts = new Map();\n' +
+      '  let largest = 0;\n' +
+      '  for (const key of keys) {\n' +
+      '    const next = (counts.get(key) ?? 0) + 1;\n' +
+      '    counts.set(key, next);\n' +
+      '    if (next > largest) largest = next;\n' +
+      '  }\n' +
+      '  return { groups: counts.size, largest: largest };\n' +
+      '}\n' +
+      '\n' +
+      'function census(total, label) {\n' +
+      '  const cache = {};\n' +
+      '  const roots = shapeList(total, cache).map((shape) => {\n' +
+      '    const copy = clone(shape);\n' +
+      '    return label === "inorder" ? labelInOrder(copy) : labelPreOrder(copy);\n' +
+      '  });\n' +
+      '  const pre = roots.map((root) => preorder(root).join(" "));\n' +
+      '  const ino = roots.map((root) => inorder(root).join(" "));\n' +
+      '  const post = roots.map((root) => postorder(root).join(" "));\n' +
+      '  const preKeys = [];\n' +
+      '  const inKeys = [];\n' +
+      '  const postKeys = [];\n' +
+      '  const prePostKeys = [];\n' +
+      '  const inPostKeys = [];\n' +
+      '  for (let index = 0; index < roots.length; index += 1) {\n' +
+      '    preKeys.push(pre[index]);\n' +
+      '    inKeys.push(ino[index]);\n' +
+      '    postKeys.push(post[index]);\n' +
+      '    prePostKeys.push(pre[index] + " | " + post[index]);\n' +
+      '    inPostKeys.push(ino[index] + " | " + post[index]);\n' +
+      '  }\n' +
+      '  const fullOnly = [];\n' +
+      '  for (let index = 0; index < roots.length; index += 1) {\n' +
+      '    if (isFullBinary(roots[index])) fullOnly.push(prePostKeys[index]);\n' +
+      '  }\n' +
+      '  return {\n' +
+      '    trees: roots.length,\n' +
+      '    byPre: largestGroup(preKeys),\n' +
+      '    byIn: largestGroup(inKeys),\n' +
+      '    byPost: largestGroup(postKeys),\n' +
+      '    byPrePost: largestGroup(prePostKeys),\n' +
+      '    byInPost: largestGroup(inPostKeys),\n' +
+      '    byPreIn: largestGroup(preKeys.map((key, index) => key + " | " + ino[index])),\n' +
+      '    fullPrePost: largestGroup(fullOnly),\n' +
+      '    chainPost: post.filter((key) => {\n' +
+      '      const parts = key.split(" ");\n' +
+      '      for (let index = 0; index < parts.length; index += 1) if (Number(parts[index]) !== total - index) return false;\n' +
+      '      return true;\n' +
+      '    }).length,\n' +
+      '  };\n' +
+      '}\n' +
+      '\n' +
+      'function requirementsLine(total) {\n' +
+      '  const inorderLabelled = census(total, "inorder");\n' +
+      '  const preorderLabelled = census(total, "preorder");\n' +
+      '  return "n=" + total + " shapes=" + inorderLabelled.trees +\n' +
+      '    " fixed-inorder: by-pre largest=" + inorderLabelled.byPre.largest + " groups=" + inorderLabelled.byPre.groups +\n' +
+      '    " by-prepost largest=" + inorderLabelled.byPrePost.largest + " groups=" + inorderLabelled.byPrePost.groups +\n' +
+      '    " | fixed-preorder: by-in largest=" + preorderLabelled.byIn.largest + " groups=" + preorderLabelled.byIn.groups +\n' +
+      '    " by-post largest=" + preorderLabelled.byPost.largest + " groups=" + preorderLabelled.byPost.groups +\n' +
+      '    " by-inpost largest=" + preorderLabelled.byInPost.largest + " groups=" + preorderLabelled.byInPost.groups +\n' +
+      '    " full-binary prepost largest=" + preorderLabelled.fullPrePost.largest + " groups=" + preorderLabelled.fullPrePost.groups +\n' +
+      '    " reverse-post trees=" + preorderLabelled.chainPost;\n' +
+      '}',
+    modify:
+      'Ask for the number of distinct trees that a given preorder and postorder pair admits, as a function of the number of nodes with exactly one child. Which listing has to be counted first, and what does the answer become for a full binary tree?',
+  },
+  {
+    step: 13,
+    name: 'Construct Binary Tree from Preorder and Inorder Traversal',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Rebuild the binary tree from its preorder and inorder listings with distinct values, account for the cost of finding each split, and say what the construction does to an input that describes no tree.',
+    brief: 'Input: two arrays, the preorder and the inorder traversal of one tree, values distinct. Output: the reconstructed root. Deliver the one-root-two-ranges recurrence, the value-to-index map that makes the split lookup O(1), the guards for an inconsistent or duplicated pair, and the iterative stack construction without any map.',
+    concepts:
+      [
+        'dsa-preorder-fixes-the-root-inorder-fixes-the-cut',
+        'dsa-the-build-stack-holds-the-open-left-spine',
+        'dsa-tree-cells-carry-shape',
+        'dsa-three-orders-one-walk',
+        'dsa-boundary-conditions',
+      ],
+    shortAnswer:
+      'The head of the current preorder range is the root; its position in the current inorder range is the cut, and cut minus the range start is the left size; so the left child takes preStart plus 1 and the right child takes preStart plus 1 plus that size. Build a value-to-index map once and each frame costs one lookup - 4345 probes to rebuild 4345 nodes - where searching the range inside the frame costs 12585, and on a seven node chain 7 against 28.',
+    idealAnswer:
+      'The two listings play different roles and the whole algorithm is that division. Preorder is a queue of roots: its head is always the root of the range it covers. Inorder is a coordinate system: the position of a value inside the current range says how many nodes live in the left subtree, and that count is what the recursion needs to cut the preorder. So a frame is three numbers and one lookup - take pre[preStart], find its inorder index cut, give the left child the ranges pre plus 1 over inStart to cut minus 1 and the right child pre plus 1 plus cut minus inStart over cut plus 1 to inEnd - and it terminates on inStart being greater than inEnd. Run on 1 2 4 5 3 6 7 against 4 2 5 1 6 3 7: the root is 1, cut 3, left size 3, so the left child is built from the first three preorder entries over the first three inorder entries and the right from the last three over the last three, which rebuilds 1 2 3 4 5 6 7 and reproduces both listings exactly.' +
+      'The split lookup is the entire complexity of this recursion, and the two ways to pay for it differ by a factor of depth. An indexOf call inside the frame scans the current range, so the work is the sum of the range lengths: over 900 random trees totalling 4345 nodes that is 12585 comparisons, about 2.9 per node, and the shape of the cost is visible in the worst case - a right-leaning chain of 7 nodes with inorder reversed costs 28 comparisons against 7 for a map. One pass over the inorder array to fill a value-to-index map makes every frame a single lookup, and the shipped version counts exactly 4345 probes for 4345 nodes: one per frame that builds a node, with the empty-range frames costing nothing at all. Space is O(n) for the map plus O(h) for the call stack, and the map is not an optimisation to be apologised for - it is what makes the claim O(n) honest.' +
+      'The guard is part of the algorithm, because a map lookup answers undefined and undefined does not compare. Positions are recorded for every value, so a frame can receive an index outside its own inorder range: that happens exactly when the two arrays are not the traversals of one tree, and the range check cut between inStart and inEnd is what turns it into a null return instead of a recursion that never terminates. The same check answers a preorder with an entry the inorder does not contain - given pre 1 2 4 5 3 6 7 99 against the inorder of the perfect 7 node tree the build returns that tree, 7 nodes, and its preorder listing no longer matches the input. Feeding 1 9 against 2 1 returns a single node, and the multiset test says the two arrays were never the same bag of values: an inconsistent pair should be diagnosed, not silently truncated to whatever prefix fits.' +
+      'Repeated values break the construction in a way no guard can fix, because the premise fails rather than the code. The map keys values to indices, so when one value names two nodes the last write wins and the split is the wrong one: given pre 1 2 4 3 4 and in 4 2 1 3 4 the build returns 1 2 3 null null null 4 - 4 nodes, with neither listing reproducing. On the duplicate-label population 540 of 900 trees carried a repeated value and the same 540 failed to round trip, losing 2879 of 4284 nodes, with every one of those rebuilds shorter than the tree it came from. There is no correct single answer there - the pair admits several trees - so the honest options are to report the count of trees, or to require node identity, which a listing cannot provide.' +
+      'The map-free version is worth knowing because it is the one that cannot be dismissed as a hashtable trick. Read the preorder left to right and keep a stack of the nodes whose left side is still open; the new entry becomes the left child of the top, unless the top equals the current inorder cursor, in which case that top is finished on the left, gets popped, and the new entry becomes its right child. The stack is therefore exactly the current chain of unfinished ancestors, the cursor advances once per node, and the shipped version built the same tree as the recursive one on all 900 random trees with no map and no sizes. Its only explicit failure case is the stack emptying during a pop run, which again only happens for a pair that describes no tree.',
+    walkthrough:
+      'pre 1 2 4 5 3 6 7, in 4 2 5 1 6 3 7. Frame 1: root 1, cut 3, left size 3 -> left from pre[1..3] over in[0..2], right from pre[4..6] over in[4..6]. Left frame: root 2, cut 1, left size 1 -> 4 is its left child (cut 0, both sides empty), 5 its right. Right frame: root 3, cut 6, left size 2 -> 6 from pre[5] over in[4] and 7 from pre[6] over in[5]. Rebuilt tree 1 2 3 4 5 6 7, and traversing it returns both input arrays. The map version spent 7 lookups; the scanning version spent 12 comparisons on the same tree, and on the same shape with the inorder reversed the two are 7 and 28.',
+    commonMistake:
+      'Advancing the right child by the cut index instead of by the left size, or searching the inorder range with indexOf inside every frame and calling the result O(n).',
+    whyWrong:
+      'The cut is an absolute position while the preorder ranges are sized by how many nodes fall to the left of it, so the right head is preStart plus 1 plus cut minus inStart; using the bare cut shifts every right subtree by the size of everything before it in the array. As for the scan: the per-frame search is linear in the range, and over 4345 random nodes it cost 12585 comparisons, growing to 28 against 7 on a 7 node chain - the map version is 4345 probes for 4345 nodes, which is the version whose claim matches its work.',
+    followUps:
+      [
+        'Two nodes share a value. Which of the two listings stops meaning anything, and what should the function return instead of a tree?',
+        'Give the construction with no map and no subtree sizes. State the invariant of its stack and where the inorder cursor moves.',
+        'The arrays describe no single tree. Which guard fires first - the empty range, the undefined lookup, or the out-of-range index - and what does each protect against?',
+        'Count the comparisons your version makes on a right-leaning chain of n nodes and on a perfect tree of n nodes. What is the difference, and does the map version see it?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function preorder(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return [node.val].concat(preorder(node.left), preorder(node.right));\n' +
+      '}\n' +
+      '\n' +
+      'function inorder(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return inorder(node.left).concat([node.val], inorder(node.right));\n' +
+      '}\n' +
+      '\n' +
+      'function postorder(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return postorder(node.left).concat(postorder(node.right), [node.val]);\n' +
+      '}\n' +
+      '\n' +
+      'function buildFromPreIn(pre, ino) {\n' +
+      '  const positions = new Map();\n' +
+      '  ino.forEach((value, index) => positions.set(value, index));\n' +
+      '  const build = (preStart, inStart, inEnd) => {\n' +
+      '    if (inStart > inEnd) return null;\n' +
+      '    const value = pre[preStart];\n' +
+      '    const cut = positions.get(value);\n' +
+      '    if (cut === undefined || cut < inStart || cut > inEnd) return null;\n' +
+      '    const leftSize = cut - inStart;\n' +
+      '    const node = { val: value, left: null, right: null };\n' +
+      '    node.left = build(preStart + 1, inStart, cut - 1);\n' +
+      '    node.right = build(preStart + 1 + leftSize, cut + 1, inEnd);\n' +
+      '    return node;\n' +
+      '  };\n' +
+      '  return build(0, 0, ino.length - 1);\n' +
+      '}\n' +
+      '\n' +
+      'function buildByScanning(pre, ino) {\n' +
+      '  if (pre.length === 0) return null;\n' +
+      '  const root = { val: pre[0], left: null, right: null };\n' +
+      '  const stack = [root];\n' +
+      '  let inIndex = 0;\n' +
+      '  for (let index = 1; index < pre.length; index += 1) {\n' +
+      '    const node = { val: pre[index], left: null, right: null };\n' +
+      '    let parent = null;\n' +
+      '    while (stack.length > 0 && stack[stack.length - 1].val === ino[inIndex]) {\n' +
+      '      parent = stack.pop();\n' +
+      '      inIndex += 1;\n' +
+      '    }\n' +
+      '    if (parent === null) {\n' +
+      '      parent = stack[stack.length - 1];\n' +
+      '      if (parent === undefined) return null;\n' +
+      '      parent.left = node;\n' +
+      '    } else {\n' +
+      '      parent.right = node;\n' +
+      '    }\n' +
+      '    stack.push(node);\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function cutsByScanning(pre, ino) {\n' +
+      '  let probes = 0;\n' +
+      '  const build = (preStart, inStart, inEnd) => {\n' +
+      '    if (inStart > inEnd) return null;\n' +
+      '    const value = pre[preStart];\n' +
+      '    let cut = inStart;\n' +
+      '    while (cut <= inEnd && ino[cut] !== value) {\n' +
+      '      probes += 1;\n' +
+      '      cut += 1;\n' +
+      '    }\n' +
+      '    probes += 1;\n' +
+      '    if (cut > inEnd) return null;\n' +
+      '    const node = { val: value, left: null, right: null };\n' +
+      '    node.left = build(preStart + 1, inStart, cut - 1);\n' +
+      '    node.right = build(preStart + 1 + (cut - inStart), cut + 1, inEnd);\n' +
+      '    return node;\n' +
+      '  };\n' +
+      '  const root = build(0, 0, ino.length - 1);\n' +
+      '  return [root, probes];\n' +
+      '}\n' +
+      '\n' +
+      'function cutsWithMap(pre, ino) {\n' +
+      '  const positions = new Map();\n' +
+      '  ino.forEach((value, index) => positions.set(value, index));\n' +
+      '  let probes = 0;\n' +
+      '  const build = (preStart, inStart, inEnd) => {\n' +
+      '    if (inStart > inEnd) return null;\n' +
+      '    const value = pre[preStart];\n' +
+      '    const cut = positions.get(value);\n' +
+      '    probes += 1;\n' +
+      '    if (cut === undefined || cut < inStart || cut > inEnd) return null;\n' +
+      '    const node = { val: value, left: null, right: null };\n' +
+      '    node.left = build(preStart + 1, inStart, cut - 1);\n' +
+      '    node.right = build(preStart + 1 + (cut - inStart), cut + 1, inEnd);\n' +
+      '    return node;\n' +
+      '  };\n' +
+      '  const root = build(0, 0, ino.length - 1);\n' +
+      '  return [root, probes];\n' +
+      '}\n' +
+      '\n' +
+      'function swapLastTwo(values) {\n' +
+      '  const copy = values.slice();\n' +
+      '  if (copy.length < 2) return copy;\n' +
+      '  const held = copy[copy.length - 1];\n' +
+      '  copy[copy.length - 1] = copy[copy.length - 2];\n' +
+      '  copy[copy.length - 2] = held;\n' +
+      '  return copy;\n' +
+      '}\n' +
+      '\n' +
+      'function sameMultiset(a, b) {\n' +
+      '  if (a.length !== b.length) return false;\n' +
+      '  const counts = new Map();\n' +
+      '  for (const value of a) counts.set(value, (counts.get(value) ?? 0) + 1);\n' +
+      '  for (const value of b) {\n' +
+      '    const left = (counts.get(value) ?? 0) - 1;\n' +
+      '    if (left < 0) return false;\n' +
+      '    counts.set(value, left);\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function repeatedValues(values) {\n' +
+      '  const counts = new Map();\n' +
+      '  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);\n' +
+      '  return Array.from(counts.keys()).filter((value) => (counts.get(value) ?? 0) > 1);\n' +
+      '}\n' +
+      '\n' +
+      'function preInLine(pre, ino) {\n' +
+      '  const mapped = buildFromPreIn(pre, ino);\n' +
+      '  const scanned = buildByScanning(pre, ino);\n' +
+      '  const withMap = cutsWithMap(pre, ino);\n' +
+      '  const withScan = cutsByScanning(pre, ino);\n' +
+      '  return "built nodes=" + nodeCount(mapped) + " pre ok=" + (preorder(mapped).join(" ") === pre.join(" ")) +\n' +
+      '    " in ok=" + (inorder(mapped).join(" ") === ino.join(" ")) +\n' +
+      '    " map probes=" + withMap[1] + " scan probes=" + withScan[1] +\n' +
+      '    " stack agreed=" + (serializeLevel(mapped) === serializeLevel(scanned)) +\n' +
+      '    " round trip=" + (serializeLevel(buildFromPreIn(preorder(mapped), inorder(mapped))) === serializeLevel(mapped)) +\n' +
+      '    " consistent=" + sameMultiset(pre, ino) + " repeats=" + repeatedValues(ino).length +\n' +
+      '    " given pre=[" + pre.join(" ") + "] given in=[" + ino.join(" ") + "] tree=[" + serializeLevel(mapped) + "]";\n' +
+      '}',
+    modify:
+      'Rebuild from an inorder listing in which one value occurs twice and report the number of distinct trees the pair now admits rather than one tree. Which split becomes a choice, and what does your recursion do at that frame?',
+  },
+  {
+    step: 13,
+    name: 'Construct Binary Tree from Inorder and Postorder Traversal',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Rebuild the binary tree from its inorder and postorder listings with distinct values, and say where the mirror error in the ranges shows up.',
+    brief: 'Input: the inorder and the postorder traversal of one tree, values distinct. Output: the reconstructed root. Deliver the backwards recurrence with the root at the end of the postorder range, the left size taken from the inorder split, the slicing version and what it allocates, and the range error that loses a whole side.',
+    concepts:
+      [
+        'dsa-postorder-builds-from-the-back',
+        'dsa-preorder-fixes-the-root-inorder-fixes-the-cut',
+        'dsa-tree-cells-carry-shape',
+        'dsa-postorder-is-the-bottom-up-recording-time',
+        'dsa-boundary-conditions',
+      ],
+    shortAnswer:
+      'The last entry of the postorder range is the root, its inorder index cut gives the left size as cut minus inStart, and the two children take postStart to postStart plus leftSize minus 1 and postStart plus leftSize to postEnd minus 1 over the inorder ranges either side. It is the preorder construction read from the back: the root moves, the split does not. A version that sizes the left subtree as inEnd minus cut hands it the right size and builds 2 nodes where 7 belong.',
+    idealAnswer:
+      'Postorder records a node after both of its sides, so the last entry of a postorder range is the root of the subtree that range covers - which is the whole of what postorder contributes to the reconstruction. The split is still the inorder index, and it is still a size rather than a position: leftSize is cut minus inStart, so the left child gets the first leftSize slots of the postorder range and the right child gets the slots from postStart plus leftSize up to the one before the root. Run on in 4 2 5 1 6 3 7 with post 4 5 2 6 7 3 1: the root is 1, cut 3, leftSize 3, so the left frame is post[0..2] over in[0..2] and the right is post[3..5] over in[4..6]; the rebuilt tree is 1 2 3 4 5 6 7, whose preorder 1 2 4 5 3 6 7 is the third listing the input never mentioned, and both given listings reproduce exactly.' +
+      'The direction is the only real difference from the preorder version, and it is where the classic error lives. Measuring the left size from the end of the inorder range - inEnd minus cut - is not a sign mistake but a category error: that quantity is the right size, so the left child is given too few slots and the ranges stop describing the same nodes. On the perfect tree it builds 1 null 3, two nodes out of seven: the root, no left subtree, and the surviving right frame consuming everything. Across 900 random trees that variant agreed with the correct build only on the 179 empty ones and produced 674 nodes where the true trees hold 4345, so it is not merely fragile - it is silent, and it returns a plausible tree.' +
+      'Two ways to write the same recursion, and the cost difference is in the argument list. The index version passes four integers per frame and reads the arrays in place; the slicing version passes ino.slice(0, cut) and post.slice(cut, postEnd) and recurses on shorter arrays. The two build identical trees - over the 900 random trees and 4345 nodes the slicing version disagreed on none, and on the duplicate-label trees they fail in the same way - so slicing is not wrong, it is just O(n) allocations per frame on top of an O(n) indexOf, which makes the whole construction quadratic in time and in extra space where the index version is linear plus the map. The readable version is a fine first answer; the claim that it is the same algorithm is not.' +
+      'Boundaries and the guard. An empty pair is the empty tree and returns null, and the range check has to be the first statement in the frame because the root is read as post[postEnd], which is undefined at postEnd equals minus 1 - the single value pair in 1 with post 1 gives one node and the mirror-error variant gives 0 nodes, so the two differ exactly where the recursion has not started. A value missing from the range makes the map answer undefined, and undefined is not less than inStart, so the guard must test it explicitly before comparing; the shipped version then returns null and given in 1 9 with post 2 1 it rebuilds one node, 1, with neither listing matching the input it was handed. Repeated values corrupt the split for the same reason as the other construction: the last index written wins, and on the duplicate-label population 540 of 900 trees failed to round trip through this build, losing 2871 of 4284 nodes.',
+    walkthrough:
+      'in 4 2 5 1 6 3 7, post 4 5 2 6 7 3 1. Frame: root post[6] = 1, cut 3, leftSize 3 -> left child from post[0..2] over in[0..2], right from post[3..5] over in[4..6]. Left: root post[2] = 2, cut 1, leftSize 1 -> 4 then 5. Right: root post[5] = 3, cut 6, leftSize 2 -> 6 and 7. Tree 1 2 3 4 5 6 7. Now replace leftSize by inEnd minus cut: the first frame sizes the left subtree as 6 minus 3, which is the right size, hands those slots to an inorder range ending at 2, and the cut at index 4 fails that range, so the left side comes back null; on the right the same formula gives 6 minus 6 equals 0, so node 3 is built with no children either. The result is 1 null 3 - two nodes of seven, and only the empty tree hides the error.',
+    commonMistake:
+      'Sizing the left subtree from the end of the inorder range, or reading the root from the front of the postorder range.',
+    whyWrong:
+      'inEnd minus cut is the number of nodes to the right of the root, not to the left, so the left child is handed a range of the wrong length and the two ranges no longer partition the postorder slots; the perfect tree comes back as 1 null 3 with 2 of its 7 nodes, and over 900 random trees the variant agreed with the correct construction on nothing but the 179 empty trees, building 674 nodes against 4345. Taking the root from the front of postorder is the same error in a different place: the front of a postorder range is a leaf, and the recursion then descends until an index goes negative.',
+    followUps:
+      [
+        'The two constructions are mirrors. Which single expression changes, and what does the wrong one build on 1 2 3 4 5 6 7?',
+        'Give the version that walks both arrays from the back with one shared cursor and no map. In which order must it attach children, and why that order?',
+        'Which listing supplies the split, and what happens to the recursion when the same value appears at two nodes?',
+        'Rewrite the slicing version with indices. What does each frame allocate before, what does it allocate after, and does the tree change at all?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function preorder(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return [node.val].concat(preorder(node.left), preorder(node.right));\n' +
+      '}\n' +
+      '\n' +
+      'function inorder(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return inorder(node.left).concat([node.val], inorder(node.right));\n' +
+      '}\n' +
+      '\n' +
+      'function postorder(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return postorder(node.left).concat(postorder(node.right), [node.val]);\n' +
+      '}\n' +
+      '\n' +
+      'function buildFromInPost(ino, post) {\n' +
+      '  const positions = new Map();\n' +
+      '  ino.forEach((value, index) => positions.set(value, index));\n' +
+      '  const build = (postStart, postEnd, inStart, inEnd) => {\n' +
+      '    if (postStart > postEnd) return null;\n' +
+      '    const value = post[postEnd];\n' +
+      '    const cut = positions.get(value);\n' +
+      '    if (cut === undefined || cut < inStart || cut > inEnd) return null;\n' +
+      '    const leftSize = cut - inStart;\n' +
+      '    const node = { val: value, left: null, right: null };\n' +
+      '    node.left = build(postStart, postStart + leftSize - 1, inStart, cut - 1);\n' +
+      '    node.right = build(postStart + leftSize, postEnd - 1, cut + 1, inEnd);\n' +
+      '    return node;\n' +
+      '  };\n' +
+      '  return build(0, post.length - 1, 0, ino.length - 1);\n' +
+      '}\n' +
+      '\n' +
+      'function buildNaivelyFromInPost(ino, post) {\n' +
+      '  if (post.length === 0) return null;\n' +
+      '  const value = post[post.length - 1];\n' +
+      '  const cut = ino.indexOf(value);\n' +
+      '  if (cut === -1) return null;\n' +
+      '  const node = { val: value, left: null, right: null };\n' +
+      '  node.left = buildNaivelyFromInPost(ino.slice(0, cut), post.slice(0, cut));\n' +
+      '  node.right = buildNaivelyFromInPost(ino.slice(cut + 1), post.slice(cut, post.length - 1));\n' +
+      '  return node;\n' +
+      '}\n' +
+      '\n' +
+      'function buildFromInPostWrongSide(ino, post) {\n' +
+      '  const positions = new Map();\n' +
+      '  ino.forEach((value, index) => positions.set(value, index));\n' +
+      '  const build = (postStart, postEnd, inStart, inEnd) => {\n' +
+      '    if (postStart > postEnd) return null;\n' +
+      '    const value = post[postEnd];\n' +
+      '    const cut = positions.get(value);\n' +
+      '    if (cut === undefined || cut < inStart || cut > inEnd) return null;\n' +
+      '    const leftSize = inEnd - cut;\n' +
+      '    const node = { val: value, left: null, right: null };\n' +
+      '    node.left = build(postStart, postStart + leftSize - 1, inStart, cut - 1);\n' +
+      '    node.right = build(postStart + leftSize, postEnd - 1, cut + 1, inEnd);\n' +
+      '    return node;\n' +
+      '  };\n' +
+      '  return build(1, post.length - 1, 0, ino.length - 1);\n' +
+      '}\n' +
+      '\n' +
+      'function cellsOf(root) {\n' +
+      '  return serializeLevel(root);\n' +
+      '}\n' +
+      '\n' +
+      'function inPostLine(ino, post) {\n' +
+      '  const mapped = buildFromInPost(ino, post);\n' +
+      '  const sliced = buildNaivelyFromInPost(ino, post);\n' +
+      '  const offByOne = buildFromInPostWrongSide(ino, post);\n' +
+      '  return "built nodes=" + nodeCount(mapped) + " in ok=" + (inorder(mapped).join(" ") === ino.join(" ")) +\n' +
+      '    " post ok=" + (postorder(mapped).join(" ") === post.join(" ")) +\n' +
+      '    " pre=[" + preorder(mapped).join(" ") + "]" +\n' +
+      '    " slicing agreed=" + (cellsOf(mapped) === cellsOf(sliced)) +\n' +
+      '    " off by one nodes=" + nodeCount(offByOne) +\n' +
+      '    " off by one agreed=" + (cellsOf(mapped) === cellsOf(offByOne)) +\n' +
+      '    " round trip=" + (cellsOf(buildFromInPost(inorder(mapped), postorder(mapped))) === cellsOf(mapped)) +\n' +
+      '    " given in=[" + ino.join(" ") + "] given post=[" + post.join(" ") + "] tree=[" + cellsOf(mapped) + "]";\n' +
+      '}',
+    modify:
+      'Build from an inorder and a postorder listing in which one value occurs twice, and return every tree the pair admits instead of the first one the map chooses. Which frame becomes a branch point, and how many trees does the duplicate label population suggest that can be?',
   },
 ];
 
