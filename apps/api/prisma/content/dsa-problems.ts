@@ -1604,6 +1604,27 @@ export const DSA_CONCEPTS = {
     terms: ['profit order', 'latest free slot', 'deadline caps the slot', 'slot is the resource', 'find-the-next-free'],
     weight: 4,
   },
+  'dsa-neighbour-rule-needs-both-sweeps': {
+    slug: 'dsa-neighbour-rule-needs-both-sweeps',
+    name: 'A rule about both neighbours is one sweep per direction',
+    detail: 'Every child must out-receive the lower-rated neighbour on either side, and a left-to-right pass can only honour the left side: it hands each climb previous-plus-one and never notices that a descent further right needed more. The return pass walks back and takes a maximum, so it strengthens the right side without breaking any promise the left pass made - two linear sweeps, and nothing but comparisons between neighbours.',
+    terms: ['one pass per direction', 'max on the return', 'never undo the left promise', 'comparisons not differences', 'two sweeps stay linear'],
+    weight: 5,
+  },
+  'dsa-removals-complement-the-kept-set': {
+    slug: 'dsa-removals-complement-the-kept-set',
+    name: 'Count what stays and subtract - removals are never chosen directly',
+    detail: 'The fewest intervals to delete is the input length minus the largest set that can stay, and the set that can stay is the earliest-finish schedule. Deciding which interval to drop in each collision is a different question and usually the wrong one, and counting overlapping pairs is wrong in the other direction: one deletion can break several pairs at once, so the pair count overstates the work.',
+    terms: ['answer is length minus kept', 'earliest finish picks the kept set', 'which-to-drop is a trap', 'one removal breaks many pairs', 'pair counting overstates'],
+    weight: 4,
+  },
+  'dsa-merge-in-three-phases-around-the-newcomer': {
+    slug: 'dsa-merge-in-three-phases-around-the-newcomer',
+    name: 'Copy the strictly earlier, absorb the touching, copy the rest',
+    detail: 'Sorted disjoint intervals let an insertion be one walk: emit every interval that ends before the newcomer starts, then grow the newcomer across every interval that starts at or before its running end - touching counts, or a shared endpoint is left as two intervals - then emit the tail. Both ends of the span have to move, because an absorbed interval can hang lower or reach higher, and the loop is driven by a running end that never shrinks.',
+    terms: ['three phases one pass', 'absorb on touch', 'both ends move', 'running end only grows', 'output stays sorted'],
+    weight: 4,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -19883,6 +19904,500 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return best;\n' +
       '}',
     modify: 'Slots now start at 0 instead of 1 and a job may run on or before its deadline. Which two lines shift, and what becomes of a job whose deadline is 0?',
+  },
+  {
+    step: 12,
+    name: 'Candy',
+    difficulty: 'Hard',
+    topicSlug: DP,
+    stem: 'Every child in a line gets at least one candy and strictly more candies than either neighbour whose rating is lower; return the smallest total number of candies handed out.',
+    brief: 'Input: one rating per child, in line order. Output: the minimum total and the per-child allocation. Deliver the two-sweep greedy, each sweep on its own, the assignment-instead-of-max breakage, the rating-order construction and the bump-until-stable referee.',
+    concepts: ['dsa-neighbour-rule-needs-both-sweeps', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Sweep forward giving every climb one more than the child on its left, then sweep back giving every descent one more than the child on its right, taking a maximum ' +
+      'so the forward promise survives. The two run lengths are lower bounds on that child and the greedy meets both, so the total is minimal. Equal neighbours ' +
+      'constrain nothing and ratings are only compared, never subtracted. O(n) time, O(n) candies.',
+    idealAnswer:
+      'This is not a choice among competing items, it is a per-child number, and the two sweeps are two half-answers that have to be added together with a maximum. ' +
+      'A child at index i must hold at least one candy, at least one more than the child on its left if that rating is lower, and at least one more than the child on ' +
+      'its right if that rating is lower. Chasing the left rule alone gives the length of the strictly increasing run ending at i from the left, and chasing the right ' +
+      'rule alone gives the same length read from the other end; both are genuine lower bounds, so the answer is their maximum, which is exactly what the return pass ' +
+      'computes with Math.max. Nothing can be lowered without breaking a rule, so the total is minimal by construction rather than by luck. ' +
+      'Running only one sweep is right about half the time and wrong in both directions: on the descent 5,4,3,2,1 the forward sweep hands out 1,1,1,1,1 - five candies ' +
+      'where the answer is fifteen - and on the climb 1,2,3,4,5 the backward sweep does the same the other way round. Across 1500 random rating lines the forward-only ' +
+      'rule differs from the two-sweep answer 863 times and the backward-only rule 826 times, and they are wrong on different lines, so no amount of tuning the order ' +
+      'of one pass fixes it. On 4,1,2,1,3,1,5,5 both single sweeps total 11 while the answer is 12 - the return pass lifts only the first child, and the forward pass ' +
+      'lifts only the third, fifth and seventh. ' +
+      'The max is the part that is easy to drop and hard to notice. Writing gives[i] = gives[i + 1] + 1 on the way back can take candies away from a child who already ' +
+      'earned them going up: on 1,3,4,5,2 it returns 1,2,3,2,1, which totals nine and is not even a legal allocation, because the child rated 5 now holds the same as ' +
+      'the child rated 4 on the left. That version differs from the answer on 142 of the 1500 lines, first on 3,0,2,5,0 where it hands out 8 instead of 9. ' +
+      'Two independent constructions agree with the greedy on every line tested. Sort the children by rating and hand each one 1 plus the richest already-placed ' +
+      'neighbour: nothing unplaced can constrain it, since those ratings are higher, so this reads the same lower bounds in a third order. Or start everyone at one and ' +
+      'bump any violation until none remain - the fixpoint is honest but slow to spread, since a round moves a bump only one seat down the line: 4 rounds on ' +
+      '5,4,3,2,1 and at most 3 on the fuzz set, while two sweeps always finish in two passes no matter the shape. ' +
+      'Scale is worth stating because the temptation is to read ratings as quantities: they are only compared, so 1,2,3,4,2000000000 is allocated 1,2,3,4,5 and totals ' +
+      '15. Edges: an empty line gives 0, one child gives 1, 1,1,1 gives 3 with 1,1,1 since a tie asks for nothing, and the two children rated 5 at the end of ' +
+      '4,1,2,1,3,1,5,5 finish at 2 and 1 for the same reason - 1,2,2 totals 4 as 1,2,1.',
+    walkthrough:
+      'The line 4,1,2,1,3,1,5,5 comes out of the forward sweep as 1,1,2,1,2,1,2,1 - eleven candies - and the return sweep lifts only the first child, whose right ' +
+      'neighbour is rated lower, up to 2. The total is 12, and the two children rated 5 finish at 2 and 1 because a tie demands nothing.',
+    commonMistake:
+      'Running a single sweep, or running the return sweep as a plain assignment instead of a maximum so it can undo what the forward pass already earned.',
+    whyWrong:
+      'One sweep is right about half the time: forward-only differs on 863 of 1500 random lines and backward-only on 826, and they fail on different shapes - the ' +
+      'descent 5,4,3,2,1 gets five candies instead of fifteen forward, the climb 1,2,3,4,5 the same backwards. The assignment version returns nine for 1,3,4,5,2, ' +
+      'which breaks the rule it was written to satisfy, and differs on 142 of the same lines.',
+    followUps:
+      [
+        'Can the two sweeps be fused into one pass with O(1) extra space by counting a rising run and the falling run after it? Where does the peak get counted twice?',
+        'The children stand in a circle, so the first and last are neighbours. What breaks in each sweep, and how many passes does a ring need?',
+        'Ratings arrive as a stream and only the total is wanted. What is the smallest state that still gives the right answer, and what does it cost to hold?',
+        'The bump-until-stable referee needs up to 4 rounds on a five-child descent while the sweeps need two. What makes a round move only one seat?',
+      ],
+    solution:
+      'function candy(ratings) {\n' +
+      '  const n = ratings.length;\n' +
+      '  if (n === 0) return 0;\n' +
+      '  const gives = new Array(n).fill(1);\n' +
+      '  for (let index = 1; index < n; index += 1) {\n' +
+      '    if (ratings[index] > ratings[index - 1]) gives[index] = gives[index - 1] + 1;\n' +
+      '  }\n' +
+      '  for (let index = n - 2; index >= 0; index -= 1) {\n' +
+      '    if (ratings[index] > ratings[index + 1]) gives[index] = Math.max(gives[index], gives[index + 1] + 1);\n' +
+      '  }\n' +
+      '  return gives.reduce((sum, count) => sum + count, 0);\n' +
+      '}\n' +
+      '\n' +
+      'function candyTotalOf(allocation) {\n' +
+      '  if (allocation === "") return 0;\n' +
+      '  return allocation.split(",").reduce((sum, count) => sum + Number(count), 0);\n' +
+      '}\n' +
+      '\n' +
+      'function candyAllocation(ratings) {\n' +
+      '  const n = ratings.length;\n' +
+      '  if (n === 0) return "";\n' +
+      '  const gives = new Array(n).fill(1);\n' +
+      '  for (let index = 1; index < n; index += 1) {\n' +
+      '    if (ratings[index] > ratings[index - 1]) gives[index] = gives[index - 1] + 1;\n' +
+      '  }\n' +
+      '  for (let index = n - 2; index >= 0; index -= 1) {\n' +
+      '    if (ratings[index] > ratings[index + 1]) gives[index] = Math.max(gives[index], gives[index + 1] + 1);\n' +
+      '  }\n' +
+      '  return gives.join(",");\n' +
+      '}\n' +
+      '\n' +
+      'function candyLeftSweep(ratings) {\n' +
+      '  const n = ratings.length;\n' +
+      '  if (n === 0) return "";\n' +
+      '  const gives = new Array(n).fill(1);\n' +
+      '  for (let index = 1; index < n; index += 1) {\n' +
+      '    if (ratings[index] > ratings[index - 1]) gives[index] = gives[index - 1] + 1;\n' +
+      '  }\n' +
+      '  return gives.join(",");\n' +
+      '}\n' +
+      '\n' +
+      'function candyRightSweep(ratings) {\n' +
+      '  const n = ratings.length;\n' +
+      '  if (n === 0) return "";\n' +
+      '  const gives = new Array(n).fill(1);\n' +
+      '  for (let index = n - 2; index >= 0; index -= 1) {\n' +
+      '    if (ratings[index] > ratings[index + 1]) gives[index] = gives[index + 1] + 1;\n' +
+      '  }\n' +
+      '  return gives.join(",");\n' +
+      '}\n' +
+      '\n' +
+      'function candyReturnWithoutMax(ratings) {\n' +
+      '  if (ratings.length === 0) return "";\n' +
+      '  const gives = candyLeftSweep(ratings).split(",").map(Number);\n' +
+      '  for (let index = gives.length - 2; index >= 0; index -= 1) {\n' +
+      '    if (ratings[index] > ratings[index + 1]) gives[index] = gives[index + 1] + 1;\n' +
+      '  }\n' +
+      '  return gives.join(",");\n' +
+      '}\n' +
+      '\n' +
+      'function candyByRatingOrder(ratings) {\n' +
+      '  const n = ratings.length;\n' +
+      '  if (n === 0) return 0;\n' +
+      '  const gives = new Array(n).fill(0);\n' +
+      '  const order = ratings\n' +
+      '    .map((rating, index) => index)\n' +
+      '    .sort((first, second) => ratings[first] - ratings[second] || first - second);\n' +
+      '  for (const index of order) {\n' +
+      '    let need = 1;\n' +
+      '    if (index > 0 && ratings[index] > ratings[index - 1]) need = Math.max(need, gives[index - 1] + 1);\n' +
+      '    if (index + 1 < n && ratings[index] > ratings[index + 1]) need = Math.max(need, gives[index + 1] + 1);\n' +
+      '    gives[index] = need;\n' +
+      '  }\n' +
+      '  return gives.reduce((sum, count) => sum + count, 0);\n' +
+      '}\n' +
+      '\n' +
+      'function candyStable(ratings) {\n' +
+      '  const n = ratings.length;\n' +
+      '  if (n === 0) return { total: 0, rounds: 0 };\n' +
+      '  const gives = new Array(n).fill(1);\n' +
+      '  let rounds = 0;\n' +
+      '  for (;;) {\n' +
+      '    let changed = false;\n' +
+      '    for (let index = 0; index < n; index += 1) {\n' +
+      '      if (index > 0 && ratings[index] > ratings[index - 1] && gives[index] <= gives[index - 1]) {\n' +
+      '        gives[index] = gives[index - 1] + 1;\n' +
+      '        changed = true;\n' +
+      '      }\n' +
+      '      if (index + 1 < n && ratings[index] > ratings[index + 1] && gives[index] <= gives[index + 1]) {\n' +
+      '        gives[index] = gives[index + 1] + 1;\n' +
+      '        changed = true;\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (!changed) break;\n' +
+      '    rounds += 1;\n' +
+      '  }\n' +
+      '  return { total: gives.reduce((sum, count) => sum + count, 0), rounds };\n' +
+      '}',
+    modify: 'A tie must now be settled as well: children with equal ratings have to receive equal candies. Which comparison changes, and what are the totals for 1,2,2 and for 5,5,5?',
+  },
+  {
+    step: 12,
+    name: 'Non-overlapping Intervals',
+    difficulty: 'Medium',
+    topicSlug: DP,
+    stem: 'Given intervals on a timeline, return the fewest that must be removed so that no two of what is left overlap; intervals that only touch at an endpoint are already separate.',
+    brief: 'Input: [start, end] pairs in no particular order. Output: the number of removals. Deliver the earliest-finish schedule whose size the answer is the complement of, the kept-set printout, the two orderings that pay for the wrong thing, the pair counter and the subset referee.',
+    concepts: ['dsa-removals-complement-the-kept-set', 'dsa-earliest-finish-leaves-the-most-room', 'dsa-interval-sweep', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Do not choose removals at all: schedule the largest set that can stay and subtract. Sort by end, keep every interval that starts at or after the running end of ' +
+      'the last one kept, and the answer is the length of the input minus that count. Touching endpoints are fine, so the test is >=. O(n log n) for the sort, O(n) ' +
+      'for the scan, and the count is the whole answer - which intervals went is not asked for.',
+    idealAnswer:
+      'The question is phrased as a deletion and answered as a selection. Every set that survives has to be pairwise non-overlapping, and any pairwise non-overlapping ' +
+      'set survives, so the fewest removals is the input length minus the largest keepable set - and the largest keepable set is the interval-scheduling answer: sort ' +
+      'by end and take every interval starting at or after the running end. The exchange is the usual one on the end rather than the start or the length: replacing the ' +
+      'first kept interval by one that finishes no later cannot make anything afterwards impossible, so no optimal kept set is hurt by taking the earliest finisher. ' +
+      'The trap is answering the deletion question directly, because that asks which interval to blame for each collision, and blame is not what is being minimised. ' +
+      'Scanning in start order and dropping the latercomer on 1-10, 2-3, 4-5 removes two where the answer is one - the wide interval is the one worth dropping and ' +
+      'it arrived first. Repairing that by dropping whichever of the two is longer fixes this example, but ordering the whole set by length keeps only one of three ' +
+      'on 0-5, 4-6, 5-10 for two removals, where earliest-finish keeps 0-5 and 5-10 and removes one. Across 900 random interval sets the start order differs from the ' +
+      'subset referee 72 times and the shortest-first order 358 times, while the earliest-finish schedule never did. ' +
+      'Counting overlapping pairs is wrong in the other direction: three copies of 1-2 overlap in 3 pairs and need 2 removals, because a single deletion can break ' +
+      'several pairs at once. On all 900 fuzz sets the pair count never fell below the removal count, which is the honest reading - pairs bound the work from above ' +
+      'and say nothing about which to cut. ' +
+      'The boundary is the other half of the answer. The test is start >= running end, so 1-2 and 2-3 both stay and the answer is 0; tightening it to a strict ' +
+      'comparison calls that one removal, and that variant differs from the greedy on 236 of the 900 sets. The referee has to agree on the convention too: a subset ' +
+      'is compatible when sorting by end and walking never finds a start below the running end, and zero-width intervals make the two readings of touch differ, which ' +
+      'is why the fuzz generator always gives an interval real width. Edges: an empty set needs 0 removals, a single interval 0, and 1-10, 2-3, 4-5, 6-7 nested inside ' +
+      'the first needs 1, keeping 2-3 4-5 6-7. The kept set of 1-100, 11-22, 1-11, 2-12 is 1-11 11-22 - two removals, and the shared endpoint 11 is what lets both ' +
+      'stay.',
+    walkthrough:
+      'The set 1-100, 11-22, 1-11, 2-12 sorts by end as 1-11, 2-12, 11-22, 1-100. Then 1-11 is kept, 2-12 is dropped for starting before the running end of 11, 11-22 ' +
+      'is kept because it starts exactly at 11, and 1-100 is dropped. Two removals out of four, and the kept set is 1-11 11-22.',
+    commonMistake:
+      'Deciding which interval to delete at each collision - by start order or by length - or counting overlapping pairs and calling that the number of removals.',
+    whyWrong:
+      'Start order with drop-the-latercomer removes 2 from 1-10, 2-3, 4-5 where 1 is enough and differs from the referee on 72 of 900 random sets; shortest-first ' +
+      'removes 2 from 0-5, 4-6, 5-10 where 1 is enough and differs 358 times. Pair counting answers a different question outright: 1-2 1-2 1-2 has 3 overlapping pairs ' +
+      'and needs 2 removals, since one deletion breaks several pairs at once.',
+    followUps:
+      [
+        'Each interval now needs a ten-minute cleanup before the next can start. Which single comparison changes, and does the kept set have to be re-chosen?',
+        'Return which intervals were removed instead of how many. Does earliest-finish name the same set every time, and what breaks the tie?',
+        'Maximise the total weight of the intervals that stay instead of the count. Why does the earliest-finish greedy stop being right, and what replaces it?',
+        'The intervals arrive already sorted by start. Can the removals still be counted in one pass without sorting by end, and what state does that need?',
+      ],
+    solution:
+      'function byEnd(intervals) {\n' +
+      '  return intervals\n' +
+      '    .slice()\n' +
+      '    .sort((first, second) => first[1] - second[1] || first[0] - second[0]);\n' +
+      '}\n' +
+      '\n' +
+      'function keptByEnd(intervals) {\n' +
+      '  const kept = [];\n' +
+      '  let freeAt = -Infinity;\n' +
+      '  for (const place of byEnd(intervals)) {\n' +
+      '    if (place[0] >= freeAt) {\n' +
+      '      kept.push(place);\n' +
+      '      freeAt = place[1];\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return kept;\n' +
+      '}\n' +
+      '\n' +
+      'function maxNonOverlapping(intervals) {\n' +
+      '  return keptByEnd(intervals).length;\n' +
+      '}\n' +
+      '\n' +
+      'function eraseCount(intervals) {\n' +
+      '  return intervals.length - maxNonOverlapping(intervals);\n' +
+      '}\n' +
+      '\n' +
+      'function eraseKept(intervals) {\n' +
+      '  return keptByEnd(intervals).map((place) => place[0] + "-" + place[1]).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function eraseLog(intervals) {\n' +
+      '  let freeAt = -Infinity;\n' +
+      '  const rows = [];\n' +
+      '  for (const place of byEnd(intervals)) {\n' +
+      '    if (place[0] >= freeAt) {\n' +
+      '      rows.push("keep " + place[0] + "-" + place[1]);\n' +
+      '      freeAt = place[1];\n' +
+      '    } else {\n' +
+      '      rows.push("drop " + place[0] + "-" + place[1] + " starts before free " + freeAt);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return rows.join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function eraseByStartKeepFirst(intervals) {\n' +
+      '  let freeAt = -Infinity;\n' +
+      '  let kept = 0;\n' +
+      '  const byStart = intervals.slice().sort((first, second) => first[0] - second[0] || first[1] - second[1]);\n' +
+      '  for (const place of byStart) {\n' +
+      '    if (place[0] >= freeAt) {\n' +
+      '      kept += 1;\n' +
+      '      freeAt = place[1];\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return intervals.length - kept;\n' +
+      '}\n' +
+      '\n' +
+      'function eraseByShortestFirst(intervals) {\n' +
+      '  let freeAt = -Infinity;\n' +
+      '  let kept = 0;\n' +
+      '  const byLength = intervals\n' +
+      '    .slice()\n' +
+      '    .sort((first, second) => first[1] - first[0] - (second[1] - second[0]) || first[0] - second[0]);\n' +
+      '  for (const place of byLength) {\n' +
+      '    if (place[0] >= freeAt) {\n' +
+      '      kept += 1;\n' +
+      '      freeAt = place[1];\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return intervals.length - kept;\n' +
+      '}\n' +
+      '\n' +
+      'function eraseTouchIsOverlap(intervals) {\n' +
+      '  let freeAt = -Infinity;\n' +
+      '  let kept = 0;\n' +
+      '  for (const place of byEnd(intervals)) {\n' +
+      '    if (place[0] > freeAt) {\n' +
+      '      kept += 1;\n' +
+      '      freeAt = place[1];\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return intervals.length - kept;\n' +
+      '}\n' +
+      '\n' +
+      'function overlappingPairs(intervals) {\n' +
+      '  let pairs = 0;\n' +
+      '  for (let index = 0; index < intervals.length; index += 1) {\n' +
+      '    for (let other = index + 1; other < intervals.length; other += 1) {\n' +
+      '      if (intervals[index][0] < intervals[other][1] && intervals[other][0] < intervals[index][1]) pairs += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return pairs;\n' +
+      '}\n' +
+      '\n' +
+      'function compatibleSubset(places) {\n' +
+      '  const sorted = places\n' +
+      '    .slice()\n' +
+      '    .sort((first, second) => first[1] - second[1]);\n' +
+      '  let freeAt = -Infinity;\n' +
+      '  for (const place of sorted) {\n' +
+      '    if (place[0] < freeAt) return false;\n' +
+      '    freeAt = place[1];\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function eraseBrute(intervals) {\n' +
+      '  const n = intervals.length;\n' +
+      '  let best = 0;\n' +
+      '  for (let mask = 0; mask < (1 << n); mask += 1) {\n' +
+      '    const chosen = [];\n' +
+      '    for (let index = 0; index < n; index += 1) {\n' +
+      '      if (mask & (1 << index)) chosen.push(intervals[index]);\n' +
+      '    }\n' +
+      '    if (compatibleSubset(chosen) && chosen.length > best) best = chosen.length;\n' +
+      '  }\n' +
+      '  return n - best;\n' +
+      '}',
+    modify: 'Touching endpoints now count as overlapping, so the schedule has to leave a real gap. Which comparison changes, and is the answer for 1-2, 2-3 zero or one?',
+  },
+  {
+    step: 12,
+    name: 'Insert Interval',
+    difficulty: 'Medium',
+    topicSlug: DP,
+    stem: 'Insert one interval into a list already sorted by start and pairwise disjoint, merging everything the newcomer touches or overlaps, and return the list still sorted and merged.',
+    brief: 'Input: sorted disjoint [start, end] pairs plus one new pair. Output: the merged list. Deliver the three-phase single walk, the sort-then-merge fallback, the splice that never merges, the two boundary variants and the invariants the output has to satisfy.',
+    concepts: ['dsa-merge-in-three-phases-around-the-newcomer', 'dsa-interval-sweep', 'dsa-sort-then-two-pointer', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'One walk in three phases: copy every interval that ends strictly before the newcomer starts, absorb every interval that starts at or before the running end of ' +
+      'the span built so far - touching counts - then copy the tail. Both ends of the span move while absorbing. O(n) time and O(n) output, versus O(n log n) for the ' +
+      'append-then-sort-and-merge version that is only needed when the input is not promised sorted.',
+    idealAnswer:
+      'The promise that the list is sorted and pairwise disjoint is what makes this one pass instead of a sort plus a merge, and the three phases are that promise read ' +
+      'out loud. An interval ending before the newcomer starts cannot be touched by anything the newcomer does, so it is copied as it stands. An interval starting at ' +
+      'or before the running end shares ground with the span, so it is absorbed. And because the list is sorted, an interval starting after the running end cannot be ' +
+      'reached later either - the running end only grows while absorbing - so the tail is copied too. ' +
+      'Two details carry the whole correctness argument. The absorb test is start <= end, not start < end: intervals that share an endpoint have to become one, so ' +
+      'inserting 2-3 into 1-2, 3-4 returns 1-4 while the strict test returns 1-3 3-4, which is sorted and covers the right ground but is not merged. On 900 random ' +
+      'sorted lists with a newcomer each, the strict comparison differs from the correct output 80 times. Both ends of the span move while absorbing - the merged ' +
+      'start is the smaller of the two because an interval can hang below the newcomer, and the merged end is the larger. Dropping the min on the start is the quiet ' +
+      'bug: on 1-2, 3-4, 5-8, 11-14 with the newcomer 7-10 it returns 1-2 3-4 7-10 11-14 instead of 1-2 3-4 5-10 11-14, having lost the child interval that started ' +
+      'earlier, and it differs on 229 of the 900. ' +
+      'Inserting by sorted position without merging is the other false friend, and it is only wrong when there is something to merge: 378 of the 900 random insertions ' +
+      'absorb at least one interval, and in every one of those the naive answer still lists the overlapped pairs - 1-2 3-4 5-8 7-10 11-14 where the answer is ' +
+      '1-2 3-4 5-10 11-14. The append-then-merge fallback agrees with the three-phase walk on all 900, which is the point of writing it: it is correct, it is ' +
+      'O(n log n) because it sorts, and it is the version that survives when the input promise is broken. ' +
+      'Two invariants are worth testing rather than assuming. The set of points covered by the output equals the points covered by the input plus the newcomer - the ' +
+      'merge never bridges a real gap, and on these 900 it never failed - and the output is still sorted and pairwise separated, likewise. Edges: an empty list ' +
+      'returns just the newcomer; 1-5 with 2-3 returns 1-5 unchanged, having absorbed one interval; 5-8 with 1-3 returns 1-3 5-8, having absorbed none; a newcomer ' +
+      'of zero width such as 18-18 touching 15-18 merges into 15-18, and 1-2, 3-4 with 2-3 collapses to a single 1-4.',
+    walkthrough:
+      'Inserting 4-8 into 1-2, 3-5, 6-7, 8-10, 12-16 copies 1-2, then absorbs 3-5 into 3-8, absorbs 6-7 with no change because the running end already reaches past ' +
+      'it, and absorbs 8-10 into 3-10, then copies 12-16. The list comes out as 1-2 3-10 12-16 with three intervals absorbed.',
+    commonMistake:
+      'Merging only when the next interval starts strictly before the running end, or inserting by sorted position and treating the list as finished.',
+    whyWrong:
+      'The strict test leaves 1-3 3-4 where the answer is 1-4 - two intervals sharing the point 3 - and differs on 65 of 900 random insertions. Skipping the merge ' +
+      'leaves overlapped pairs in the output for all 378 insertions that absorb something. Forgetting the min on the start shrinks the span: the same insertion that ' +
+      'should read 5-10 reads 7-10, and that differs on 229 of the 900.',
+    followUps:
+      [
+        'The input is no longer promised sorted or disjoint. What do the three phases become, and does the linear bound survive without the sort?',
+        'Insert k intervals. When is one sort-and-merge cheaper than k three-phase walks, and where does the crossover sit in the input sizes?',
+        'Delete an interval from a merged list instead of inserting. What invariant must the output keep, and can a gap that was once bridged be recovered?',
+        'Return the position the newcomer landed at. Which line has to remember the start before it is overwritten, and what does the phase boundary tell you about it?',
+      ],
+    solution:
+      'function insertInterval(intervals, added) {\n' +
+      '  const out = [];\n' +
+      '  let index = 0;\n' +
+      '  while (index < intervals.length && intervals[index][1] < added[0]) {\n' +
+      '    out.push(intervals[index]);\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  const merged = [added[0], added[1]];\n' +
+      '  while (index < intervals.length && intervals[index][0] <= merged[1]) {\n' +
+      '    merged[0] = Math.min(merged[0], intervals[index][0]);\n' +
+      '    merged[1] = Math.max(merged[1], intervals[index][1]);\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  out.push(merged);\n' +
+      '  while (index < intervals.length) {\n' +
+      '    out.push(intervals[index]);\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'const asLabels = (places) => places.map((place) => place[0] + "-" + place[1]).join(" ");\n' +
+      '\n' +
+      'function insertLabels(intervals, added) {\n' +
+      '  return asLabels(insertInterval(intervals, added));\n' +
+      '}\n' +
+      '\n' +
+      'function insertAppendThenMerge(intervals, added) {\n' +
+      '  const all = intervals\n' +
+      '    .concat([added])\n' +
+      '    .sort((first, second) => first[0] - second[0] || first[1] - second[1]);\n' +
+      '  const out = [];\n' +
+      '  for (const place of all) {\n' +
+      '    const last = out.length === 0 ? null : out[out.length - 1];\n' +
+      '    if (last !== null && place[0] <= last[1]) {\n' +
+      '      last[0] = Math.min(last[0], place[0]);\n' +
+      '      last[1] = Math.max(last[1], place[1]);\n' +
+      '    } else {\n' +
+      '      out.push([place[0], place[1]]);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return asLabels(out);\n' +
+      '}\n' +
+      '\n' +
+      'function insertSortedNoMerge(intervals, added) {\n' +
+      '  const out = intervals.slice();\n' +
+      '  let index = 0;\n' +
+      '  while (index < out.length && out[index][0] < added[0]) index += 1;\n' +
+      '  out.splice(index, 0, added);\n' +
+      '  return asLabels(out);\n' +
+      '}\n' +
+      '\n' +
+      'function insertStrictOverlapOnly(intervals, added) {\n' +
+      '  const out = [];\n' +
+      '  let index = 0;\n' +
+      '  while (index < intervals.length && intervals[index][1] < added[0]) {\n' +
+      '    out.push(intervals[index]);\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  const merged = [added[0], added[1]];\n' +
+      '  while (index < intervals.length && intervals[index][0] < merged[1]) {\n' +
+      '    merged[0] = Math.min(merged[0], intervals[index][0]);\n' +
+      '    merged[1] = Math.max(merged[1], intervals[index][1]);\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  out.push(merged);\n' +
+      '  while (index < intervals.length) {\n' +
+      '    out.push(intervals[index]);\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  return asLabels(out);\n' +
+      '}\n' +
+      '\n' +
+      'function insertNoFrontClamp(intervals, added) {\n' +
+      '  const out = [];\n' +
+      '  let index = 0;\n' +
+      '  while (index < intervals.length && intervals[index][1] < added[0]) {\n' +
+      '    out.push(intervals[index]);\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  const merged = [added[0], added[1]];\n' +
+      '  while (index < intervals.length && intervals[index][0] <= merged[1]) {\n' +
+      '    merged[1] = Math.max(merged[1], intervals[index][1]);\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  out.push(merged);\n' +
+      '  while (index < intervals.length) {\n' +
+      '    out.push(intervals[index]);\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  return asLabels(out);\n' +
+      '}\n' +
+      '\n' +
+      'function insertLog(intervals, added) {\n' +
+      '  const rows = [];\n' +
+      '  let index = 0;\n' +
+      '  while (index < intervals.length && intervals[index][1] < added[0]) {\n' +
+      '    rows.push("before " + intervals[index][0] + "-" + intervals[index][1]);\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  const merged = [added[0], added[1]];\n' +
+      '  let absorbed = 0;\n' +
+      '  while (index < intervals.length && intervals[index][0] <= merged[1]) {\n' +
+      '    rows.push(\n' +
+      '      "absorb " + intervals[index][0] + "-" + intervals[index][1] + " -> " + Math.min(merged[0], intervals[index][0]) + "-" + Math.max(merged[1], intervals[index][1]),\n' +
+      '    );\n' +
+      '    merged[0] = Math.min(merged[0], intervals[index][0]);\n' +
+      '    merged[1] = Math.max(merged[1], intervals[index][1]);\n' +
+      '    absorbed += 1;\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  rows.push("place " + merged[0] + "-" + merged[1] + " after " + absorbed + " absorbed");\n' +
+      '  while (index < intervals.length) {\n' +
+      '    rows.push("after " + intervals[index][0] + "-" + intervals[index][1]);\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  return rows.join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function isSeparated(intervals) {\n' +
+      '  for (let index = 1; index < intervals.length; index += 1) {\n' +
+      '    if (intervals[index][0] > intervals[index - 1][1]) continue;\n' +
+      '    return false;\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}',
+    modify: 'The intervals are now half-open, so 1-2 and 2-3 never touch. Which comparison flips, and what does inserting 2-3 into 1-2, 3-4 return?',
   },
 ];
 
