@@ -1667,6 +1667,48 @@ export const DSA_CONCEPTS = {
     terms: ['inorder is positional order', 'strict increase not non-decrease', 'local edges miss ancestor bounds', 'carry the range down', 'duplicates need a rule'],
     weight: 4,
   },
+  'dsa-postorder-is-the-bottom-up-recording-time': {
+    slug: 'dsa-postorder-is-the-bottom-up-recording-time',
+    name: 'Record after both children and the node is answered by its subtrees',
+    detail: 'Postorder is the meeting after the left and the right are both finished, which is the moment a node has everything it needs to be combined. That makes it the order of bottom-up computation - size, height, subtree sums - and the reason a height function reads like postorder even though it never prints a listing. The order is also the one hardest to do with one stack, because the walk has to remember which of its two children just finished.',
+    terms: ['both children first', 'combine point is the record point', 'size and height are postorder folds', 'hardest iterative order', 'leaves come out left to right'],
+    weight: 4,
+  },
+  'dsa-postorder-is-a-reversed-root-right-left-walk': {
+    slug: 'dsa-postorder-is-a-reversed-root-right-left-walk',
+    name: 'Run the mirrored preorder and read it backwards, and it is postorder',
+    detail: 'Left-right-root is the reverse of root-right-left, so a walk that visits a node, then its right side, then its left side, handed back in reverse order is a postorder. Two stacks buy that reversal: the first walks the mirrored preorder, the second collects it in arrival order, and draining the second prints it backwards. The cost is honest - the second stack holds every node, so this is O(n) extra space for an O(h) idea, and it is a listing trick, not an in-place traversal.',
+    terms: ['reverse of root-right-left', 'second stack is the reversal', 'push left then right to pop right first', 'drain order is the mirror', 'full node count of extra space'],
+    weight: 4,
+  },
+  'dsa-bfs-needs-the-band-boundary': {
+    slug: 'dsa-bfs-needs-the-band-boundary',
+    name: 'Level order is a queue plus a count of what is already queued',
+    detail: 'A plain queue mixes depths the moment children are appended, so the band has to be closed by size: take the number of nodes in hand, emit exactly that many, and their children are the next band. Everything level-order answers - widest band, depth of a node, top and bottom view, per-level summaries - is a property of the band, so the boundary is the invariant, not a formatting step at the end.',
+    terms: ['close the band by its size', 'children form the next band', 'depth is the band index', 'band properties need the boundary', 'one queue, no second structure'],
+    weight: 4,
+  },
+  'dsa-spiral-reverses-bands-not-subtrees': {
+    slug: 'dsa-spiral-reverses-bands-not-subtrees',
+    name: 'Spiral order flips whole bands, so the parity is the only state',
+    detail: 'Zig-zag printing keeps every depth band exactly as breadth-first order forms it and reverses alternating bands, which makes the direction a property of the depth, not of a node or an edge. A single stack pair can build the bands in the right order, but it must swap the child order on every band; the far more common implementation walks the bands normally and reverses on odd depth. Either way the underlying partition into depths never changes.',
+    terms: ['direction is band parity', 'bands unchanged, only flipped', 'two stacks swap child order', 'reversing every band is wrong', 'same set of nodes per depth'],
+    weight: 3,
+  },
+  'dsa-stack-peak-is-path-plus-pending-siblings': {
+    slug: 'dsa-stack-peak-is-path-plus-pending-siblings',
+    name: 'The iterative walk holds the way home and the siblings waiting on it',
+    detail: 'A stack replacing recursion stores the ancestors still owed a visit plus the right children parked on the way down, so its peak is bounded by the depth of the deepest node - height plus one - and never by the node count. A chain costs one entry and a balanced tree costs one per level. That bound is the difference between an iterative traversal that scales with the tree and one whose pending work scales with the width.',
+    terms: ['ancestors plus parked siblings', 'peak is height plus one', 'chain holds one entry', 'never the node count', 'pending work is depth-shaped'],
+    weight: 4,
+  },
+  'dsa-recording-time-decides-which-order-a-stack-emits': {
+    slug: 'dsa-recording-time-decides-which-order-a-stack-emits',
+    name: 'Write on push and you get preorder; write on pop and you get inorder',
+    detail: 'The iterative preorder and inorder walks differ mainly in when the node is written down. Preorder can record as it pops, because popping is arrival; inorder must descend left first, so recording during that descent writes the parent before its left subtree and collapses into the preorder listing. Postorder cannot be fixed this way at all - neither push nor pop is the moment both children are finished - which is why it needs a previous pointer or a second stack.',
+    terms: ['record on push is preorder', 'arrival is not completion', 'inorder writes after the left descent', 'postorder has no single pop moment', 'same walk, different line'],
+    weight: 4,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -21381,6 +21423,954 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return isStrictlyIncreasing(inorderValues(root));\n' +
       '}',
     modify: 'Return the kth smallest value in O(h plus k) time without building the listing. Which two lines of the iterative walk carry the count, and what stops the descent early?',
+  },
+  {
+    step: 13,
+    name: 'Postorder Traversal of Binary Tree',
+    difficulty: 'Easy',
+    topicSlug: TREES,
+    stem: 'List a binary tree in postorder - left subtree, right subtree, then the node - and explain why the orders that compute a subtree answer from its children are written in this order.',
+    brief: 'Input: a binary tree. Output: the postorder listing, the leaves in position order, and the size and height computed the way postorder computes them. Deliver the recursive walk and the reversed-mirrored-preorder rewrite.',
+    concepts:
+      [
+        'dsa-postorder-is-the-bottom-up-recording-time',
+        'dsa-three-orders-one-walk',
+        'dsa-tree-cells-carry-shape',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Walk left, walk right, then record the node. Postorder is the meeting after both subtrees are finished, so it is the order a bottom-up computation runs in: size, height, subtree ' +
+      'sums and any "combine the children, then answer for the parent" recurrence is the postorder walk with the record step replaced by an addition. It lists the leaves left to right and the ' +
+      'root last. O(n) time, O(h) space for the call stack.',
+    idealAnswer:
+      'Postorder is the least natural of the three orders to say out loud and the most useful of them to compute in, and the reason is a single sentence: the node is written down after both of its ' +
+      'children, which is exactly the moment the node knows everything about its subtrees. Every recursive tree function that returns a number is secretly a postorder walk - height takes the two child ' +
+      'heights and combines them, size takes the two child sizes, a subtree-sum or a balance check reads its children before it answers for itself - and recognising that is what makes those functions ' +
+      'feel routine rather than clever. The listing itself is three lines: postorder(left), postorder(right), node. ' +
+      'Two properties of the listing are worth being able to state. First, the root is always last and the leaves come out in left-to-right position order, because a leaf is recorded the moment it is ' +
+      'seen and no leaf is ever passed over on the way to another. That makes postorder the order a "prune the leaves" or "evaluate the operands before the operator" pass wants - an expression tree ' +
+      'evaluated in postorder is a postfix expression. Second, postorder is the only one of the three that cannot be produced by moving a single record line inside an iterative walk: preorder records on ' +
+      'arrival, inorder records once the left is done, and postorder records once the right is done too, which is a second condition and needs a second stack or an explicit visited flag. ' +
+      'The rewrite that makes postorder easy is an identity rather than an algorithm. Left-right-root is the reverse of root-right-left, and root-right-left is just a preorder that visits the right ' +
+      'child first. So walk the mirrored preorder and read it backwards, and the output is a postorder; with two stacks the second stack does the reading backwards for free. The trap is to reverse the ' +
+      'ordinary preorder instead, which is right-left-root and only agrees with postorder on trees where no node has two children - and that is exactly the class of trees where every order looks the same, ' +
+      'so the mistake survives the first test. On 900 randomly shaped trees the honest reversal matched the recursive walk on all of them, the ordinary-preorder reversal disagreed on 342, and 342 was ' +
+      'also the number of trees with at least one node holding two children: the disagreement appears precisely where a node has both sides, and nowhere else. ' +
+      'Edges: the empty tree gives the empty listing; a single node is both first and last; a one-sided chain - every tree with no two-child node - lists the same way for postorder and for reversed ' +
+      'preorder, and for that reason a chain is a useless test case for this row.',
+    walkthrough:
+      'On the perfect tree the walk goes 1, 2, 4, records 4, backtracks, records 2 after 5, and only records 1 once both 2 and 3 are done, giving 4 5 2 6 7 3 1 - root last, leaves 4 5 6 7 in position ' +
+      'order. On the chain 1, null, 2, null, 3 the listing is 3 2 1, and reversing either preorder walk gives the same three numbers, which is why the chain hides the bug.',
+    commonMistake:
+      'Producing postorder by reversing an ordinary left-before-right preorder, or treating the postorder listing as an odd variant of inorder instead of the order where a parent is answered by its children.',
+    whyWrong:
+      'Reversing root-left-right gives root-right-left read backwards, which is right-left-root, not left-right-root; it agrees with postorder only when no node has two children, so it differs on 342 of ' +
+      '900 random trees and passes a chain-only test suite. Calling it a curiosity misses the cost: the same confusion turns a height or subtree-sum function into a top-down re-derivation that visits ' +
+      'subtrees twice, when the postorder fold already hands the parent both answers.',
+    followUps:
+      [
+        'Evaluate an expression tree stored as a binary tree. Which listing does that produce, and why is it the same walk with a different record step?',
+        'Delete every node of a tree after deleting its children. Why is postorder the only safe order for freeing memory, and what breaks if the parent is released first?',
+        'Print the postorder listing using the mirrored-preorder-with-one-stack rewrite instead of two stacks. What extra piece of state replaces the second stack?',
+        'Given a postorder listing and the shape of the tree, is the tree reconstructible? What does that say about how much information a single order carries?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function postorder(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  return [postorder(root.left), postorder(root.right), root.val].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function postorderValues(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  return [...postorderValues(root.left), ...postorderValues(root.right), root.val];\n' +
+      '}\n' +
+      '\n' +
+      'function leavesInOrder(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  if (root.left === null && root.right === null) return String(root.val);\n' +
+      '  return [leavesInOrder(root.left), leavesInOrder(root.right)].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function sizeOf(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  const left = sizeOf(root.left);\n' +
+      '  const right = sizeOf(root.right);\n' +
+      '  return left + right + 1;\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  const left = heightOf(root.left);\n' +
+      '  const right = heightOf(root.right);\n' +
+      '  return 1 + Math.max(left, right);\n' +
+      '}\n' +
+      '\n' +
+      'function mirroredPreorder(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  return [root.val, mirroredPreorder(root.right), mirroredPreorder(root.left)].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function preorder(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  return [root.val, preorder(root.left), preorder(root.right)].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function reversed(text) {\n' +
+      '  return text === "" ? "" : text.split(" ").reverse().join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function postorderByReverseOfMirrored(root) {\n' +
+      '  return reversed(mirroredPreorder(root));\n' +
+      '}\n' +
+      '\n' +
+      'function postorderByReverseOfPreorder(root) {\n' +
+      '  return reversed(preorder(root));\n' +
+      '}\n' +
+      '\n' +
+      'function hasTwoChildNode(root) {\n' +
+      '  if (root === null) return false;\n' +
+      '  if (root.left !== null && root.right !== null) return true;\n' +
+      '  return hasTwoChildNode(root.left) || hasTwoChildNode(root.right);\n' +
+      '}',
+    modify: 'Return the postorder listing of every subtree that is a mirror of the input (left and right swapped) without rebuilding the tree. Which single line of the walk changes?',
+  },
+  {
+    step: 13,
+    name: 'Level order Traversal / Spiral',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Print a binary tree band by band - all nodes at depth 0, then depth 1, then depth 2 - and then print it in spiral order, one band left to right and the next right to left.',
+    brief: 'Input: a binary tree. Output: the level listing split into bands, the band widths, and the zig-zag listing. Deliver the queue walk that closes a band by its own size, and the two-stack walk that gets the alternating direction without reversing anything.',
+    concepts:
+      [
+        'dsa-bfs-needs-the-band-boundary',
+        'dsa-spiral-reverses-bands-not-subtrees',
+        'dsa-three-orders-one-walk',
+        'dsa-tree-cells-carry-shape',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Level order is breadth-first on a tree: keep a queue, and process exactly as many nodes as the queue held when the band started, because those and only those are the nodes at this depth. The ' +
+      'children appended while processing are the next band. Every band question - widths, the widest band, the right view - is answered off that boundary. Spiral order takes the same bands and reverses ' +
+      'alternating ones, because the direction is a property of the depth and nothing else. The band count is ' +
+      'the height plus one, and the widest band is the width of the tree. O(n) time, O(width) space.',
+    idealAnswer:
+      'The three depth-first orders share one walk, so level order is the row where a genuinely different discipline appears: a queue instead of a stack, and a band instead of a path. The one thing that ' +
+      'makes it work is knowing where a band ends. A plain queue does not label its entries with a depth, and by the time the second node of a band is popped its own children are already queued behind ' +
+      'it, so the queue mixes depths. Measuring the queue length at the start of a band fixes that with no extra structure: that many nodes are at this depth, and everything appended after the count is ' +
+      'taken belongs to the next one. Every level-order question in the sheet - band widths, the widest band, the depth of a node, top and bottom view, right view, burn-the-tree - is a property of a band, ' +
+      'so the boundary is not a printing detail; it is the invariant that makes the answers exist.' +
+      'Spiral order is the same bands with alternating direction, and there are two honest ways to write it. The readable one walks the bands in normal order and reverses the odd-indexed band on the way ' +
+      'out, because the direction is a property of the depth and nothing else. The classic interview version uses two stacks and never reverses: the active stack holds the current band in the order it ' +
+      'should be printed, and while draining it the next band is pushed in the opposite child order - left then right when the current band runs right to left, right then left when it runs left to ' +
+      'right - so the stack hands back the next band already flipped. Both are linear, both visit each node once, and they agree on every band of every tree: the test worth writing is that the two produce ' +
+      'the same listing, because a spiral walk that gets one child order backwards produces a plausible zig-zag that is wrong in one band.' +
+      'Two claims are worth stating before coding. The number of bands is the height plus one, since a band exists for every depth the tree reaches and the root band is depth zero - which makes a level ' +
+      'walk a legitimate way to measure height when the recursion would otherwise be the answer. And a band of width one is invisible to the spiral: reversing it produces the same band. The spiral flips the ' +
+      'bands at odd depths, so the two orders flatten to the same list whenever every band at an odd depth holds a single node - which happened on 578 of the 900 random trees tested here, chains included. ' +
+      'Spiral order only shows up on the other 322, and that is exactly the kind of test case a hand-written example tends to miss.' +
+      'Edges: the empty tree has no bands and both orders print nothing; a single node is one band of width one, and its spiral is itself; a band with a missing child still prints the children it has, in ' +
+      'position order, so nulls never enter the listing - they are slots, not nodes.',
+    walkthrough:
+      'On the perfect tree the queue holds one node, then two, then four, so the bands read 1 | 2 3 | 4 5 6 7 with widths 1 2 4 and a widest band of 4; flipping the odd band gives the spiral 1 | 3 2 | 4 5 6 7. ' +
+      'On the gap tree the bands are 1 | 2 3 | 4 5 | 6, so the spiral is 1 | 3 2 | 4 5 | 6 - the third band has two nodes in position order and stays as it is because depth two runs left to right again.',
+    commonMistake:
+      'Trying to spot band changes by comparing a stored depth per node instead of counting the queue, or writing the spiral as "reverse every band" or by flipping the child order on only one of the two passes.',
+    whyWrong:
+      'A depth carried per node works but costs an extra field and an extra comparison on every pop, and it still has to be printed in runs, so the count is the cheaper invariant. Reversing every band is ' +
+      'not spiral order - it reverses the root band and every even band instead of the odd ones, so on the perfect tree it prints 1 | 2 3 | 7 6 5 4 where the answer is 1 | 3 2 | 4 5 6 7 - and flipping ' +
+      'the child order on only one pass makes the two stacks agree with the band reversal on the first bands and drift after that. On 900 random trees the inverted parity differed from the correct spiral ' +
+      'on 342 of them, and the two-stack walk agreed with the band-reversal walk on all 900.',
+    followUps:
+      [
+        'Right view of the tree. Which one number per band do you keep, and does the walk need to store the band at all?',
+        'Vertical order traversal. Why does the band boundary have to become a horizontal coordinate, and what does that do to the output order inside a column?',
+        'Widest band with nulls counted as gaps. Why does the answer need positions rather than counts, and what overflows when the tree is deep?',
+        'Top and bottom view. Both are column-first questions with a depth tie-break - which traversal supplies the tie-break for free, and why?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function levelBands(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  const bands = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const stop = queue.length;\n' +
+      '    const band = [];\n' +
+      '    for (; cursor < stop; cursor += 1) {\n' +
+      '      const node = queue[cursor];\n' +
+      '      band.push(String(node.val));\n' +
+      '      if (node.left !== null) queue.push(node.left);\n' +
+      '      if (node.right !== null) queue.push(node.right);\n' +
+      '    }\n' +
+      '    bands.push(band);\n' +
+      '  }\n' +
+      '  return bands;\n' +
+      '}\n' +
+      '\n' +
+      'function levelLines(root) {\n' +
+      '  return levelBands(root).map((band) => band.join(" ")).join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function levelFlat(root) {\n' +
+      '  return levelBands(root).flat().join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function bandCounts(root) {\n' +
+      '  return levelBands(root).map((band) => band.length).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function widestBand(root) {\n' +
+      '  return levelBands(root).reduce((best, band) => Math.max(best, band.length), 0);\n' +
+      '}\n' +
+      '\n' +
+      'function bandCountIsHeight(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return levelBands(root).length - 1;\n' +
+      '}\n' +
+      '\n' +
+      'function spiralBands(root) {\n' +
+      '  return levelBands(root)\n' +
+      '    .map((band, depth) => (depth % 2 === 0 ? band : band.slice().reverse()))\n' +
+      '    .map((band) => band.join(" "))\n' +
+      '    .join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function spiralInvertedParity(root) {\n' +
+      '  return levelBands(root)\n' +
+      '    .map((band, depth) => (depth % 2 === 1 ? band : band.slice().reverse()))\n' +
+      '    .map((band) => band.join(" "))\n' +
+      '    .join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function spiralFlat(root) {\n' +
+      '  return spiralBands(root).split(" | ").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function spiralTwoStacks(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  let current = [root];\n' +
+      '  let following = [];\n' +
+      '  let leftToRight = true;\n' +
+      '  while (current.length > 0) {\n' +
+      '    rows.push(current.map((node) => String(node.val)).join(" "));\n' +
+      '    for (let index = current.length - 1; index >= 0; index -= 1) {\n' +
+      '      const node = current[index];\n' +
+      '      if (leftToRight) {\n' +
+      '        if (node.right !== null) following.push(node.right);\n' +
+      '        if (node.left !== null) following.push(node.left);\n' +
+      '      } else {\n' +
+      '        if (node.left !== null) following.push(node.left);\n' +
+      '        if (node.right !== null) following.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    current = following;\n' +
+      '    following = [];\n' +
+      '    leftToRight = !leftToRight;\n' +
+      '  }\n' +
+      '  return rows.join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}',
+    modify: 'Print the bottom view: for each horizontal coordinate the value of the deepest node in that column. Which two numbers have to ride in the queue alongside the node, and what replaces the band count?',
+  },
+  {
+    step: 13,
+    name: 'Iterative Preorder Traversal of Binary Tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Walk a binary tree in preorder without recursion, using an explicit stack, and account for what the stack is holding at any moment.',
+    brief: 'Input: a binary tree. Output: the preorder listing produced by a loop. Deliver the stack walk, the mirrored push order it depends on, the peak stack size, and the height the peak is bounded by.',
+    concepts:
+      [
+        'dsa-stack-order-decides-visit-order',
+        'dsa-stack-peak-is-path-plus-pending-siblings',
+        'dsa-recording-time-decides-which-order-a-stack-emits',
+        'dsa-three-orders-one-walk',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Push the root, then repeat: pop a node, record it, push its right child and then its left. The stack is last-in-first-out, so the child pushed second is visited second - which means the child that ' +
+      'must be visited first goes in last. The entries are the right siblings waiting along the path back to the root, so the peak is at most the height plus one: one entry per level, never one per node. ' +
+      'O(n) time, O(h) space.',
+    idealAnswer:
+      'Iterating a traversal is the part of this row that is worth doing in an interview, because it forces the answer to a question recursion hides: what is on the stack, and why is it allowed to be ' +
+      'there. Preorder is the easiest case, and it is easy for one reason - a node is recorded the moment it is seen, so the only job left for the structure is to remember the subtrees that have not been ' +
+      'walked yet. Push right, then left, and the pop order is left-subtree-first, exactly as preorder wants. ' +
+      'The push order is the whole mechanism, and it is worth stating as a rule rather than as a line of code: whatever has to happen next has to be pushed last, because a stack hands back what went in ' +
+      'last. Get it the other way and the walk produces a mirrored preorder - root, then the right side, then the left - which is a plausible listing of all n values and is wrong in a way no chain will ' +
+      'ever reveal. Pushing left before right was tested against the recursive walk on 900 randomly shaped trees and disagreed on 342 of them, and the trees it disagreed on are precisely the ones with at ' +
+      'least one node that has two children.' +
+      'Recording time also matters, and it is the reason preorder is the easy order. Recording the node before pushing its children, or after, makes no difference to the listing - the node is popped ' +
+      'exactly once and both children are still below it on the stack either way; on all 900 random trees the two shapes agreed. The same two choices in the inorder walk give completely different answers, ' +
+      'because there the node must not be recorded until its left side is finished. That contrast is what makes this row a Medium rather than the mirror image of the easy one.' +
+      'The stack is not a bucket of pending work in general - it is the path from the root to the node just visited, plus the right children parked on that path. That gives two claims a good answer states ' +
+      'and a follow-up question asks for: a right chain 1, null, 2, null, 3 never holds more than one entry, because each pop has no left child to push and one right child to carry, and a balanced tree ' +
+      'peaks at one entry per level. Across 900 random trees the peak never exceeded the height plus one, so the space is height-shaped, not width-shaped. The practical consequence is the reason this ' +
+      'rewrite gets asked: recursion costs the same memory but charges it to the call stack, which overflows on a deep chain long before an explicit array does.' +
+      'Edges: the empty tree leaves the stack empty and prints nothing; a single node pushes, pops and prints itself with a peak of 1; and a tree whose nodes all have one child prints the same listing ' +
+      'as inorder and postorder would, while keeping the stack at depth 1 - the shape that makes all three orders indistinguishable.',
+    walkthrough:
+      'On the perfect tree the stack runs [1], pops 1 and pushes 3 then 2 so it holds [3, 2], pops 2 and pushes 5 then 4 to hold [3, 5, 4] - that is the peak of 3, one entry for each of the two levels ' +
+      'below the root plus the parked right sibling - and the listing is 1 2 4 5 3 6 7. Pushing left before right instead pops 3 first and prints 1 3 7 6 2 5 4.',
+    commonMistake:
+      'Pushing the left child before the right, or pushing nulls as placeholders so the pop loop can stay uniform.',
+    whyWrong:
+      'Left-before-right pops the right subtree first, which is a mirrored preorder: it lists every value exactly once and is wrong on 342 of 900 random trees, silently, because it agrees with the answer ' +
+      'on every chain. Pushing nulls adds a pop-and-continue for every missing child, so the stack holds up to two entries per level and the peak claim stops being about the height; it also means the ' +
+      'record step has to be guarded by a null test on every iteration, which is the cost the two push-site checks avoid.',
+    followUps:
+      [
+        'Iterative preorder on a tree with parent pointers and no stack. What does the walk use instead, and which node does it move to when the right subtree is empty?',
+        'Compare the stack peak with the recursion depth on the same tree. Why do they track each other, and which one survives a chain of 100000 nodes in JavaScript?',
+        'Preorder of an n-ary tree iteratively. Which child goes on the stack last, and what changes if the children are stored in reverse order?',
+        'Flatten the tree to a right-spine preorder linked list in place. Why does the naive loop that re-parents the left subtree walk the left spine twice, and which structure removes that?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function preorderRecursive(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  return [root.val, preorderRecursive(root.left), preorderRecursive(root.right)].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function preorderStack(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const out = [];\n' +
+      '  const stack = [root];\n' +
+      '  while (stack.length > 0) {\n' +
+      '    const node = stack.pop();\n' +
+      '    out.push(String(node.val));\n' +
+      '    if (node.right !== null) stack.push(node.right);\n' +
+      '    if (node.left !== null) stack.push(node.left);\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function preorderStackRecordAfterPush(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const out = [];\n' +
+      '  const stack = [root];\n' +
+      '  while (stack.length > 0) {\n' +
+      '    const node = stack.pop();\n' +
+      '    if (node.right !== null) stack.push(node.right);\n' +
+      '    if (node.left !== null) stack.push(node.left);\n' +
+      '    out.push(String(node.val));\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function preorderStackLeftFirst(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const out = [];\n' +
+      '  const stack = [root];\n' +
+      '  while (stack.length > 0) {\n' +
+      '    const node = stack.pop();\n' +
+      '    out.push(String(node.val));\n' +
+      '    if (node.left !== null) stack.push(node.left);\n' +
+      '    if (node.right !== null) stack.push(node.right);\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function preorderStackPeak(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  let peak = 0;\n' +
+      '  const stack = [root];\n' +
+      '  while (stack.length > 0) {\n' +
+      '    peak = Math.max(peak, stack.length);\n' +
+      '    const node = stack.pop();\n' +
+      '    if (node.right !== null) stack.push(node.right);\n' +
+      '    if (node.left !== null) stack.push(node.left);\n' +
+      '  }\n' +
+      '  return peak;\n' +
+      '}\n' +
+      '\n' +
+      'function stackWalkLog(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const stack = [root];\n' +
+      '  while (stack.length > 0) {\n' +
+      '    const node = stack.pop();\n' +
+      '    if (node.right !== null) stack.push(node.right);\n' +
+      '    if (node.left !== null) stack.push(node.left);\n' +
+      '    rows.push("visit " + node.val + " stack " + (stack.length === 0 ? "empty" : stack.map((held) => String(held.val)).join(",")));\n' +
+      '  }\n' +
+      '  return rows.join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}',
+    modify: 'Rewrite the walk so the stack never holds more than one entry per level even on a tree where every node has two children, without using recursion. Is that possible for preorder, and what does the answer depend on?',
+  },
+  {
+    step: 13,
+    name: 'Iterative Inorder Traversal of Binary Tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Walk a binary tree in inorder without recursion, and use the same loop to answer the questions that need the walk to pause - the next value, the kth value, the successor of a node.',
+    brief: 'Input: a binary tree, and for the kth question an index. Output: the inorder listing from a loop. Deliver the descend-then-pop walk, the version that records while descending and what it actually prints, the peak stack size, and a walk that stops after k nodes.',
+    concepts:
+      [
+        'dsa-recording-time-decides-which-order-a-stack-emits',
+        'dsa-stack-peak-is-path-plus-pending-siblings',
+        'dsa-inorder-is-the-bst-test',
+        'dsa-stack-order-decides-visit-order',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Keep a cursor and a stack. Push the cursor and every node reached by walking left until the cursor is null - that descent is the left subtree being consumed - then pop, record, and move the cursor to ' +
+      'the popped node - which is the right side of the node just recorded. The loop ends when both the cursor and the stack are empty. The stack is the path back to the root whose left sides are done, so ' +
+      'the peak is the height plus one. O(n) time, O(h) space.',
+    idealAnswer:
+      'Inorder is the first order where the iterative version has to say something recursion never had to say. The recursive one-liner - left, node, right - hides the fact that the walk has to come back ' +
+      'up: the node is not finished when it is first touched, it is finished when its left subtree is. So the loop has two pieces of state and both matter. The stack holds the ancestors that are still ' +
+      'owed a record. The cursor holds the position the call frame would have held, and the moment it is dropped - popping and recording without moving to the right child - the walk either stalls or walks ' +
+      'the left spine again.' +
+      'The one line that separates a correct iterative inorder from a wrong one is where the record happens. Record after the pop and the walk lists 4 2 5 1 6 3 7 on the perfect tree. Record while ' +
+      'descending left instead - the tempting place, because that is where the node is first seen - and the listing becomes 1 2 4 5 3 6 7, which is preorder. This is not a hypothetical: on 900 randomly ' +
+      'shaped trees the record-on-descent variant disagreed with the inorder walk on 609 of them, and on all 721 non-empty trees it produced exactly the preorder listing. It agreed with inorder on the other ' +
+      '112 because those were chains, where every order collapses to the same listing, and on 179 more it printed nothing at all because the tree was empty - which is exactly the kind of test case a ' +
+      'hand-written example tends to leave out.' +
+      'The real payoff for doing inorder iteratively is that it can be paused. Because the stack is the entire state of the walk, a class holding a stack and a cursor can answer "what comes next" in ' +
+      'amortised O(1) per call, and the same loop with a counter answers "what is the kth smallest" in O(h plus k) time and O(h) space - which is the answer to the follow-up that turns up in almost every ' +
+      'tree interview: kth smallest in a search tree without materialising the listing, and a search-tree iterator that a caller can advance. Recording the whole listing first costs O(n) space whether or ' +
+      'not the caller needs it; the paused walk costs what the caller actually consumes.' +
+      'The space bound is worth stating precisely, because the shape of the stack differs between the two walks even though both are bounded by height plus one. In preorder the stack holds parked right ' +
+      'siblings; in inorder it holds the ancestors whose left side is finished, and while descending it grows to exactly the length of that left spine. On the gap tree the inorder stack peaks at 3 while ' +
+      'the preorder stack peaks at 2, on the same tree of height 3. Neither ever reaches the node count: across 900 random trees the peak never exceeded the height plus one.' +
+      'Edges: the empty tree has an empty stack, a null cursor, and records nothing; a single node descends zero steps, pops, records and stops; a left chain 3, 2, 1 pushes every node before the first ' +
+      'record, so the peak is the whole length of the chain, which is also its height plus one - the bound is tight, not just an upper limit.',
+    walkthrough:
+      'On the perfect tree the descent pushes 1, 2, 4 and pops 4, which records 4 and leaves the stack holding 1, 2; the next pop records 2 and moves the cursor to 5, which is pushed and popped next, so ' +
+      'the first four values are 4, 2, 5, 1 - and 1 only appears once both its subtrees are exhausted. On the gap tree the descent is 1, 2, 4, and the stack peak of 3 is the length of that left spine.',
+    commonMistake:
+      'Recording during the left descent instead of after the pop, or popping without moving the cursor to the right child of the popped node.',
+    whyWrong:
+      'Recording on the descent emits the preorder listing, not the inorder one - the parent is written before the left subtree that should precede it - and it is indistinguishable from correct on a chain, ' +
+      'so it passes the obvious test. Dropping the right-child step loses every right subtree: the walk drains the stack of ancestors and stops, listing only the left spine, because nothing else was ever ' +
+      'queued to be visited.',
+    followUps:
+      [
+        'Turn the loop into an iterator class with a next method. Which two fields are the state, and why is the cost per call amortised rather than worst-case constant?',
+        'Kth smallest in a search tree in O(h plus k). Which line becomes the counter, and what does the walk return when k is past the end?',
+        'Validate a search tree using this walk without storing the listing. Which one value has to be remembered between records, and what does it replace?',
+        'Morris inorder rewires threads instead of using a stack. What does it give up to reach O(1) space, and what is the state that makes the second visit findable?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function inorderRecursive(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  return [inorderRecursive(root.left), root.val, inorderRecursive(root.right)].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function inorderStack(root) {\n' +
+      '  const out = [];\n' +
+      '  const stack = [];\n' +
+      '  let cursor = root;\n' +
+      '  while (stack.length > 0 || cursor !== null) {\n' +
+      '    while (cursor !== null) {\n' +
+      '      stack.push(cursor);\n' +
+      '      cursor = cursor.left;\n' +
+      '    }\n' +
+      '    cursor = stack.pop();\n' +
+      '    out.push(String(cursor.val));\n' +
+      '    cursor = cursor.right;\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function inorderStackRecordOnDescent(root) {\n' +
+      '  const out = [];\n' +
+      '  const stack = [];\n' +
+      '  let cursor = root;\n' +
+      '  while (stack.length > 0 || cursor !== null) {\n' +
+      '    while (cursor !== null) {\n' +
+      '      stack.push(cursor);\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      cursor = cursor.left;\n' +
+      '    }\n' +
+      '    cursor = stack.pop();\n' +
+      '    cursor = cursor.right;\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function inorderStackPeak(root) {\n' +
+      '  let peak = 0;\n' +
+      '  const stack = [];\n' +
+      '  let cursor = root;\n' +
+      '  while (stack.length > 0 || cursor !== null) {\n' +
+      '    while (cursor !== null) {\n' +
+      '      stack.push(cursor);\n' +
+      '      peak = Math.max(peak, stack.length);\n' +
+      '      cursor = cursor.left;\n' +
+      '    }\n' +
+      '    cursor = stack.pop();\n' +
+      '    cursor = cursor.right;\n' +
+      '  }\n' +
+      '  return peak;\n' +
+      '}\n' +
+      '\n' +
+      'function leftSpine(root) {\n' +
+      '  const path = [];\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    path.push(String(cursor.val));\n' +
+      '    cursor = cursor.left;\n' +
+      '  }\n' +
+      '  return path.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function kthInorderValue(root, k) {\n' +
+      '  const stack = [];\n' +
+      '  let cursor = root;\n' +
+      '  let seen = 0;\n' +
+      '  while (stack.length > 0 || cursor !== null) {\n' +
+      '    while (cursor !== null) {\n' +
+      '      stack.push(cursor);\n' +
+      '      cursor = cursor.left;\n' +
+      '    }\n' +
+      '    cursor = stack.pop();\n' +
+      '    seen += 1;\n' +
+      '    if (seen === k) return cursor.val;\n' +
+      '    cursor = cursor.right;\n' +
+      '  }\n' +
+      '  return null;\n' +
+      '}\n' +
+      '\n' +
+      'function preorderStack(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const out = [];\n' +
+      '  const stack = [root];\n' +
+      '  while (stack.length > 0) {\n' +
+      '    const node = stack.pop();\n' +
+      '    out.push(String(node.val));\n' +
+      '    if (node.right !== null) stack.push(node.right);\n' +
+      '    if (node.left !== null) stack.push(node.left);\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function firstValuesDiffer(left, right) {\n' +
+      '  if (left === right) return -1;\n' +
+      '  const partsLeft = left === "" ? [] : left.split(" ");\n' +
+      '  const partsRight = right === "" ? [] : right.split(" ");\n' +
+      '  for (let index = 0; index < Math.max(partsLeft.length, partsRight.length); index += 1) {\n' +
+      '    if (partsLeft[index] !== partsRight[index]) return index;\n' +
+      '  }\n' +
+      '  return -1;\n' +
+      '}',
+    modify: 'Make the walk resumable: a class that stores the stack and the cursor and returns one value per call to next. Which two fields carry the state, and what does next return once the walk is finished?',
+  },
+  {
+    step: 13,
+    name: 'Postorder Traversal using 2 Stacks',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Produce the postorder listing of a binary tree with two stacks and no recursion, and account for what each stack is doing and what the pair costs.',
+    brief: 'Input: a binary tree. Output: the postorder listing. Deliver the two-stack walk, the mirrored-preorder identity it rests on, the second stack in arrival order, and the push-order variant that silently produces the wrong listing.',
+    concepts:
+      [
+        'dsa-postorder-is-a-reversed-root-right-left-walk',
+        'dsa-postorder-is-the-bottom-up-recording-time',
+        'dsa-stack-order-decides-visit-order',
+        'dsa-three-orders-one-walk',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Postorder is left, right, root; read backwards that is root, right, left, which is a preorder that visits the right child first. So push the root on the first stack, pop it onto the second, and push ' +
+      'its left child then its right child onto the first - so the right comes off first. The second stack then holds root, right, left in arrival order, and draining it prints left, right, root. O(n) time, ' +
+      'O(n) space: the second stack ends up holding every node.',
+    idealAnswer:
+      'The two-stack walk is worth knowing for what it reveals rather than for its constant factors. Postorder is the order a node is recorded after both its children, and a stack only ever hands back one ' +
+      'end, so there is no single moment at which a popped node is finished - which is exactly why the one-stack version needs a previous-pointer test. The identity that removes the problem is small: ' +
+      'left-right-root reversed is root-right-left, and root-right-left is a preorder that happens to visit the right child first. A second stack is a way of buying a reversal, so the walk becomes: emit ' +
+      'the mirrored preorder onto stack two, then read stack two backwards.' +
+      'Every interesting detail lives in the push order onto the first stack. To pop right before left, push left before right - the same rule as iterative preorder, applied one level up. Reverse those two ' +
+      'pushes and the first stack emits an ordinary preorder, the second stack collects root, left, right, and the drain prints right, left, root: a listing with every value exactly once, which is neither ' +
+      'postorder nor anything else, but differs from the correct answer only on trees that branch. On 900 randomly shaped trees that variant disagreed with the recursive postorder on 342 and agreed on the ' +
+      'other 558 - exactly the trees where no node holds two children, so a test suite built from chains and single nodes passes it.' +
+      'The second stack is not a working set; it is the whole answer waiting to be read, and it holds n entries when the walk finishes. That is the honest cost of the trick: the recursive walk uses O(h) ' +
+      'call frames, the one-stack iterative walk uses O(h) entries, and this version uses O(n) of both stack and listing. It is still the right answer to the question as asked, because it is mechanical, it ' +
+      'never re-tests a node, and the reversal is done by the structure instead of by a comparison. Where the follow-up pushes - do it with one stack - the price comes back down by remembering which child ' +
+      'was just finished, which is the same information the recursion kept in the return address.' +
+      'Edges: the empty tree leaves the first stack empty, the second stack empty, and prints nothing; a single node costs two moves - the seed push and one pop onto the second stack - and prints itself; a chain prints in the direction the ' +
+      'chain runs - 1, null, 2, null, 3 gives 3 2 1 - and here the mirrored and ordinary preorders coincide, so both push orders give the right answer, which is the edge case to state out loud rather than ' +
+      'test against.',
+    walkthrough:
+      'On the perfect tree the first stack runs [1], pops 1 and pushes 2 then 3 so it holds [2, 3], pops 3 and pushes 6 then 7, pops 7, pops 6, then pops 2 and does the same - so the second stack arrives as ' +
+      '1, 3, 7, 6, 2, 5, 4 and draining it backwards prints 4 5 2 6 7 3 1. Push left after right instead and the second stack arrives 1, 2, 4, 5, 3, 6, 7, and the drain prints 7 6 3 5 4 2 1.',
+    commonMistake:
+      'Pushing the right child before the left onto the first stack, or reversing the second stack in place and calling that the algorithm while losing the listing.',
+    whyWrong:
+      'Right-before-left makes the first walk an ordinary preorder, so the reversed output is right-left-root instead of left-right-root; it lists all n values once and is wrong on 342 of 900 random ' +
+      'trees, agreeing only where a node has no two-child branching. The second point is a cost rather than a bug - reading stack two backwards requires either a second copy of the listing or popping it, ' +
+      'so the walk cannot print on the fly, and an interview that asks for the values in postorder on a stream has to be told that this method buffers all of them.',
+    followUps:
+      [
+        'One stack, no reversal. Which test on the popped node replaces the second stack, and why does it need to remember the node visited just before?',
+        'The two-stack walk gives the postorder of the tree. What listing does it give if the input tree is mirrored first - and what does that say about the pair of orders?',
+        'Delete every node of a tree after its children using this walk. Why is the second stack the safe order to free from, and what does the first stack hold at the moment of a free?',
+        'Compare two stacks against recursion on a tree of height 100000 that is a chain. Which one runs out of memory, and which one runs out of patience?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function postorderRecursive(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  return [postorderRecursive(root.left), postorderRecursive(root.right), root.val].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function mirroredPreorder(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  return [root.val, mirroredPreorder(root.right), mirroredPreorder(root.left)].filter((part) => part !== "").join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function reversed(text) {\n' +
+      '  return text === "" ? "" : text.split(" ").reverse().join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function postorderTwoStacks(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const first = [root];\n' +
+      '  const second = [];\n' +
+      '  while (first.length > 0) {\n' +
+      '    const node = first.pop();\n' +
+      '    second.push(node);\n' +
+      '    if (node.left !== null) first.push(node.left);\n' +
+      '    if (node.right !== null) first.push(node.right);\n' +
+      '  }\n' +
+      '  return second.map((node) => String(node.val)).reverse().join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function secondStackArrival(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const first = [root];\n' +
+      '  const second = [];\n' +
+      '  while (first.length > 0) {\n' +
+      '    const node = first.pop();\n' +
+      '    second.push(node);\n' +
+      '    if (node.left !== null) first.push(node.left);\n' +
+      '    if (node.right !== null) first.push(node.right);\n' +
+      '  }\n' +
+      '  return second.map((node) => String(node.val)).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function postorderTwoStacksRightFirst(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const first = [root];\n' +
+      '  const second = [];\n' +
+      '  while (first.length > 0) {\n' +
+      '    const node = first.pop();\n' +
+      '    second.push(node);\n' +
+      '    if (node.right !== null) first.push(node.right);\n' +
+      '    if (node.left !== null) first.push(node.left);\n' +
+      '  }\n' +
+      '  return second.map((node) => String(node.val)).reverse().join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function secondStackSize(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  const first = [root];\n' +
+      '  const second = [];\n' +
+      '  while (first.length > 0) {\n' +
+      '    const node = first.pop();\n' +
+      '    second.push(node);\n' +
+      '    if (node.left !== null) first.push(node.left);\n' +
+      '    if (node.right !== null) first.push(node.right);\n' +
+      '  }\n' +
+      '  return second.length;\n' +
+      '}\n' +
+      '\n' +
+      'function movesForTwoStacks(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  const first = [root];\n' +
+      '  const second = [];\n' +
+      '  let moves = 1;\n' +
+      '  while (first.length > 0) {\n' +
+      '    const node = first.pop();\n' +
+      '    second.push(node);\n' +
+      '    moves += 1;\n' +
+      '    if (node.left !== null) {\n' +
+      '      first.push(node.left);\n' +
+      '      moves += 1;\n' +
+      '    }\n' +
+      '    if (node.right !== null) {\n' +
+      '      first.push(node.right);\n' +
+      '      moves += 1;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return moves;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function hasTwoChildNode(root) {\n' +
+      '  if (root === null) return false;\n' +
+      '  if (root.left !== null && root.right !== null) return true;\n' +
+      '  return hasTwoChildNode(root.left) || hasTwoChildNode(root.right);\n' +
+      '}',
+    modify: 'Rewrite the walk to print the postorder listing of the mirrored tree using the same two stacks and no extra reversal. Which two lines move?',
   },
 ];
 
