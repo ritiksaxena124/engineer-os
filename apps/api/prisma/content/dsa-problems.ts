@@ -1625,6 +1625,20 @@ export const DSA_CONCEPTS = {
     terms: ['three phases one pass', 'absorb on touch', 'both ends move', 'running end only grows', 'output stays sorted'],
     weight: 4,
   },
+  'dsa-reachable-indices-form-a-prefix': {
+    slug: 'dsa-reachable-indices-form-a-prefix',
+    name: 'Everything up to the running frontier is reachable, so one integer decides',
+    detail: 'If an index is reachable then every index before it is reachable, because a leap may be shortened. That turns the whole question into one running maximum - the farthest index the scanned prefix can land on - walked in index order: an index past the frontier is the first unreachable one and nothing beyond it can ever be recovered, while an index at or inside it is standing room from which the frontier may still grow. Any per-index choice set is a subset of that prefix, so back-to-front goal migration decides the same question with the same single integer.',
+    terms: ['reachable set is a prefix', 'shorten the leap', 'one running maximum', 'past the frontier is fatal', 'goal moves backwards'],
+    weight: 4,
+  },
+  'dsa-jumps-are-breadth-first-layers': {
+    slug: 'dsa-jumps-are-breadth-first-layers',
+    name: 'Jumps are breadth-first layers, so count the bands, not the landings',
+    detail: 'Indices one jump from the start form a contiguous band, indices two jumps form the next band, and so on, so the fewest jumps is the band index that first covers the last cell. The scan therefore keeps three numbers - jumps so far, the end of the current band, and the farthest reach seen while walking the band - and commits a jump only when the walk hits the band end, which is why the loop stops before the last index. Choosing a landing index by any local rule is a different algorithm: the richest neighbour, the farthest single leap and the neighbour with the best reach all commit to one path instead of a whole band, and all lose.',
+    terms: ['band per jump', 'commit at the band end', 'three running numbers', 'stop before the last index', 'local landing rule loses'],
+    weight: 4,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -20073,8 +20087,8 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       'by end and take every interval starting at or after the running end. The exchange is the usual one on the end rather than the start or the length: replacing the ' +
       'first kept interval by one that finishes no later cannot make anything afterwards impossible, so no optimal kept set is hurt by taking the earliest finisher. ' +
       'The trap is answering the deletion question directly, because that asks which interval to blame for each collision, and blame is not what is being minimised. ' +
-      'Scanning in start order and dropping the latercomer on 1-10, 2-3, 4-5 removes two where the answer is one - the wide interval is the one worth dropping and ' +
-      'it arrived first. Repairing that by dropping whichever of the two is longer fixes this example, but ordering the whole set by length keeps only one of three ' +
+      'Scanning in start order and dropping whichever interval arrived later removes two from 1-10, 2-3, 4-5 where the answer is one - the wide interval is the one ' +
+      'worth dropping, and it arrived first. Repairing that by dropping whichever of the two is longer fixes this example, but ordering the whole set by length keeps only one of three ' +
       'on 0-5, 4-6, 5-10 for two removals, where earliest-finish keeps 0-5 and 5-10 and removes one. Across 900 random interval sets the start order differs from the ' +
       'subset referee 72 times and the shortest-first order 358 times, while the earliest-finish schedule never did. ' +
       'Counting overlapping pairs is wrong in the other direction: three copies of 1-2 overlap in 3 pairs and need 2 removals, because a single deletion can break ' +
@@ -20092,7 +20106,7 @@ export const DSA_PROBLEMS: DsaProblem[] = [
     commonMistake:
       'Deciding which interval to delete at each collision - by start order or by length - or counting overlapping pairs and calling that the number of removals.',
     whyWrong:
-      'Start order with drop-the-latercomer removes 2 from 1-10, 2-3, 4-5 where 1 is enough and differs from the referee on 72 of 900 random sets; shortest-first ' +
+      'Start order, where the later interval always loses, removes 2 from 1-10, 2-3, 4-5 where 1 is enough and differs from the referee on 72 of 900 random sets; shortest-first ' +
       'removes 2 from 0-5, 4-6, 5-10 where 1 is enough and differs 358 times. Pair counting answers a different question outright: 1-2 1-2 1-2 has 3 overlapping pairs ' +
       'and needs 2 removals, since one deletion breaks several pairs at once.',
     followUps:
@@ -20245,8 +20259,8 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       'sorted lists with a newcomer each, the strict comparison differs from the correct output 80 times. Both ends of the span move while absorbing - the merged ' +
       'start is the smaller of the two because an interval can hang below the newcomer, and the merged end is the larger. Dropping the min on the start is the quiet ' +
       'bug: on 1-2, 3-4, 5-8, 11-14 with the newcomer 7-10 it returns 1-2 3-4 7-10 11-14 instead of 1-2 3-4 5-10 11-14, having lost the child interval that started ' +
-      'earlier, and it differs on 229 of the 900. ' +
-      'Inserting by sorted position without merging is the other false friend, and it is only wrong when there is something to merge: 378 of the 900 random insertions ' +
+      'earlier, and it differs on 201 of the 900. ' +
+      'Inserting by sorted position without merging is the other false friend, and it is only wrong when there is something to merge: 404 of the 900 random insertions ' +
       'absorb at least one interval, and in every one of those the naive answer still lists the overlapped pairs - 1-2 3-4 5-8 7-10 11-14 where the answer is ' +
       '1-2 3-4 5-10 11-14. The append-then-merge fallback agrees with the three-phase walk on all 900, which is the point of writing it: it is correct, it is ' +
       'O(n log n) because it sorts, and it is the version that survives when the input promise is broken. ' +
@@ -20260,9 +20274,9 @@ export const DSA_PROBLEMS: DsaProblem[] = [
     commonMistake:
       'Merging only when the next interval starts strictly before the running end, or inserting by sorted position and treating the list as finished.',
     whyWrong:
-      'The strict test leaves 1-3 3-4 where the answer is 1-4 - two intervals sharing the point 3 - and differs on 65 of 900 random insertions. Skipping the merge ' +
-      'leaves overlapped pairs in the output for all 378 insertions that absorb something. Forgetting the min on the start shrinks the span: the same insertion that ' +
-      'should read 5-10 reads 7-10, and that differs on 229 of the 900.',
+      'The strict test leaves 1-3 3-4 where the answer is 1-4 - two intervals sharing the point 3 - and differs on 80 of 900 random insertions. Skipping the merge ' +
+      'leaves overlapped pairs in the output for all 404 insertions that absorb something. Forgetting the min on the start shrinks the span: the same insertion that ' +
+      'should read 5-10 reads 7-10, and that differs on 201 of the 900.',
     followUps:
       [
         'The input is no longer promised sorted or disjoint. What do the three phases become, and does the linear bound survive without the sort?',
@@ -20398,6 +20412,339 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return true;\n' +
       '}',
     modify: 'The intervals are now half-open, so 1-2 and 2-3 never touch. Which comparison flips, and what does inserting 2-3 into 1-2, 3-4 return?',
+  },
+  {
+    step: 12,
+    name: 'Jump Game',
+    difficulty: 'Medium',
+    topicSlug: DP,
+    stem: 'Say whether the last index can be landed on, where standing on index i allows a leap to any index from i + 1 through i + nums[i].',
+    brief: 'Input: an array of non-negative leap lengths. Output: whether the final cell is reachable. Deliver the frontier scan, the goal-migration twin, the brute-force referee, the reachable prefix, and the two readings that get this answer wrong.',
+    concepts: ['dsa-reachable-indices-form-a-prefix', 'dsa-loop-invariant', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'One running integer: the farthest index the prefix scanned so far can land on. Walk the indices in order; if the current index is past that frontier the answer ' +
+      'is false, because the reachable indices form a prefix and a hole in it is permanent; otherwise push the frontier out to index + nums[index]. Finishing the walk ' +
+      'without meeting a hole gives true. O(n) time and O(1) space, and the same single integer walked back to front - migrating a goal instead of growing a frontier ' +
+      '- agrees with it on every input.',
+    idealAnswer:
+      'A leap may be shortened, so if index j is landable then every index before j is landable as well: the reachable set is a prefix of the array, and a prefix is ' +
+      'described by exactly one number. That is the reduction, and it is why this greedy needs no table and no path. The scan holds the farthest landing point of the ' +
+      'prefix it has read, asks whether the next index sits inside it, and only then spends that index as standing room. An index past the frontier is the first cell ' +
+      'nobody can reach, and since the frontier is only ever built from indices at or inside it, no value further right can lift it: the answer is settled at that ' +
+      'moment, which is what makes a single pass enough. ' +
+      'The exchange argument here is unusually quiet, because there is nothing to give back. A wider frontier is never a worse position - landing further right keeps ' +
+      'every landing that a smaller frontier had, since the leap can always be shortened - so taking the maximum is not one strategy among several, it is the exact ' +
+      'boundary of the prefix after reading that index. The order of the two statements is the real detail: the test against the frontier comes before the update, so ' +
+      'an index sitting exactly on the frontier is still usable, because that is where the previous leap landed, while an index one past it is the hole. ' +
+      'The wrong readings are both about which landings are allowed. The first treats the array as a fixed path, leaping exactly nums[i] from index i. It never ' +
+      'promises a reachability it cannot deliver - a fixed path is a legal sequence of leaps - but it refuses 485 of 1200 reachable arrays: on 3,1,4,4,2,2 it walks ' +
+      '0, 3, 7, falls off the end and says no, while the scan lands on 2 and then on 5 by shortening both leaps. On 3,3,1,0,1 it walks into index 3, stands ' +
+      'on a zero and says no, while the scan shortens the first leap to one, and index 1 alone reaches past the end. The second wrong reading lets the frontier shrink, writing ' +
+      'reach = index + nums[index] instead of a maximum: it forgets the room an earlier leap paid for, and disagrees with the scan on 300 of the 1200 - 2,0,0 is ' +
+      'the smallest case, where index 1 pulls the frontier back from 2 to 1 and index 2 then looks unreachable. ' +
+      'Three cross-checks carry the same result. Migrating a goal from the right - the rightmost index that still needs to be reached steps left whenever a cell can ' +
+      'land on it - differs from the frontier on 0 of 1200 arrays, the memoised depth-first search over every legal landing differs on 0, and the count of cells the ' +
+      'scan can stand on equals the array length exactly when the answer is true. Edges worth quoting: a one-cell array is already finished, so [0] is true, and so is ' +
+      'the empty array; [0,1] is false because index 1 lies outside a frontier of 0, while [1,0] is true - the value of the last cell never matters, because landing ' +
+      'there ends the game; and 3,0,0,0 is true next to 2,0,0,0 false, which is the pair that punishes reading a zero as a wall rather than as a place to stand.',
+    walkthrough:
+      'The frontier on 2,3,1,1,4 reads 0:2 - index 0 lifts it to 2 - then 1:4, and every later index is already inside, giving 2:4, 3:4 and 4:8 before the walk ends ' +
+      'with no hole, so the answer is true. On 3,2,1,0,4 the trace is 0:3 1:3 2:3 3:3 and then 4: unreachable, so index 4 is the hole and the answer is false.',
+    commonMistake:
+      'Answering the fixed-path question by leaping exactly nums[i], or overwriting the frontier instead of taking a running maximum of it.',
+    whyWrong:
+      'The fixed path refuses 485 of 1200 reachable arrays, including 3,3,1,0,1, where the first leap only has to be shortened to one so that index 1 does the ' +
+      'reaching. Overwriting the frontier loses ' +
+      'the room an earlier leap bought and disagrees on 300 of the 1200 - on 3,0,0,0 it calls the third cell unreachable although index 0 reaches it.',
+    followUps:
+      [
+        'Return the index where the run stops instead of a yes or no. Which line moves, and what should a fully reachable array report?',
+        'Now nums[i] may be negative. Does the reachable set stay a prefix, and can one running maximum still decide the question?',
+        'Print one shortest winning path rather than a boolean. Why does the frontier scan need parent pointers, and what does that do to the O(1) space claim?',
+        'The next question asks for the fewest leaps. Why is that a different algorithm rather than a tighter version of this one, and which extra invariant has to be carried?',
+      ],
+    solution:
+      'function canJump(nums) {\n' +
+      '  let reach = 0;\n' +
+      '  for (let index = 0; index < nums.length; index += 1) {\n' +
+      '    if (index > reach) return false;\n' +
+      '    reach = Math.max(reach, index + nums[index]);\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function frontierTrace(nums) {\n' +
+      '  let reach = 0;\n' +
+      '  const rows = [];\n' +
+      '  for (let index = 0; index < nums.length; index += 1) {\n' +
+      '    if (index > reach) {\n' +
+      '      rows.push(index + ": unreachable");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    reach = Math.max(reach, index + nums[index]);\n' +
+      '    rows.push(index + ":" + reach);\n' +
+      '  }\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function stuckIndex(nums) {\n' +
+      '  let reach = 0;\n' +
+      '  for (let index = 0; index < nums.length; index += 1) {\n' +
+      '    if (index > reach) return index;\n' +
+      '    reach = Math.max(reach, index + nums[index]);\n' +
+      '  }\n' +
+      '  return -1;\n' +
+      '}\n' +
+      '\n' +
+      'function reachableCount(nums) {\n' +
+      '  let reach = 0;\n' +
+      '  let counted = 0;\n' +
+      '  for (let index = 0; index < nums.length; index += 1) {\n' +
+      '    if (index > reach) break;\n' +
+      '    reach = Math.max(reach, index + nums[index]);\n' +
+      '    counted += 1;\n' +
+      '  }\n' +
+      '  return counted;\n' +
+      '}\n' +
+      '\n' +
+      'function canJumpFromTheBack(nums) {\n' +
+      '  let goal = nums.length - 1;\n' +
+      '  for (let index = nums.length - 2; index >= 0; index -= 1) {\n' +
+      '    if (index + nums[index] >= goal) goal = index;\n' +
+      '  }\n' +
+      '  return goal <= 0;\n' +
+      '}\n' +
+      '\n' +
+      'function canJumpExactLeap(nums) {\n' +
+      '  let index = 0;\n' +
+      '  const seen = new Set();\n' +
+      '  while (index < nums.length) {\n' +
+      '    if (index === nums.length - 1) return true;\n' +
+      '    if (seen.has(index)) return false;\n' +
+      '    seen.add(index);\n' +
+      '    index += nums[index];\n' +
+      '  }\n' +
+      '  return false;\n' +
+      '}\n' +
+      '\n' +
+      'function canJumpWithoutMax(nums) {\n' +
+      '  let reach = 0;\n' +
+      '  for (let index = 0; index < nums.length; index += 1) {\n' +
+      '    if (index > reach) return false;\n' +
+      '    reach = index + nums[index];\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function canJumpBrute(nums) {\n' +
+      '  const n = nums.length;\n' +
+      '  if (n === 0) return true;\n' +
+      '  const memo = new Array(n).fill(-1);\n' +
+      '  const walk = (index) => {\n' +
+      '    if (index >= n - 1) return true;\n' +
+      '    if (memo[index] !== -1) return memo[index] === 1;\n' +
+      '    for (let step = 1; step <= nums[index]; step += 1) {\n' +
+      '      if (walk(index + step)) {\n' +
+      '        memo[index] = 1;\n' +
+      '        return true;\n' +
+      '      }\n' +
+      '    }\n' +
+      '    memo[index] = 0;\n' +
+      '    return false;\n' +
+      '  };\n' +
+      '  return walk(0);\n' +
+      '}',
+    modify: 'Now nums[i] may be negative, so a leap can land behind you. Is the reachable set still a prefix of the array, and what has the scan carry instead of one maximum?',
+  },
+  {
+    step: 12,
+    name: 'Jump Game II',
+    difficulty: 'Medium',
+    topicSlug: DP,
+    stem: 'Return the fewest leaps that land on the last index, given an array of non-negative leap lengths where standing on index i allows a leap to any index from i + 1 through i + nums[i].',
+    brief: 'Input: an array of non-negative leap lengths. Output: the minimum number of leaps, or -1 when the last cell cannot be landed on. Deliver the band-counting scan, the DP referee, the three local landing rules and the boundary that decides whether the loop stops one cell early.',
+    concepts: ['dsa-jumps-are-breadth-first-layers', 'dsa-reachable-indices-form-a-prefix', 'dsa-loop-invariant', 'dsa-boundary-conditions', 'dsa-complexity-counting'],
+    shortAnswer:
+      'Read the array as breadth-first layers: the cells one leap away form a band, the cells two leaps away form the next, and each band is a contiguous range, so two ' +
+      'integers describe it. Walk the array keeping three numbers - leaps committed, the last index the current band covers, and the farthest reach seen while scanning ' +
+      'the band - and commit a leap only when the walk reaches the band end, at which point the band end becomes that farthest reach. The answer is the band that first ' +
+      'covers the final cell: O(n) time, O(1) space, and -1 when a band turns out to reach no further than itself.',
+    idealAnswer:
+      'The question is a shortest-path question on a graph where every index has an edge to the next few, so the honest answer is breadth-first search and the greedy is ' +
+      'BFS with the queue removed. Removing the queue is legitimate because of the same prefix fact that carries Jump Game: if an index is k leaps away then every ' +
+      'earlier index is at most k leaps away, since a leap can be shortened. Each layer is therefore an interval, an interval needs only its two ends, and the whole ' +
+      'frontier fits in three integers - leaps committed, the end of the band being scanned, and the farthest reach found inside it. Committing a leap at the band end ' +
+      'is exactly the moment the next layer is complete, which is why the count is minimal rather than merely valid: no cell inside the old band can be reached with ' +
+      'fewer leaps, and the new band is everything reachable in one more. ' +
+      'Two boundaries carry the implementation. The loop runs to n - 2, not to the last index, because the last cell is the target and never a place to jump from - ' +
+      'scanning it as standing room lets a commit fire from the finish, and 1,1 then reports 2 leaps instead of 1, which is wrong on 259 of the 1200 random arrays ' +
+      'checked. And the commit is guarded: if the farthest reach ' +
+      'inside the band equals the band end, the band has produced nothing new, so the walk is out of standing room and the answer is -1. That is precisely where the ' +
+      'reachability frontier of the previous question stops, and across 1200 random arrays the two agree: the scan reports -1 exactly on the arrays whose last cell is ' +
+      'unreachable. ' +
+      'The tempting wrong answers all pick a landing index. Leaping exactly nums[i] is wrong 490 times out of 1200; jumping to the neighbour with the largest value is ' +
+      'wrong 669 times; jumping to the neighbour that itself reaches furthest is wrong 364 times. They fail for one reason - each commits to one path, while the ' +
+      'optimal answer needs the whole band, because the cell that wins later is often the least impressive one in front of you. On 2,4,1,1,1 the fewest is 2: a leap of ' +
+      'one to index 1, whose value 4 then covers the end. The fixed leap takes 3 by landing on 2 and crawling from there, and both neighbour-picking rules get stuck ' +
+      'reporting -1, because from index 1 every candidate looks worse than index 1 itself. The O(n^2) DP - relax every landing from every reachable cell - agrees with ' +
+      'band counting on all 1200 arrays, which is the check worth writing, and the band trace shows why the count is exact: on 2,3,1,1,4 the first band is 1-2, the ' +
+      'farthest reach inside it is 4, so the second band is 3-4 and it already holds the last cell. ' +
+      'Edges worth quoting: a one-cell array needs no leap, so [1] and [5] both give 0 - a huge value changes nothing when you are already standing on the target; ' +
+      '[1,1,1,1,1] gives 4, the worst case for the count and the case where every band has width one; [3,0,0,0] gives 1, since the single band 1-3 already covers the ' +
+      'end; [4,3,2,1,0] also gives 1 even though the values fall all the way down; and [0,1] and [1,0,1] both give -1, the unreachable cases.',
+    walkthrough:
+      'On 2,3,1,1,4 the walk commits its first leap at index 0, where the band end sits, having found a farthest reach of 2, so band one is 1-2. Scanning that band, ' +
+      'index 1 pushes the farthest reach to 4, so at the band end the second leap is committed and band two is 3-4, which holds the last index: 2 leaps, traced as ' +
+      'jump 1 from 0 covers 1-2 | jump 2 from 2 covers 3-4. On 3,2,1,0,4 the first band is 1-3, the farthest reach inside it stays 3, and the commit guard fires.',
+    commonMistake:
+      'Choosing a landing index greedily - the furthest legal one, the richest one, the one whose own leap reaches furthest - or letting the loop scan the last index as ' +
+      'standing room.',
+    whyWrong:
+      'A per-index rule commits to a path where the answer needs a band: on 2,4,1,1,1 the fixed-leap rule reports 3 and both neighbour-picking rules report -1, where ' +
+      'the fewest is 2 - a leap of one to index 1, whose own value then covers the end - and across 1200 random arrays the fixed-leap rule is wrong 490 times, the ' +
+      'richest-neighbour rule 669 and the best-reach rule 364. Scanning the last index ' +
+      'fires a jump from the finish, so 1,1 reads 2 instead of 1 and 259 of the 1200 arrays are overcounted.',
+    followUps:
+      [
+        'Return the indices actually landed on, one shortest path. Which extra array has to remember a choice per band, and does the O(1) space claim survive?',
+        'Why is the loop bound n - 1 rather than n? Give the input where a full scan reports one leap too many and say which line is responsible.',
+        'The end is guaranteed reachable in the original statement. Where does the -1 come from here, and why is it exactly the cell where the reachability frontier stops?',
+        'Compare the O(n^2) DP with the band scan. What does the DP table hold that the three integers already summarise, and when would the table be the better answer?',
+      ],
+    solution:
+      'function canJump(nums) {\n' +
+      '  let reach = 0;\n' +
+      '  for (let index = 0; index < nums.length; index += 1) {\n' +
+      '    if (index > reach) return false;\n' +
+      '    reach = Math.max(reach, index + nums[index]);\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function minJumps(nums) {\n' +
+      '  const n = nums.length;\n' +
+      '  if (n <= 1) return 0;\n' +
+      '  let jumps = 0;\n' +
+      '  let end = 0;\n' +
+      '  let farthest = 0;\n' +
+      '  for (let index = 0; index < n - 1; index += 1) {\n' +
+      '    farthest = Math.max(farthest, index + nums[index]);\n' +
+      '    if (index === end) {\n' +
+      '      if (farthest === end) return -1;\n' +
+      '      jumps += 1;\n' +
+      '      end = farthest;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return end >= n - 1 ? jumps : -1;\n' +
+      '}\n' +
+      '\n' +
+      'function minJumpsFullScan(nums) {\n' +
+      '  const n = nums.length;\n' +
+      '  if (n <= 1) return 0;\n' +
+      '  let jumps = 0;\n' +
+      '  let end = 0;\n' +
+      '  let farthest = 0;\n' +
+      '  for (let index = 0; index < n; index += 1) {\n' +
+      '    farthest = Math.max(farthest, index + nums[index]);\n' +
+      '    if (index === end) {\n' +
+      '      if (farthest === end) return -1;\n' +
+      '      jumps += 1;\n' +
+      '      end = farthest;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return end >= n - 1 ? jumps : -1;\n' +
+      '}\n' +
+      '\n' +
+      'function jumpLayers(nums) {\n' +
+      '  const n = nums.length;\n' +
+      '  if (n <= 1) return "";\n' +
+      '  const rows = [];\n' +
+      '  let jumps = 0;\n' +
+      '  let end = 0;\n' +
+      '  let farthest = 0;\n' +
+      '  for (let index = 0; index < n - 1; index += 1) {\n' +
+      '    farthest = Math.max(farthest, index + nums[index]);\n' +
+      '    if (index === end) {\n' +
+      '      if (farthest === end) {\n' +
+      '        rows.push("stuck at " + end);\n' +
+      '        return rows.join(" | ");\n' +
+      '      }\n' +
+      '      jumps += 1;\n' +
+      '      rows.push("jump " + jumps + " from " + end + " covers " + (end + 1) + "-" + Math.min(farthest, n - 1));\n' +
+      '      end = farthest;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return rows.join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function minJumpsByDp(nums) {\n' +
+      '  const n = nums.length;\n' +
+      '  if (n <= 1) return 0;\n' +
+      '  const best = new Array(n).fill(Infinity);\n' +
+      '  best[0] = 0;\n' +
+      '  for (let index = 0; index < n; index += 1) {\n' +
+      '    if (best[index] === Infinity) continue;\n' +
+      '    for (let step = 1; step <= nums[index] && index + step < n; step += 1) {\n' +
+      '      best[index + step] = Math.min(best[index + step], best[index] + 1);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return best[n - 1] === Infinity ? -1 : best[n - 1];\n' +
+      '}\n' +
+      '\n' +
+      'function minJumpsFullLeap(nums) {\n' +
+      '  const n = nums.length;\n' +
+      '  if (n <= 1) return 0;\n' +
+      '  let index = 0;\n' +
+      '  let jumps = 0;\n' +
+      '  while (index < n - 1) {\n' +
+      '    const step = nums[index];\n' +
+      '    if (step === 0) return -1;\n' +
+      '    jumps += 1;\n' +
+      '    index += step;\n' +
+      '  }\n' +
+      '  return index === n - 1 ? jumps : -1;\n' +
+      '}\n' +
+      '\n' +
+      'function minJumpsRichestNeighbour(nums) {\n' +
+      '  const n = nums.length;\n' +
+      '  if (n <= 1) return 0;\n' +
+      '  let index = 0;\n' +
+      '  let jumps = 0;\n' +
+      '  const seen = new Set();\n' +
+      '  while (index < n - 1) {\n' +
+      '    if (seen.has(index)) return -1;\n' +
+      '    seen.add(index);\n' +
+      '    let best = index;\n' +
+      '    for (let step = 1; step <= nums[index] && index + step < n; step += 1) {\n' +
+      '      if (nums[index + step] > nums[best]) best = index + step;\n' +
+      '    }\n' +
+      '    if (best === index) return -1;\n' +
+      '    jumps += 1;\n' +
+      '    index = best;\n' +
+      '  }\n' +
+      '  return jumps;\n' +
+      '}\n' +
+      '\n' +
+      'function minJumpsBestReach(nums) {\n' +
+      '  const n = nums.length;\n' +
+      '  if (n <= 1) return 0;\n' +
+      '  let index = 0;\n' +
+      '  let jumps = 0;\n' +
+      '  const seen = new Set();\n' +
+      '  while (index < n - 1) {\n' +
+      '    if (seen.has(index)) return -1;\n' +
+      '    seen.add(index);\n' +
+      '    let best = index;\n' +
+      '    for (let step = 1; step <= nums[index] && index + step < n; step += 1) {\n' +
+      '      if (step + index + nums[index + step] > best + nums[best]) best = index + step;\n' +
+      '    }\n' +
+      '    if (best === index) return -1;\n' +
+      '    jumps += 1;\n' +
+      '    index = best;\n' +
+      '  }\n' +
+      '  return jumps;\n' +
+      '}',
+    modify: 'Return one shortest list of landed-on indices instead of a count. Which per-band decision has to be remembered, and what does the space bound become?',
   },
 ];
 
