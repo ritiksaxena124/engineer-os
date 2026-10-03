@@ -1822,6 +1822,46 @@ export const DSA_CONCEPTS = {
     terms: ['hit case, split case, pass-through case', 'an ancestor pair has no split node', 'absence looks like success to a plain recursion', 'comparing paths gives distance for free', 'values are not node identity'],
     weight: 4,
   },
+  'dsa-heap-index-measures-the-band-span': {
+    slug: 'dsa-heap-index-measures-the-band-span',
+    name: 'Width is a span of positions, so the queue carries an index and counts nothing',
+    detail:
+    'A level is as wide as the gap between its outermost nodes plus one, which the node count cannot see because a hole inside the band costs a position and no node. Number the root 0 and the children of position i at 2i+1 and 2i+2, carry that number next to the node through the queue, and the band answer is last minus first plus 1. Counting the nodes per band answers a question that only agrees on a perfect tree, and a level-order listing of values and null markers is a log of what the queue emitted rather than an array of slots, so slicing it into groups of 1, 2, 4 drifts out of alignment at the first hole.',
+    terms: ['last index minus first plus one', 'children of i at 2i+1 and 2i+2', 'nodes per band is a different quantity', 'a queue log is not a slot array', 'a band can span more slots than it holds nodes'],
+    weight: 4,
+  },
+  'dsa-index-doubling-outgrows-exact-integers': {
+    slug: 'dsa-index-doubling-outgrows-exact-integers',
+    name: 'Two multiplications per level spend the exact-integer range in fifty-odd levels',
+    detail:
+    'Band d starts near 2 to the d, so the position index is exponential in the depth while the tree is only linear in it. Floating point integers stay exact to 2 to the 53 minus 1, and past that two adjacent children become the same number, which collapses a real span of 2 to 1 without any error being raised. Normalising a band to its own minimum before multiplying keeps the numbers the size of the band and leaves the span unchanged. The two forms agree on every shallow tree, so only a deliberately deep witness shows the difference.',
+    terms: ['2 to the d per level', 'exact integers end at 2 to the 53 minus 1', 'siblings collapse onto one value', 'subtract the band minimum first', 'a shallow random test cannot see it'],
+    weight: 4,
+  },
+  'dsa-children-sum-is-a-check-per-internal-node': {
+    slug: 'dsa-children-sum-is-a-check-per-internal-node',
+    name: 'A rule over every internal node is a conjunction, and a leaf is never asked',
+    detail:
+    'The check is one equality per node that has children: the node equals the sum of the children it actually has. Leaves and the empty tree pass without being compared, so a true answer states that no internal node broke the rule and nothing more, and an offender list carries strictly more information. The wording also hides a fork between the arithmetical reading and the structural one that demands zero or two children, and with distinct values the two cannot separate, because a node with one child only satisfies the sum when the child repeats its parent.',
+    terms: ['one comparison per internal node', 'a leaf passes without being asked', 'report the offenders, not just true', 'one child splits the two readings', 'a repeated value is what makes them differ'],
+    weight: 3,
+  },
+  'dsa-parent-map-opens-the-upward-edge': {
+    slug: 'dsa-parent-map-opens-the-upward-edge',
+    name: 'Child pointers are one-way, so a distance question needs the reverse edge built',
+    detail:
+    'Distance counts edges in both directions while the tree only offers edges downward, so a search from a node that is not the root answers about its subtree and misses the parent, the sibling branch and everything above. One breadth-first pass fills a map keyed by node reference, every node then has up to three neighbours, and the question becomes an unweighted sphere on a graph that the wave closes band by band. The set of seen nodes exists to stop the wave coming back down through the parent, and the map has to be keyed by reference because a value can name two nodes.',
+    terms: ['map keyed by node, not by value', 'three neighbours: two children and a parent', 'the root is where both readings agree', 'a downward-empty answer is the loudest miss', 'the seen set stops the return through the parent'],
+    weight: 4,
+  },
+  'dsa-burn-time-is-the-farthest-distance': {
+    slug: 'dsa-burn-time-is-the-farthest-distance',
+    name: 'Fire crosses every edge, so the seconds are the eccentricity of the start',
+    detail:
+    'The burn is the distance wave run until the frontier empties, which makes its seconds the distance to the farthest node from the start rather than the depth below it. The height of the start agrees only when a descendant is also the farthest node, so the downward reading passes on the root and fails below it. Maximising the same quantity over all starts gives the diameter in edges, and an end of a longest path is a start that attains it, which is why the slowest start is a leaf.',
+    terms: ['seconds equal the farthest distance', 'height of the start is a downward answer', 'waves minus one', 'the worst start is an end of a longest path', 'the root is where the two readings coincide'],
+    weight: 4,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -25811,6 +25851,837 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return "pair=" + a + "," + b + " recursive=" + lcaRecursive(root, a, b) + " byPaths=" + lcaByPaths(root, a, b) + " byMap=" + lcaByParentMap(root, a, b) + " bothSides=" + lcaRequiresDifferentSides(root, a, b) + " checked=" + lcaWithPresenceCheck(root, a, b) + " distance=" + distanceBetween(root, a, b) + " nodes=" + nodeCount(root) + " tree=[" + serializeLevel(root) + "]";\n' +
       '}',
     modify: 'Take node references instead of values. Which implementation changes behaviour on 1 2 3 4 null null 4, and what does the pair (4, 4) mean afterwards?',
+  },
+  {
+    step: 13,
+    name: 'Maximum Width of Binary Tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Report the maximum width of a binary tree, where the width of a level is the span from its leftmost node to its rightmost node in the position numbering of a complete tree, gaps included, and say what that numbering costs at depth.',
+    brief: 'Input: a binary tree that is neither complete nor ordered. Output: the largest level span, counting the empty positions between the two end nodes of that level. Deliver the indexed breadth-first wave, the per-level node count and why it is a different question, the null-padded listing and why slicing it drifts, and the depth at which the doubled index stops being an exact integer.',
+    concepts:
+      [
+        'dsa-heap-index-measures-the-band-span',
+        'dsa-index-doubling-outgrows-exact-integers',
+        'dsa-bfs-needs-the-band-boundary',
+        'dsa-tree-cells-carry-shape',
+        'dsa-boundary-conditions',
+      ],
+    shortAnswer:
+      'Number each node with its position in a complete tree - root 0, children of position i at 2i+1 and 2i+2 - carry that pair through the queue, and read last minus first plus 1 from each band. The largest span is the width; counting the nodes of a band answers a different question and gives the wrong number on 127 of the 721 random trees tried.',
+    idealAnswer:
+      'Width is a property of positions, not of nodes. The level of 1 2 3 4 5 null 6 null null 7 8 that holds the values 3, 5 and 6 runs from position 3 to position 6, so it is four wide while holding three nodes, because position 4 is an empty slot inside the span. That is the whole reason the wave carries an index next to each node: root at 0, children of position i at 2i+1 and 2i+2, and the band answer is last minus first plus 1. The band boundary itself comes from the ordinary level-order discipline of closing a band by the count already in hand, so the walk stays one breadth-first pass - O(n) time, and space equal to the widest band of nodes.' +
+      'The reading that looks like the same question is the number of nodes per band. On a perfect tree the two never part: 1 2 3 4 5 6 7 has bands 0, 1 to 2, 3 to 6, and both readings report 4, so the first test passes and the disagreement is still ahead. It arrives with the first hole inside a band - the wide tree above gives per-band node counts 1, 2, 3, 2 against widths 1, 2, 4, 2, so the node count answers 3 and the width is 4. Across the 721 non-empty random trees the two answers differ on 127 of them. They also differ in kind: over that population the widest span reached 13 while no tree held more than 12 nodes, and one tree spans more positions than it has nodes at all. A span can exceed the tree because it is measured on the complete tree the input sits inside. With labels drawn from an alphabet of four rather than one value per node the same reading reached 19.' +
+      'A third tool is the null-padded level-order listing, cut into bands of 1, 2, 4, ... cells and measured from its first non-null to its last. It fails for a reason that is easy to miss: that listing records what the queue emitted, and a null in it was dequeued without producing children, so from the first hole onward the fixed band sizes no longer line up with levels at all. Against the indexed answer on the 900 random trees it disagreed 469 times - 453 too large and 16 too small - and on the 41-node tree that is two spines 20 levels deep it reported 32 cells where the real band spans 1048576 positions. A shape-carrying listing needs positions that mean slots, and this one does not have them.' +
+      'The index doubles every level, so band d begins near 2 to the d and the arithmetic leaves the exact-integer range long before the tree grows large. JavaScript holds integers exactly to 9007199254740991, which is 2 to the 53 minus 1, and a tree with exactly two nodes in its last band turns that into a witness machine. At depth 53 the two siblings are numbered 9007199254740991 and 9007199254740992, the subtraction still yields 2 and the width is right by luck; at depth 54 both children land on 18014398509481984, so the absolute span answers 1 for a band that holds two nodes. The first collapse is at depth 54. Normalising before multiplying - subtract the band minimum, then number the children of the shifted values - measures the same gap in band-local coordinates and kept 2 at depth 54 where the absolute form returned 1. The normalised form matched the absolute one on all 900 random trees, whose bands go five levels deep at most, so no amount of sampling on ordinary trees finds this bug.' +
+      'Boundaries, then the number to keep in your pocket. The empty tree has no band and reports 0, which is a different convention from the height of -1 and worth stating before someone assumes the two line up; a single node reports 1, and a chain reports 1 at every band because a band with one node spans one position. The two-spine tree of 41 nodes and height 20 has a width of 1048576, so the answer is exponential in the size of the input while the queue itself never holds more than two nodes - the interview question hiding inside this one is whether the type holding the index, and the type holding the answer, are wide enough. In a language with 32-bit integers the same collapse arrives around depth 30 instead of 54.',
+    walkthrough:
+      '1 2 3 4 5 null 6 null null 7 8, height 3. Band 0 holds the root at position 0. Band 1 holds positions 1 and 2, span 2. Band 2 holds 3, 5, 6 at positions 3, 5, 6 - span 6 minus 3 plus 1, which is 4 - and band 3 holds 7, 8 at positions 9 and 10, span 2. The widths are 1, 2, 4, 2 and the answer is 4 at depth 2, while the node counts of the same bands are 1, 2, 3, 2. Now the tree 1 2 null 3 4 5 null 6, whose bands are 0, then 1 alone, then 3 to 4, then 7 to 9: widths 1, 1, 2, 3 and the answer is 3 at depth 3, from a band that holds two nodes with a hole between them.',
+    commonMistake:
+      'Counting the nodes on each level and calling the maximum of those the width, or carrying the absolute position through the whole tree and trusting the doubled index at any depth.',
+    whyWrong:
+      'The node count throws away the gaps the definition asks for: it answers 3 on 1 2 3 4 5 null 6 null null 7 8, whose widest band spans 4 positions, and it is the wrong number on 127 of the 721 random trees tried. The absolute index is right until it is silently wrong: the two children at depth 54 are the same JavaScript number, so the span collapses from 2 to 1, and the random population whose bands are at most five deep agreed with the normalised form on all 900 trees, which is exactly how a bug like this ships.',
+    followUps:
+      [
+        'Take the tree that is two spines 20 levels deep and holds 41 nodes. What is its width, and what does that say about the type you keep the answer in?',
+        'Report the leftmost and rightmost values of the widest band, not only its size. Which two fields does the wave have to carry?',
+        'Drop the index and push null markers into the queue so a band is honest padding. What does that cost on a tree that is a chain down one side?',
+        'Is the maximum width the same quantity as the maximum queue length? Which one bounds the other, and on which tree do they differ most?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function numberedBands(root) {\n' +
+      '  const bands = [];\n' +
+      '  let frontier = root === null ? [] : [{ node: root, index: 0 }];\n' +
+      '  while (frontier.length > 0) {\n' +
+      '    bands.push(frontier);\n' +
+      '    const next = [];\n' +
+      '    for (const cell of frontier) {\n' +
+      '      if (cell.node.left !== null) next.push({ node: cell.node.left, index: cell.index * 2 + 1 });\n' +
+      '      if (cell.node.right !== null) next.push({ node: cell.node.right, index: cell.index * 2 + 2 });\n' +
+      '    }\n' +
+      '    frontier = next;\n' +
+      '  }\n' +
+      '  return bands;\n' +
+      '}\n' +
+      '\n' +
+      'function widthsWithIndexes(root) {\n' +
+      '  return numberedBands(root).map((band) => band[band.length - 1].index - band[0].index + 1);\n' +
+      '}\n' +
+      '\n' +
+      'function widthsWithCompactIndexes(root) {\n' +
+      '  const widths = [];\n' +
+      '  let frontier = root === null ? [] : [{ node: root, index: 0 }];\n' +
+      '  while (frontier.length > 0) {\n' +
+      '    widths.push(frontier[frontier.length - 1].index - frontier[0].index + 1);\n' +
+      '    const next = [];\n' +
+      '    const offset = frontier[0].index;\n' +
+      '    for (const cell of frontier) {\n' +
+      '      const shifted = cell.index - offset;\n' +
+      '      if (cell.node.left !== null) next.push({ node: cell.node.left, index: shifted * 2 + 1 });\n' +
+      '      if (cell.node.right !== null) next.push({ node: cell.node.right, index: shifted * 2 + 2 });\n' +
+      '    }\n' +
+      '    frontier = next;\n' +
+      '  }\n' +
+      '  return widths;\n' +
+      '}\n' +
+      '\n' +
+      'function widthsByNodeCount(root) {\n' +
+      '  return numberedBands(root).map((band) => band.length);\n' +
+      '}\n' +
+      '\n' +
+      'function widestOf(widths) {\n' +
+      '  let best = 0;\n' +
+      '  for (const width of widths) if (width > best) best = width;\n' +
+      '  return best;\n' +
+      '}\n' +
+      '\n' +
+      'function maxWidthByIndex(root) {\n' +
+      '  return widestOf(widthsWithIndexes(root));\n' +
+      '}\n' +
+      '\n' +
+      'function maxWidthByCompactIndex(root) {\n' +
+      '  return widestOf(widthsWithCompactIndexes(root));\n' +
+      '}\n' +
+      '\n' +
+      'function widestDepth(root) {\n' +
+      '  const widths = widthsWithIndexes(root);\n' +
+      '  let depth = -1;\n' +
+      '  let best = -1;\n' +
+      '  for (let band = 0; band < widths.length; band += 1) {\n' +
+      '    if (widths[band] > best) {\n' +
+      '      best = widths[band];\n' +
+      '      depth = band;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return depth;\n' +
+      '}\n' +
+      '\n' +
+      'function cellSpanFromCells(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  const cells = serializeLevel(root).split(" ");\n' +
+      '  let best = 0;\n' +
+      '  let cursor = 0;\n' +
+      '  let band = 0;\n' +
+      '  while (cursor < cells.length) {\n' +
+      '    const size = 2 ** band;\n' +
+      '    const slice = cells.slice(cursor, cursor + size);\n' +
+      '    const first = slice.findIndex((row) => row !== "null");\n' +
+      '    if (first !== -1) {\n' +
+      '      let last = slice.length - 1;\n' +
+      '      while (slice[last] === "null") last -= 1;\n' +
+      '      if (last - first + 1 > best) best = last - first + 1;\n' +
+      '    }\n' +
+      '    cursor += size;\n' +
+      '    band += 1;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}\n' +
+      '\n' +
+      'function twoSpinesOf(depth) {\n' +
+      '  const root = { val: 1, left: null, right: null };\n' +
+      '  let left = root;\n' +
+      '  let right = root;\n' +
+      '  let value = 2;\n' +
+      '  for (let level = 0; level < depth; level += 1) {\n' +
+      '    left.left = { val: value, left: null, right: null };\n' +
+      '    left = left.left;\n' +
+      '    value += 1;\n' +
+      '    right.right = { val: value, left: null, right: null };\n' +
+      '    right = right.right;\n' +
+      '    value += 1;\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function firstSpanDisagreement(depth) {\n' +
+      '  const root = twoSpinesOf(depth);\n' +
+      '  const absolute = widthsWithIndexes(root);\n' +
+      '  const compact = widthsWithCompactIndexes(root);\n' +
+      '  for (let band = 0; band < absolute.length; band += 1) {\n' +
+      '    if (absolute[band] !== compact[band]) return band;\n' +
+      '  }\n' +
+      '  return -1;\n' +
+      '}\n' +
+      '\n' +
+      'function pairAtDepth(depth) {\n' +
+      '  const root = { val: 1, left: null, right: null };\n' +
+      '  let cursor = root;\n' +
+      '  let value = 2;\n' +
+      '  for (let level = 1; level < depth; level += 1) {\n' +
+      '    cursor.left = { val: value, left: null, right: null };\n' +
+      '    value += 1;\n' +
+      '    cursor = cursor.left;\n' +
+      '  }\n' +
+      '  cursor.left = { val: value, left: null, right: null };\n' +
+      '  cursor.right = { val: value + 1, left: null, right: null };\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function pairLine(depth) {\n' +
+      '  const root = pairAtDepth(depth);\n' +
+      '  const bands = numberedBands(root);\n' +
+      '  const frontier = bands[bands.length - 1];\n' +
+      '  const first = frontier[0].index;\n' +
+      '  const last = frontier[frontier.length - 1].index;\n' +
+      '  return "depth=" + depth + " nodes=" + frontier.length + " first=" + first + " last=" + last +\n' +
+      '    " safe=" + (Number.isSafeInteger(first) && Number.isSafeInteger(last)) +\n' +
+      '    " absolute=" + widthsWithIndexes(root)[depth] + " compact=" + widthsWithCompactIndexes(root)[depth] +\n' +
+      '    " trueWidth=2";\n' +
+      '}\n' +
+      '\n' +
+      'function firstPairCollapse(limit) {\n' +
+      '  for (let depth = 1; depth <= limit; depth += 1) {\n' +
+      '    if (widthsWithIndexes(pairAtDepth(depth))[depth] !== 2) return depth;\n' +
+      '  }\n' +
+      '  return -1;\n' +
+      '}\n' +
+      '\n' +
+      'function maxWidthLine(root) {\n' +
+      '  return "widest=" + maxWidthByIndex(root) + " atDepth=" + widestDepth(root) + " indexes=[" + widthsWithIndexes(root).join(" ") + "] compact=[" + widthsWithCompactIndexes(root).join(" ") + "] nodes=[" + widthsByNodeCount(root).join(" ") + "] cells=" + cellSpanFromCells(root) + " height=" + (numberedBands(root).length - 1) + " tree=[" + serializeLevel(root) + "]";\n' +
+      '}\n' +
+      '\n' +
+      'function bandPositions(root) {\n' +
+      '  const bands = numberedBands(root);\n' +
+      '  return bands.map((band) => band[0].index + " to " + band[band.length - 1].index + " with " + band.length).join(" | ");\n' +
+      '}',
+    modify: 'Return the width of the deepest completely filled band instead, or null if none exists. Which index form makes that a comparison of two numbers you already have, and what does the 20-deep two-spine tree report?',
+  },
+  {
+    step: 13,
+    name: 'Check for Children Sum Property',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Check whether every node of a binary tree equals the sum of its children, and say what an answer of true actually claims, what it says about a node with one child, and what it costs on the shapes that are never asked.',
+    brief: 'Input: a binary tree. Output: whether the children-sum property holds, meaning each node either has no children or carries the sum of the children it has. Deliver the per-internal-node comparison, the vacuous cases, the one-child ambiguity between the two readings of the rule, and an answer that names the offenders rather than merely agreeing.',
+    concepts:
+      [
+        'dsa-children-sum-is-a-check-per-internal-node',
+        'dsa-balance-is-a-property-of-every-subtree',
+        'dsa-boundary-conditions',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'One equality test per node that has children: a node must equal the sum of the children it actually has, and a walk that finds no violation answers true. Leaves, a single node and the empty tree pass without being compared, so true means no internal node broke the rule and nothing beyond that.',
+    idealAnswer:
+      'The property is a conjunction over the internal nodes, so the implementation is a walk with one equality test per node that has children, and an every-style answer. A node with one child is checked against that child alone: 1 2 fails, because the root holds 1 and its only child holds 2, and the offender list is [1] with the root short of its child rather than above it. Leaves contribute no comparison at all, which is why a true answer carries less information than it appears to and why the follow-up that asks you to repair the tree is a different problem from the one that asks you to check it.' +
+      'Three shapes pass by never being asked. The empty tree, a single node and a tree whose every node is a leaf all have no internal node to break the rule, so the walk returns true without performing a comparison - the empty tree reports internal=0, leaves=0, holds=true. Over the 900 random trees, 278 answer true, and 179 of those are the empty tree, so only 99 of the 721 non-empty trees genuinely satisfy the rule. That gap is the argument for returning evidence instead of a boolean: the offenders in queue order, and how many internal nodes fell short of their children and how many exceeded them. The perfect tree 1 2 3 4 5 6 7 reads violations=[1 2 3], internal=3, leaves=4, deficit=3, excess=0, which says plainly that every parent here is smaller than the pair below it - the property holds for trees that push value down toward the leaves, and fails for the ordinary ones.' +
+      'The wording hides a fork worth naming before writing code. One reading is arithmetical - a node equals the sum of whatever children exist. The other is structural - every node has zero or two children and the sums hold, which is the full-binary variant. On trees whose values are distinct the two never separate, and the reason is not luck: a node with exactly one child can satisfy the sum only when the child repeats the parent value, so with distinct labels the arithmetical reading already fails there and both forms answer false. That is why the two agreed on all 900 distinct-label trees. Give the labels an alphabet of four and 16 of 900 trees split, and the smallest witness is 3 3 null: the root equals its only child, so the arithmetical reading answers true while the structural one answers false because a child is missing.' +
+      'The other half-correct answer is the one that looks only at the root, and it is the same mistake as checking balance at the top of the tree. On the distinct-label population the root-only test answered true on 3 trees whose full conjunction was false, and on the duplicate-label population it missed a violation below the root on 132 of 900 - with a repeated value a parent can match its child at the top while a grandchild breaks the rule underneath. Checking the root is a constant-time answer to a question that is linear by nature, and the count of internal nodes over the population, 2846 across 900 trees against 1499 leaves, is the reminder that most of the work is not at the top.' +
+      'Cost is O(n) time and O(1) extra space beyond the walk, and there is no faster correct answer, because one violating parent-child pair anywhere makes the result false and no node can be skipped. The repair variant - raise or lower values until the property holds - is a construction rather than a check: changing a node changes the sum its own parent is measured against, so it travels downward from the root and rewrites the subtree, which is why it is worth doing after the check rather than instead of it.',
+    walkthrough:
+      '2 1 1 passes: the root holds 2, its children hold 1 and 1, and the two leaves are never compared. 3 3 null passes the arithmetical reading and fails the structural one, since a child is absent. 4 2 1 fails at the root - the children sum to 3, so violations=[4] with the root exceeding them. 2 1 null null 3 fails at two nodes: the root holds 2 against a child sum of 1, and the node 1 holds 1 against a child sum of 3, so violations=[2 1] with one excess and one deficit. The perfect tree 1 2 3 4 5 6 7 fails at all three internal nodes, violations=[1 2 3], and note that the list is in queue order - the inorder listing of the same tree is 4 2 5 1 6 3 7.',
+    commonMistake:
+      'Answering from the root alone, or quietly excluding a node with one child from the rule so that 3 3 null passes a reading of the question nobody agreed to.',
+    whyWrong:
+      'A property over nodes is a conjunction, so the root-only form returned true on 3 of the 900 distinct-label trees and missed a violation on 132 of the duplicate-label trees. And the one-child node is exactly what the definition measures - the sum of the children a node has - so skipping it switches to the full-binary reading, which the same walk answers differently on 16 of the 900 trees whose labels repeat.',
+    followUps:
+      [
+        'Make the tree satisfy the property by changing node values only. Which direction does the change travel, and what happens to the leaves?',
+        'Count the comparisons the walk actually performs on 1 2 3 4 5 6 7 and on a chain of the same length. What does that say about how much a true answer is worth?',
+        'Suppose the input is a binary heap. Does the property hold, and which of the two readings is closer to what a heap actually guarantees?',
+        'Return the offenders in inorder instead of queue order, and say which listing lets a reader point at a node without ambiguity when values repeat.',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function inOrder(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  return inOrder(root.left).concat([root.val]).concat(inOrder(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function breadthNodes(root) {\n' +
+      '  const held = [];\n' +
+      '  const queue = root === null ? [] : [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    held.push(node);\n' +
+      '    if (node.left !== null) queue.push(node.left);\n' +
+      '    if (node.right !== null) queue.push(node.right);\n' +
+      '  }\n' +
+      '  return held;\n' +
+      '}\n' +
+      '\n' +
+      'function childSum(node) {\n' +
+      '  let total = 0;\n' +
+      '  if (node.left !== null) total += node.left.val;\n' +
+      '  if (node.right !== null) total += node.right.val;\n' +
+      '  return total;\n' +
+      '}\n' +
+      '\n' +
+      'function isInternal(node) {\n' +
+      '  return node.left !== null || node.right !== null;\n' +
+      '}\n' +
+      '\n' +
+      'function childrenSumHolds(root) {\n' +
+      '  return breadthNodes(root).every((node) => !isInternal(node) || node.val === childSum(node));\n' +
+      '}\n' +
+      '\n' +
+      'function childrenSumRequiresBothChildren(root) {\n' +
+      '  return breadthNodes(root).every((node) => !isInternal(node) || (node.left !== null && node.right !== null && node.val === childSum(node)));\n' +
+      '}\n' +
+      '\n' +
+      'function rootOnlyHolds(root) {\n' +
+      '  return root === null || !isInternal(root) || root.val === childSum(root);\n' +
+      '}\n' +
+      '\n' +
+      'function violationsQueued(root) {\n' +
+      '  return breadthNodes(root).filter((node) => isInternal(node) && node.val !== childSum(node)).map((node) => node.val).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function deficitCount(root) {\n' +
+      '  return breadthNodes(root).filter((node) => isInternal(node) && node.val < childSum(node)).length;\n' +
+      '}\n' +
+      '\n' +
+      'function excessCount(root) {\n' +
+      '  return breadthNodes(root).filter((node) => isInternal(node) && node.val > childSum(node)).length;\n' +
+      '}\n' +
+      '\n' +
+      'function internalCount(root) {\n' +
+      '  return breadthNodes(root).filter((node) => isInternal(node)).length;\n' +
+      '}\n' +
+      '\n' +
+      'function leafCount(root) {\n' +
+      '  return breadthNodes(root).filter((node) => !isInternal(node)).length;\n' +
+      '}\n' +
+      '\n' +
+      'function childrenSumLine(root) {\n' +
+      '  return "holds=" + childrenSumHolds(root) + " bothChildren=" + childrenSumRequiresBothChildren(root) + " rootOnly=" + rootOnlyHolds(root) + " violations=[" + violationsQueued(root) + "] internal=" + internalCount(root) + " leaves=" + leafCount(root) + " deficit=" + deficitCount(root) + " excess=" + excessCount(root) + " inorder=[" + inOrder(root).join(" ") + "] nodes=" + nodeCount(root) + " tree=[" + serializeLevel(root) + "]";\n' +
+      '}',
+    modify: 'Change the rule to every node equals the sum of its children counting a missing child as zero for leaves only. On which of the witness trees does that differ from the shipped answer, and what single predicate in the walk causes it?',
+  },
+  {
+    step: 13,
+    name: 'Nodes at distance K in binary tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'List the nodes exactly k edges from a given node of a binary tree that has no parent pointers, and say which nodes a search that only goes downward never reaches.',
+    brief: 'Input: a binary tree, a target node of it, and a non-negative integer k. Output: the values of every node at distance exactly k from the target, travelling up as well as down. Deliver the node-keyed parent map and the wave over three neighbours, the depth-first alternative that carries the root-to-target path, k equal to zero, an absent target, and a tree whose values repeat.',
+    concepts:
+      [
+        'dsa-parent-map-opens-the-upward-edge',
+        'dsa-bfs-needs-the-band-boundary',
+        'dsa-boundary-conditions',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Build a parent map keyed by node reference with one breadth-first pass, then run a wave from the target over its three neighbours - two children and the parent - for k steps and read the frontier. A downward-only search answers a different question: it never leaves the target subtree, and on 5997 random queries it was wrong on 3098 of them.',
+    idealAnswer:
+      'A binary tree hands each node two outgoing edges, while distance counts edges in both directions, so the answer is not a property of the subtree at all. From node 2 of 1 2 3 4 5 6 7 the nodes at distance 1 are 4, 5 and the root 1; at distance 2 the answer is the single node 3, which is not below the target in any sense. The missing ingredient is the reverse edge. One breadth-first pass fills a Map keyed by node reference with each node parent, every node then has up to three neighbours, and the question is an unweighted distance query on a graph - answered by a wave that closes its frontier by size, exactly as level order does.' +
+      'The wave needs a set of the nodes it has already taken, because it can climb to the parent and walk back down into the subtree it left. The tree itself has no cycles, so the parent map plus that set is the entire bookkeeping - no distance array, no second queue. The map must be keyed by node rather than by value, which is the same identity trap the lowest common ancestor rows carry: a value that sits at two nodes does not name a starting point. Cost is O(n) time to build the map and O(n) space, then one wave of at most k steps that touches each node at most once, so O(n) per query in the worst case.' +
+      'How much the downward shortcut misses is measurable. Over the 721 non-empty random trees queried at three targets and three depths - 5997 questions in all - the downward-only answer differed from the true sphere on 3098 of them. Every one of those disagreements sat below the root: the 2460 queries whose target is the root itself agree exactly, because the root has no upward edge to miss. Of the differing queries, 2414 returned an empty list while the real answer was non-empty, and 684 were partial - the downward list had some of the nodes and not the others. The 4127 nodes counted outside the target subtree are the running price of the shortcut. The cleanest witness is the perfect tree at target 2 and k equal to 3: the downward list is empty and the answer is 6 and 7, both of which are reached by going up.' +
+      'The alternative that needs no parent map is a depth-first search that records the path from the root to the target, then walks that path from the target upward and, at each ancestor, lists the nodes at the remaining depth in the branch that does not contain the target - skipping the child already on the path. Same O(n) time, O(height) extra for the path, and it is the version to have ready when the follow-up forbids the map; it is also the version that turns the question into the lowest-common-ancestor family, since the path is the ancestor chain and the remaining depth at each stop is k minus the distance already travelled. A third answer - ask every node for its distance to the target and keep those equal to k - is correct and quadratic, and worth naming only to rule out.' +
+      'Boundaries. k equal to 0 is the target itself and the wave answers it without stepping, checked on the 721 non-empty trees with zero disagreements. An absent target has no start, so the answer is empty rather than the whole tree, and on the 900 trees probed with a value that is not present nothing was returned every time; a version that returns the root or falls through to an uninitialised node reports an answer for a question nobody asked. A repeated value is a different failure and it lives in the signature: on 1 2 3 4 null null 4 the value 4 names two nodes, a breadth-first lookup answers for the shallower one, and over the duplicate-label population 1208 of the queried values named more than one node. Take a node reference, or say which occurrence you mean.',
+    walkthrough:
+      '1 2 3 4 5 6 7, target 2. The map gives 2 three neighbours: 4, 5 and the parent 1. k=1 reads the wave 4 5 1, where the downward-only list is 4 5 and the missed node is the root. k=2 steps from 1 to its other child, so the answer is the single value 3 and the downward list is empty. k=3 steps from 3 to 6 and 7 - still one wave, still nothing from the target subtree, subtree size 3 the whole way. Target 1 at k=1 gives 2 and 3 and both readings agree, because the root has nothing above it; and at k=0 the answer is 2 itself.',
+    commonMistake:
+      'Searching downward from the target, or building the parent map keyed by value so a repeated value can point at the wrong node.',
+    whyWrong:
+      'The downward search is correct only at the root: over 5997 random queries it differed from the true sphere on 3098, and on 2414 of those it returned nothing for a non-empty answer. A value-keyed map has no well-defined behaviour when one value names two nodes, which the duplicate-label population reaches on 1208 of its queries - and unlike the empty answer, that one is silently wrong.',
+    followUps:
+      [
+        'Answer many distance queries on one fixed tree. What do you build once, and what does each query cost afterwards?',
+        'k can exceed anything the target can reach. Where does the loop stop - by step count, by an empty frontier, or both - and what is returned?',
+        'Do it with no parent map, carrying only the root-to-target path. Which child is excluded at each ancestor, and what is the space bound?',
+        'Return the number of nodes at distance k for every k from 0 up to the diameter. How many waves is that, and can one pass produce all of them?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function parentMap(root) {\n' +
+      '  const parent = new Map();\n' +
+      '  if (root === null) return parent;\n' +
+      '  parent.set(root, null);\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node.left !== null) {\n' +
+      '      parent.set(node.left, node);\n' +
+      '      queue.push(node.left);\n' +
+      '    }\n' +
+      '    if (node.right !== null) {\n' +
+      '      parent.set(node.right, node);\n' +
+      '      queue.push(node.right);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return parent;\n' +
+      '}\n' +
+      '\n' +
+      'function findNode(root, target) {\n' +
+      '  const queue = root === null ? [] : [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node.val === target) return node;\n' +
+      '    if (node.left !== null) queue.push(node.left);\n' +
+      '    if (node.right !== null) queue.push(node.right);\n' +
+      '  }\n' +
+      '  return null;\n' +
+      '}\n' +
+      '\n' +
+      'function subtreeSize(node) {\n' +
+      '  if (node === null) return 0;\n' +
+      '  return 1 + subtreeSize(node.left) + subtreeSize(node.right);\n' +
+      '}\n' +
+      '\n' +
+      'function neighbours(node, parent) {\n' +
+      '  const held = [];\n' +
+      '  if (node.left !== null) held.push(node.left);\n' +
+      '  if (node.right !== null) held.push(node.right);\n' +
+      '  const above = parent.get(node);\n' +
+      '  if (above !== null && above !== undefined) held.push(above);\n' +
+      '  return held;\n' +
+      '}\n' +
+      '\n' +
+      'function waveAt(start, parent, k) {\n' +
+      '  const seen = new Set([start]);\n' +
+      '  let frontier = [start];\n' +
+      '  let steps = 0;\n' +
+      '  while (frontier.length > 0 && steps < k) {\n' +
+      '    const next = [];\n' +
+      '    for (const node of frontier) {\n' +
+      '      for (const neighbour of neighbours(node, parent)) {\n' +
+      '        if (seen.has(neighbour)) continue;\n' +
+      '        seen.add(neighbour);\n' +
+      '        next.push(neighbour);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    frontier = next;\n' +
+      '    steps += 1;\n' +
+      '  }\n' +
+      '  return frontier;\n' +
+      '}\n' +
+      '\n' +
+      'function downwardAtDistance(start, k) {\n' +
+      '  if (start === null) return [];\n' +
+      '  let frontier = [start];\n' +
+      '  let depth = 0;\n' +
+      '  while (frontier.length > 0 && depth < k) {\n' +
+      '    const next = [];\n' +
+      '    for (const node of frontier) {\n' +
+      '      if (node.left !== null) next.push(node.left);\n' +
+      '      if (node.right !== null) next.push(node.right);\n' +
+      '    }\n' +
+      '    frontier = next;\n' +
+      '    depth += 1;\n' +
+      '  }\n' +
+      '  return frontier;\n' +
+      '}\n' +
+      '\n' +
+      'function atDistanceDownOnly(root, target, k) {\n' +
+      '  return downwardAtDistance(findNode(root, target), k).map((node) => node.val).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function atDistanceOutward(root, target, k) {\n' +
+      '  const start = findNode(root, target);\n' +
+      '  if (start === null) return "";\n' +
+      '  return waveAt(start, parentMap(root), k).map((node) => node.val).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function farthestDistance(root, target) {\n' +
+      '  const start = findNode(root, target);\n' +
+      '  if (start === null) return -1;\n' +
+      '  const parent = parentMap(root);\n' +
+      '  const seen = new Set([start]);\n' +
+      '  let frontier = [start];\n' +
+      '  let steps = 0;\n' +
+      '  while (true) {\n' +
+      '    const next = [];\n' +
+      '    for (const node of frontier) {\n' +
+      '      for (const neighbour of neighbours(node, parent)) {\n' +
+      '        if (seen.has(neighbour)) continue;\n' +
+      '        seen.add(neighbour);\n' +
+      '        next.push(neighbour);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (next.length === 0) return steps;\n' +
+      '    frontier = next;\n' +
+      '    steps += 1;\n' +
+      '  }\n' +
+      '}\n' +
+      '\n' +
+      'function distanceKLine(root, target, k) {\n' +
+      '  const start = findNode(root, target);\n' +
+      '  const down = atDistanceDownOnly(root, target, k);\n' +
+      '  const outward = atDistanceOutward(root, target, k);\n' +
+      '  const missed = outward === "" ? "" : outward.split(" ").filter((value) => down.split(" ").indexOf(value) === -1).join(" ");\n' +
+      '  const reached = outward === "" ? 0 : outward.split(" ").length;\n' +
+      '  return "target=" + target + " k=" + k + " down=[" + down + "] outward=[" + outward + "] missed=[" + missed + "] reached=" + reached + " subtree=" + subtreeSize(start) + " farthest=" + farthestDistance(root, target) + " nodes=" + nodeCount(root) + " tree=[" + serializeLevel(root) + "]";\n' +
+      '}',
+    modify: 'Ask for every node at distance at most k instead of exactly k. Which single change to the loop does it, and what does the perfect tree report for target 2 at k=2 as a list versus a count?',
+  },
+  {
+    step: 13,
+    name: 'Minimum time taken to BURN the Binary Tree',
+    difficulty: 'Hard',
+    topicSlug: TREES,
+    stem: 'Given a node that catches fire at time zero and spreads to every neighbour once per second, report the seconds until the whole tree is burning, and say what that number is a property of.',
+    brief: 'Input: a binary tree without parent pointers and the value of the node that ignites at t equal to 0. Output: the time at which the last node starts burning, one edge per second in every direction. Deliver the wave over children plus parent, the identity between that time and the farthest distance from the start, the downward-only reading and where it under-reports, and the slowest possible start.',
+    concepts:
+      [
+        'dsa-burn-time-is-the-farthest-distance',
+        'dsa-parent-map-opens-the-upward-edge',
+        'dsa-diameter-is-two-heights-meeting-at-a-node',
+        'dsa-height-is-the-longest-downward-path',
+        'dsa-boundary-conditions',
+      ],
+    shortAnswer:
+      'A breadth-first wave from the start over three neighbours per node - two children and the parent from a node-keyed map - run until the frontier empties, and the seconds are the number of waves minus one, which is exactly the distance to the farthest node from the start. The height of the start under-reports it whenever the farthest node is reached by going up.',
+    idealAnswer:
+      'Fire does not know where the root is. It crosses every edge in both directions, so the process is the distance wave run until the frontier empties, and the answer is the index of the last wave: the seconds are the eccentricity of the start, its distance to the farthest node in the tree. That identity is checkable and it holds - over the 900 random trees, the number of waves minus one matched the burn seconds at 2163 probes with zero disagreements, and the number of nodes the wave consumed equalled the node count of the tree on all 721 non-empty ones, which is the coverage half of the same experiment.' +
+      'The answer people write first is the height of the start node - the deepest descendant - and it is a downward reading of an all-directions question. On 1 2 3 4 5 6 7 lit at node 4 the waves are 4, then 2, then 5 and 1, then 3, then 6 and 7: four seconds, against a height of 0 for that node. Lit at the root the two agree at 2, because a descendant is also the farthest node from the root, and that coincidence is what lets the wrong version pass the sample tests. Across the 721 non-empty random trees the downward reading differed from the true time on 622 of them, and burning the first leaf of a tree took a time equal to the height on only 528 of 721 - longer on 110, shorter on 83, which is the shape of the error in both directions.' +
+      'Asked for the slowest start rather than a given one, the answer is an end of a longest path. Searching the leaves and searching every node gave the same worst time on all 721 trees, and the double sweep - burn from an arbitrary node, take a node from its last wave, burn from that - reproduced the same number on all 721, so the worst-case seconds are the diameter in edges, which is the two-heights-meeting-at-a-turn quantity from the diameter question. Over that population the worst starts summed to 2630 seconds with a maximum of 10, while lighting every tree at its root summed to 2452: the gap is what asking the easy version costs. The reason an endpoint is the worst start is the same reason the diameter turns at one node - from an end of a longest path, the farthest node is the other end.' +
+      'Implementation is one breadth-first pass to fill a node-keyed parent map and one wave. Mark the start seen, expand each frontier node to its neighbours that are not yet seen, count the waves, and return that count minus one. A node enters the frontier exactly once, so the walk is O(n) time and O(n) space for the map and the seen set, and the seen set is only there to stop the wave returning through the parent - the tree has no cycles. If the follow-up forbids the map, the alternative is a fold that returns the height below each node while a second pass carries the burn time from above, meeting at every node; that is the version where the edge-versus-node convention for height decides whether the answer is off by one, and it is worth writing once to be able to say why it is worse.' +
+      'Boundaries and the last honest risk. A single node burns in 0 seconds - one wave, minus one - while an absent start or an empty tree produces no wave at all, which this implementation reports as -1 rather than 0; state the convention out loud, because the two answers differ exactly at the input that never catches, and returning 0 for an absent start claims a node burned that is not there. The value-to-node lookup is the remaining risk: with repeated values the start is the shallowest node carrying that value, and on the duplicate-label population the fire still reached every node from such a start - 0 trees left partly unburned - because coverage does not care which occurrence caught first. The seconds do care, and a different occurrence is a different start with a different farthest node.',
+    walkthrough:
+      '1 2 3 4 5 6 7, start 4. Wave 0 is 4; its only neighbour is 2, so wave 1 is 2; from 2 the unseen neighbours are 5 and 1, wave 2; from 1 they are 3, wave 3; from 3 they are 6 and 7, wave 4. Five waves, so four seconds, with the height of the start 0 and the height of the tree 2. The same tree lit at the root gives waves 1, then 2 3, then 4 5 6 7 - two seconds, where the downward reading is accidentally right. Lit at 2 it takes three seconds and the last wave is 6 7, both reached through the parent. Chain 1 null 2 null 3 lit at 2 gives waves 2 then 3 1: one second.',
+    commonMistake:
+      'Answering with the height of the start node, or answering 0 for a start that is not in the tree so that no wave ever begins.',
+    whyWrong:
+      'Height measures downward only, and the farthest node from a start is usually elsewhere: the two differed on 622 of the 721 non-empty random trees, and 1 2 3 4 5 6 7 lit at 4 takes 4 seconds against a height of 0. The absent start fails the other way - with no first wave the count is empty, and reporting 0 there claims a burning node that does not exist, which is why this version keeps -1 for no wave and 0 for the single node.',
+    followUps:
+      [
+        'Which start takes the longest, and what is that number a property of? Argue it without enumerating every node.',
+        'No parent map allowed. What does a fold return per node, what does the downward pass carry, and where do the two meet?',
+        'Two nodes catch fire at the same moment, at values a and b. What changes in the wave, and what is the burn time now?',
+        'Report which node burns last. Which field of the wave is it, and how does it relate to the farthest distance from the start?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function parentMap(root) {\n' +
+      '  const parent = new Map();\n' +
+      '  if (root === null) return parent;\n' +
+      '  parent.set(root, null);\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node.left !== null) {\n' +
+      '      parent.set(node.left, node);\n' +
+      '      queue.push(node.left);\n' +
+      '    }\n' +
+      '    if (node.right !== null) {\n' +
+      '      parent.set(node.right, node);\n' +
+      '      queue.push(node.right);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return parent;\n' +
+      '}\n' +
+      '\n' +
+      'function findNode(root, target) {\n' +
+      '  const queue = root === null ? [] : [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node.val === target) return node;\n' +
+      '    if (node.left !== null) queue.push(node.left);\n' +
+      '    if (node.right !== null) queue.push(node.right);\n' +
+      '  }\n' +
+      '  return null;\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function neighbours(node, parent) {\n' +
+      '  const held = [];\n' +
+      '  if (node.left !== null) held.push(node.left);\n' +
+      '  if (node.right !== null) held.push(node.right);\n' +
+      '  const above = parent.get(node);\n' +
+      '  if (above !== null && above !== undefined) held.push(above);\n' +
+      '  return held;\n' +
+      '}\n' +
+      '\n' +
+      'function burnWaves(root, target) {\n' +
+      '  const start = findNode(root, target);\n' +
+      '  if (start === null) return [];\n' +
+      '  const parent = parentMap(root);\n' +
+      '  const seen = new Set([start]);\n' +
+      '  let frontier = [start];\n' +
+      '  const waves = [];\n' +
+      '  while (frontier.length > 0) {\n' +
+      '    waves.push(frontier.map((node) => node.val).join(" "));\n' +
+      '    const next = [];\n' +
+      '    for (const node of frontier) {\n' +
+      '      for (const neighbour of neighbours(node, parent)) {\n' +
+      '        if (seen.has(neighbour)) continue;\n' +
+      '        seen.add(neighbour);\n' +
+      '        next.push(neighbour);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    frontier = next;\n' +
+      '  }\n' +
+      '  return waves;\n' +
+      '}\n' +
+      '\n' +
+      'function burnTime(root, target) {\n' +
+      '  return burnWaves(root, target).length - 1;\n' +
+      '}\n' +
+      '\n' +
+      'function burnedCount(root, target) {\n' +
+      '  return burnWaves(root, target).reduce((total, wave) => total + (wave === "" ? 0 : wave.split(" ").length), 0);\n' +
+      '}\n' +
+      '\n' +
+      'function lastWave(root, target) {\n' +
+      '  const waves = burnWaves(root, target);\n' +
+      '  return waves.length === 0 ? "" : waves[waves.length - 1];\n' +
+      '}\n' +
+      '\n' +
+      'function downwardBurnSeconds(root, target) {\n' +
+      '  const start = findNode(root, target);\n' +
+      '  return start === null ? -1 : heightOf(start);\n' +
+      '}\n' +
+      '\n' +
+      'function leafValues(root) {\n' +
+      '  const held = [];\n' +
+      '  const queue = root === null ? [] : [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node.left === null && node.right === null) held.push(node.val);\n' +
+      '    if (node.left !== null) queue.push(node.left);\n' +
+      '    if (node.right !== null) queue.push(node.right);\n' +
+      '  }\n' +
+      '  return held;\n' +
+      '}\n' +
+      '\n' +
+      'function worstStart(root) {\n' +
+      '  let best = -1;\n' +
+      '  let bestValue = -1;\n' +
+      '  for (const value of leafValues(root)) {\n' +
+      '    const seconds = burnTime(root, value);\n' +
+      '    if (seconds > best) {\n' +
+      '      best = seconds;\n' +
+      '      bestValue = value;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return bestValue;\n' +
+      '}\n' +
+      '\n' +
+      'function burnLine(root, target) {\n' +
+      '  return "start=" + target + " waves=[" + burnWaves(root, target).join(" | ") + "] seconds=" + burnTime(root, target) + " downward=" + downwardBurnSeconds(root, target) + " burned=" + burnedCount(root, target) + " last=[" + lastWave(root, target) + "] worstStart=" + worstStart(root) + " height=" + heightOf(root) + " nodes=" + nodeCount(root) + " tree=[" + serializeLevel(root) + "]";\n' +
+      '}',
+    modify: 'Light the tree at the root, at the worst start and at the middle of the longest path on 1 2 3 4 5 6 7. Give the three answers, and say which two fields of the wave every one of them is read from.',
   },
 ];
 
