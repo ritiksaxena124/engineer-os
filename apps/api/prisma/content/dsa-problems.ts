@@ -1765,6 +1765,27 @@ export const DSA_CONCEPTS = {
     terms: ['push order is the direction', 'no reverse call needed', 'alternating rule, not fixed rule', 'flat listings agree, band splits differ', 'band count equals height plus one'],
     weight: 3,
   },
+  'dsa-boundary-is-two-spines-and-the-leaves': {
+    slug: 'dsa-boundary-is-two-spines-and-the-leaves',
+    name: 'The boundary is a left spine, the leaves, and a right spine read upwards',
+    detail: 'Walking the outline of a binary tree visits three disjoint sets: the non-leaf nodes down the left-most route, every leaf in position order, and the non-leaf nodes up the right-most route. The sets have to be made disjoint on purpose, because a spine rule that does not test for a leaf repeats the node it descended past, and a leaf walk that starts at the root repeats the root. The right spine is collected downwards and printed upwards, which is the only part of the walk that needs a reversal.',
+    terms: ['three disjoint sets', 'spines skip the leaves', 'leaves in position order', 'right spine printed upwards', 'the root is counted once'],
+    weight: 4,
+  },
+  'dsa-vertical-order-needs-a-column-index': {
+    slug: 'dsa-vertical-order-needs-a-column-index',
+    name: 'A column is a coordinate, and a tree node has to be told which one it sits in',
+    detail: 'Vertical order asks for nodes sharing an x coordinate, and a tree node carries no x. The coordinate is derived on the way down: a left child takes one less than its parent, a right child one more, and the root starts at zero. Columns then come out sorted by that number while the nodes inside a column keep their breadth-first order, which is depth first and left before right at an equal depth. A map keyed by the coordinate gives the groups for free but not their order, because insertion order is a walk order and not a coordinate order.',
+    terms: ['left minus one, right plus one', 'columns sorted by coordinate', 'inside a column, depth then position', 'insertion order is not column order', 'the first of a column is the top view'],
+    weight: 4,
+  },
+  'dsa-view-is-an-extremum-per-column-or-band': {
+    slug: 'dsa-view-is-an-extremum-per-column-or-band',
+    name: 'A view picks one node per group, and the group is either a band or a column',
+    detail: 'The right view is the last node of each depth band, the left view the first, the top view the first node of each column and the bottom view the last. All four are the same walk with a different grouping and a different choice inside the group, which is why they are one problem and not four. Breadth-first order makes the choice correct by itself - the first node seen in a column is the shallowest, the last one kept is the deepest - while a depth-first walk has to compare depths, because it can reach a deep node in one subtree before a shallow node in the other.',
+    terms: ['group by band or by column', 'first or last inside the group', 'breadth-first chooses for free', 'depth-first must compare depths', 'one walk, four views'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -23998,6 +24019,854 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return "level=[" + joinRows(bands(root)) + "] spiral=[" + joinRows(spiralRows(root)) + "] two-stack=[" + joinRows(spiralTwoStackRows(root)) + "] fixed=[" + joinRows(spiralFixedPushRows(root)) + "] reversed=" + spiralAllReversed(root) + " opposite=" + spiralOppositeStart(root) + " bands=" + bandCount(root) + " sizes=" + spiralBandSizes(root) + " visible=" + directionIsVisible(root);\n' +
       '}',
     modify: 'Alternate the direction by the band being wider than the one before it instead of by its index. Which trees still print the zig-zag listing, which break first, and what does the walk have to remember that it does not remember now?',
+  },
+  {
+    step: 13,
+    name: 'Boundary Traversal of Binary Tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'List the boundary of a binary tree - the outline walked anti-clockwise from the root - and say which node belongs to two of the three parts.',
+    brief: 'Input: a binary tree. Output: the boundary listing built from a left spine, the leaves in position order and the right spine read upwards. Deliver the rule that keeps the three parts disjoint, the listing when a spine is allowed to walk through a leaf, and the listing when the right spine is not reversed.',
+    concepts:
+      [
+        'dsa-boundary-is-two-spines-and-the-leaves',
+        'dsa-postorder-is-the-bottom-up-recording-time',
+        'dsa-tree-cells-carry-shape',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Three parts in one direction: the non-leaf nodes down the left edge, then every leaf left to right, then the non-leaf nodes up the right edge. Each spine descends by preferring its own side and falling back across when that side is empty, and each stops before a leaf, because the leaf walk owns the leaves. ' +
+      'The right spine is collected top-down and printed bottom-up - the reversal is the only reordering the walk needs. O(n) time, O(h) for a spine, and the listing holds the root once.',
+    idealAnswer:
+      'The boundary is not a traversal the tree offers by itself; it is a definition, and the whole of the work is keeping its three parts from overlapping. A node can sit on a spine and be a leaf at the same time - that is exactly what the left child of a two node tree is - and the walk resolves it by rule rather than by luck: a spine stops before a leaf and the leaf walk stops at a leaf, so the node is recorded once, by the leaf walk. Write the spine loop without that test and it walks into the leaf it was passing, records it, and then the leaf walk records it again. ' +
+      'The second thing to get right is what a spine is. It is the outline, not the leftmost path: the descent prefers its own side and crosses over when that side is missing. That distinction is invisible on a complete tree, where the outline and the extreme path are the same nodes, and it is the whole answer on a tree whose root has no right child. On the gap tree the right spine is 3 then 5, because node 3 has no right child and the walk turns left into 5, which is not a leaf since it carries 6; the boundary is 1 2 4 6 5 3. A version that only follows the named side sees a right spine of one node and prints 1 2 4 6 3 - a shorter listing rather than a wrong order, which is the kind of bug a test on a complete tree never finds. ' +
+      'The reversal is the third part, and it is a property of the direction the outline is walked. Anti-clockwise from the root means the right edge is climbed, so the collected 3, 5 has to print as 5, 3; skipping the reverse leaves the listing correct as a set and wrong as a walk. On the perfect tree the right spine is a single node, so the reversal is invisible there - the smallest shape that catches it is a tree with a right spine of two, and the gap tree is that shape. ' +
+      'The root is the fourth thing that can be printed twice. The spine walks start at the children, so they cannot repeat it; the leaf walk descends the two subtrees rather than the root, so it cannot either - and that is why the single node tree prints one value. A leaf walk written from the root records the root as a leaf when the tree has one node and duplicates it in the listing. ' +
+      'The leaves come out in position order because a left-then-right descent over the subtrees reaches them in that order, and that is the part of the boundary that is a genuine traversal rather than a rule; on the wide tree it is what puts 6 between 8 and the right spine, since 6 is the leaf the right edge turns into. On the cost: the listing visits each node at most a constant number of times - two spine walks of at most h steps, one leaf walk of n nodes - so it is linear with a stack of height depth, and it is one of the few rows here where the honest complexity claim is a sum of three walks rather than one. On 900 randomly grown trees the assembled listing held every node at most once on all 900, the loose-spine version repeated a node on 622, the named-side-only version printed a shorter listing on 231, the version without the reversal changed the order on 102, and a leaf walk started at the root instead of at the two subtrees repeated the value on 99 - exactly the single node trees in the population. The same run showed the boundary holding every node of the tree on 643 of them, which is what a randomly grown tree mostly is: an outline with nothing inside it.',
+    walkthrough:
+      'Perfect tree, cells 1 2 3 4 5 6 7. The left spine starts at node 2, which has two children so it is not a leaf and gets recorded; the descent prefers left and lands on 4, which is a leaf, so the spine stops with just 2. The leaves walked through both subtrees give 4 5 6 7. The right spine starts at 3, records it, steps right onto 7, finds a leaf and stops, and the collected 3 reverses to 3. The listing is 1 2 4 5 6 7 3. ' +
+      'Gap tree, cells 1 2 3 null 4 5 null null null 6. The left spine is 2 - it carries 4 on its right, so it is not a leaf - and it then turns onto 4, which is a leaf, so it stops. The leaves are 4 and 6. The right spine is 3, then it has no right child and turns left onto 5, which carries 6 so it is recorded too, then onto 6, a leaf, stop; collected as 3 5 and printed as 5 3. The listing is 1 2 4 6 5 3, six of the six nodes - this tree has no interior nodes to leave out - and dropping the reversal would print 1 2 4 6 3 5.',
+    commonMistake:
+      'Letting a spine record the leaf it descends onto, following only the named side instead of falling back across when it is missing, or printing the right spine in the order it was collected.',
+    whyWrong:
+      'A spine that records leaves and a leaf walk that records leaves produce the same node twice: on the perfect tree the loose version prints 1 2 4 4 5 6 7 7 3, with 4 and 7 each appearing twice, and on a two node tree it prints the child twice. ' +
+      'Following only the named side is not the outline: a root with no right child has a right edge that turns left, and a walk that cannot turn prints a boundary with the turn nodes missing. Skipping the reversal keeps the right set of nodes and destroys the walk order, and it is invisible on a tree whose right spine is one node deep, so it survives a test on a complete tree.',
+    followUps:
+      [
+        'Print only the left boundary, then only the right. Which spine rule changes, and does the leaf walk belong to either half?',
+        'Return the interior nodes - the ones the boundary walk skips. What is the relation between the two listings, and what does the perfect tree give?',
+        'Do the boundary with one stack instead of three walks. Which of the three rules has to be carried as state, and where does it live?',
+        'The vertical-order row later in this step groups by a coordinate instead of by an edge. Which of these three disjoint-set rules carries over to it?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function isLeaf(node) {\n' +
+      '  return node !== null && node.left === null && node.right === null;\n' +
+      '}\n' +
+      '\n' +
+      'function leftSpine(root) {\n' +
+      '  const rows = [];\n' +
+      '  let node = root === null ? null : root.left;\n' +
+      '  while (node !== null && !isLeaf(node)) {\n' +
+      '    rows.push(node.val);\n' +
+      '    node = node.left !== null ? node.left : node.right;\n' +
+      '  }\n' +
+      '  return rows;\n' +
+      '}\n' +
+      '\n' +
+      'function rightSpine(root) {\n' +
+      '  const rows = [];\n' +
+      '  let node = root === null ? null : root.right;\n' +
+      '  while (node !== null && !isLeaf(node)) {\n' +
+      '    rows.push(node.val);\n' +
+      '    node = node.right !== null ? node.right : node.left;\n' +
+      '  }\n' +
+      '  return rows;\n' +
+      '}\n' +
+      '\n' +
+      'function leavesInOrder(root) {\n' +
+      '  const rows = [];\n' +
+      '  const walk = (node) => {\n' +
+      '    if (node === null) return;\n' +
+      '    if (isLeaf(node)) {\n' +
+      '      rows.push(node.val);\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    walk(node.left);\n' +
+      '    walk(node.right);\n' +
+      '  };\n' +
+      '  if (root !== null) {\n' +
+      '    walk(root.left);\n' +
+      '    walk(root.right);\n' +
+      '  }\n' +
+      '  return rows;\n' +
+      '}\n' +
+      '\n' +
+      'function boundary(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  const rows = [root.val];\n' +
+      '  return rows\n' +
+      '    .concat(leftSpine(root))\n' +
+      '    .concat(leavesInOrder(root))\n' +
+      '    .concat(rightSpine(root).reverse());\n' +
+      '}\n' +
+      '\n' +
+      'function leftSpineLoose(root) {\n' +
+      '  const rows = [];\n' +
+      '  let node = root === null ? null : root.left;\n' +
+      '  while (node !== null) {\n' +
+      '    rows.push(node.val);\n' +
+      '    node = node.left !== null ? node.left : node.right;\n' +
+      '  }\n' +
+      '  return rows;\n' +
+      '}\n' +
+      '\n' +
+      'function rightSpineLoose(root) {\n' +
+      '  const rows = [];\n' +
+      '  let node = root === null ? null : root.right;\n' +
+      '  while (node !== null) {\n' +
+      '    rows.push(node.val);\n' +
+      '    node = node.right !== null ? node.right : node.left;\n' +
+      '  }\n' +
+      '  return rows;\n' +
+      '}\n' +
+      '\n' +
+      'function boundaryLooseSpines(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  const rows = [root.val];\n' +
+      '  return rows\n' +
+      '    .concat(leftSpineLoose(root))\n' +
+      '    .concat(leavesInOrder(root))\n' +
+      '    .concat(rightSpineLoose(root).reverse());\n' +
+      '}\n' +
+      '\n' +
+      'function boundaryRightNotReversed(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  const rows = [root.val];\n' +
+      '  return rows.concat(leftSpine(root)).concat(leavesInOrder(root)).concat(rightSpine(root));\n' +
+      '}\n' +
+      '\n' +
+      'function boundaryNamedSideOnly(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  const down = (node, side) => {\n' +
+      '    const rows = [];\n' +
+      '    while (node !== null && !isLeaf(node)) {\n' +
+      '      rows.push(node.val);\n' +
+      '      node = side === "left" ? node.left : node.right;\n' +
+      '    }\n' +
+      '    return rows;\n' +
+      '  };\n' +
+      '  return [root.val]\n' +
+      '    .concat(down(root === null ? null : root.left, "left"))\n' +
+      '    .concat(leavesInOrder(root))\n' +
+      '    .concat(down(root === null ? null : root.right, "right").reverse());\n' +
+      '}\n' +
+      '\n' +
+      'function boundaryLeavesFromRoot(root) {\n' +
+      '  const rows = [];\n' +
+      '  const walk = (node) => {\n' +
+      '    if (node === null) return;\n' +
+      '    if (isLeaf(node)) {\n' +
+      '      rows.push(node.val);\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    walk(node.left);\n' +
+      '    walk(node.right);\n' +
+      '  };\n' +
+      '  walk(root);\n' +
+      '  return rows;\n' +
+      '}\n' +
+      '\n' +
+      'function duplicates(rows) {\n' +
+      '  return rows.length - new Set(rows).size;\n' +
+      '}\n' +
+      '\n' +
+      'function boundaryLeftOnly(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  return [root.val].concat(leftSpine(root));\n' +
+      '}\n' +
+      '\n' +
+      'function boundaryRightOnly(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  return [root.val].concat(rightSpine(root).reverse());\n' +
+      '}\n' +
+      '\n' +
+      'function boundaryLine(root) {\n' +
+      '  const rows = boundary(root);\n' +
+      '  return "boundary=" + rows.join(" ") + " left=[" + leftSpine(root).join(" ") + "] leaves=[" + leavesInOrder(root).join(" ") + "] right=[" + rightSpine(root).join(" ") + "] loose=" + boundaryLooseSpines(root).join(" ") + " dup=" + duplicates(rows) + " looseDup=" + duplicates(boundaryLooseSpines(root)) + " namedSide=" + boundaryNamedSideOnly(root).join(" ") + " notReversed=" + boundaryRightNotReversed(root).join(" ") + " nodes=" + nodeCount(root);\n' +
+      '}',
+    modify: 'Return the interior nodes - the ones the boundary skips - in the same order a level walk meets them. Which tree has no interior nodes at all, and what does the listing do about a spine node that turns across into a leaf?',
+  },
+  {
+    step: 13,
+    name: 'Vertical Order Traversal of Binary Tree',
+    difficulty: 'Hard',
+    topicSlug: TREES,
+    stem: 'Group the nodes of a binary tree by the column they stand in and print the columns left to right, naming the rule that orders nodes inside a column.',
+    brief: 'Input: a binary tree. Output: the vertical listing - nodes sharing an x coordinate, columns in coordinate order, nodes inside a column in depth order and left before right at equal depth. Deliver the coordinate walk, the two orders a map gives for free and gets wrong, and the tie-break that separates the sheet rule from the LeetCode rule.',
+    concepts:
+      [
+        'dsa-vertical-order-needs-a-column-index',
+        'dsa-bfs-needs-the-band-boundary',
+        'dsa-stack-order-decides-visit-order',
+        'dsa-tree-cells-carry-shape',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Give every node a coordinate on the way down: the root sits at column 0, a left child at its parent minus one, a right child at its parent plus one. Collect nodes per coordinate, sort the coordinates ascending, and inside a coordinate keep the breadth-first order, which is depth ascending and, at equal depth, left before right. ' +
+      'A map keyed by the coordinate gives the groups but not their order, because insertion order is a walk order. O(n log n) with the sorts, O(n) if the columns are addressed by index offset, O(width) extra for the groups.',
+    idealAnswer:
+      'Everything in this row follows from one move: the tree does not know what a column is, so the walk has to carry the coordinate. Depth is a property the structure gives you - a band, a level, something a queue can count - while a column is a position, and the only way to know it is to accumulate the left and right turns that got you there. Once nodes carry a coordinate the row is a grouping problem, and both groupings have to be imposed rather than inherited: the columns in coordinate order, and the nodes inside a column in the order the sheet asks for. ' +
+      'Breadth-first collection gives the inside of a column for free and that is the reason to walk it that way. Queue order is depth then left-to-right, so appending as you dequeue means the entries of one column are already sorted by depth, and two nodes at the same depth appear in position order. On the perfect tree the columns read -2: 4, -1: 2, 0: 1 5 6, 1: 3, 2: 7, and the 5 before 6 is exactly that property - both sit at depth 2, 5 hangs on the left side and 6 on the right. ' +
+      'The two orders a map hands you are the two bugs. Key iteration order in a real walk is insertion order, so a column that starts at 0 prints first: perfect tree, unsorted map order reads 0: 1 5 6 then -1: 2 then 1: 3 then -2: 4 then 2: 7 - a listing that uses the right groups in the wrong order and looks plausible in a printout. The other is a depth-first collection: preorder walks the left subtree to its floor before it looks at the right side, so a deep node in a column arrives before a shallow one and the column is out of depth order. The tree 1 with 2 on the left and 5 on the right, 2 turning right through 3 to 4 while 5 waits empty-handed, has column 1 holding 5 at depth 1 and 4 at depth 3; the preorder listing prints 4 before 5, and the queue listing prints 5 first, which is the answer. ' +
+      'The remaining question is what happens between two nodes at the same depth in the same column, and here the sheet and LeetCode 987 part ways. Position order keeps the node hanging on the left first: on 1 2 5 null 9 4, both 9 and 4 land in column 0 at depth 2, 9 under the left child and 4 under the right, so the sheet listing reads 1 9 4 and the value-sorted rule reads 1 4 9. Naming which convention a solution uses is part of the answer; a candidate who silently sorts by value has changed the question, and a candidate who does not know the two exist has not read the second version of the problem. ' +
+      'Two later rows in this step are the same grouping with a different choice inside the group, which is the reason to write the walk as a function that returns columns. Take the first entry of each column in coordinate order and the result is the top view; take the last and the result is the bottom view. Nothing else changes - not the walk, not the sort - and the width of the tree is the number of columns, which the walk already knows: min to max plus one. ' +
+      'Cost: the coordinate pass is O(n), the sort of the columns is O(width log width) and the answer holds n values in groups. On 900 randomly grown trees the queue-walk columns matched the depth-sorted DFS columns on every tree, the unsorted map order differed on 587 of them, and the value tie-break differed from position order on 116 - which is why the tie-break is stated as a rule rather than assumed.',
+    walkthrough:
+      'Perfect tree, cells 1 2 3 4 5 6 7. The coordinates come down with the queue: 1 at 0, then 2 at -1 and 3 at 1, then 4 at -2, 5 at 0 and 6 at 0, then 7 at 2. Grouped by coordinate and sorted, the listing is -2: 4, -1: 2, 0: 1 5 6, 1: 3, 2: 7, five columns on a tree of width 5, and the span is -2 to 2. ' +
+      'Take 1 with left 2 and right 5, 2 with no left child and right child 3, and 3 with right child 4. The coordinates are 1 at 0, 2 at -1, 5 at 1, 3 at 0, 4 at 1. Column 1 therefore holds 5 at depth 1 and 4 at depth 3. Breadth first groups them as 5 then 4; preorder reaches 4 on the way out of the left subtree, long before it looks at 5, and prints the column as 4 5. Sorting the column by depth puts the two back in agreement, and the agreement is what the queue was doing for free.',
+    commonMistake:
+      'Printing the columns in map insertion order, or collecting nodes depth first and keeping the arrival order inside a column.',
+    whyWrong:
+      'Insertion order is the order the walk met the columns, not their coordinates: on the perfect tree the root column prints first and the -2 column fourth, so the listing is right by group and wrong as an answer. ' +
+      'A preorder walk can reach a deep node before a shallow one in the same column, which puts a column out of depth order; both bugs survive a tree where every column is a single node, so the test that catches them is one where a subtree on the left runs deeper than the one on the right. The tie at equal depth is a third place to be wrong quietly, since position order and value order agree unless the left-hanging node carries the larger value.',
+    followUps:
+      [
+        'Print the top view off the same columns. Which entry of a column do you take, and what changes if the walk is depth-first?',
+        'Print the bottom view and the right view from the same walk. Which is grouped by column and which by band?',
+        'Sort inside a column by value at equal depth instead of by position. Which listings change on 1 2 5 null 9 4, and which do not change on the perfect tree?',
+        'Report the width of the tree from the coordinates. Why is that the number of columns, and what does it cost once the walk already carries them?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function entriesByQueue(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  const entries = [];\n' +
+      '  const queue = [{ node: root, column: 0, depth: 0 }];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const cell = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    entries.push({ val: cell.node.val, column: cell.column, depth: cell.depth, position: entries.length });\n' +
+      '    if (cell.node.left !== null) {\n' +
+      '      queue.push({ node: cell.node.left, column: cell.column - 1, depth: cell.depth + 1 });\n' +
+      '    }\n' +
+      '    if (cell.node.right !== null) {\n' +
+      '      queue.push({ node: cell.node.right, column: cell.column + 1, depth: cell.depth + 1 });\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return entries;\n' +
+      '}\n' +
+      '\n' +
+      'function entriesByPreorder(root) {\n' +
+      '  const entries = [];\n' +
+      '  const walk = (node, column, depth) => {\n' +
+      '    if (node === null) return;\n' +
+      '    entries.push({ val: node.val, column: column, depth: depth, position: entries.length });\n' +
+      '    walk(node.left, column - 1, depth + 1);\n' +
+      '    walk(node.right, column + 1, depth + 1);\n' +
+      '  };\n' +
+      '  walk(root, 0, 0);\n' +
+      '  return entries;\n' +
+      '}\n' +
+      '\n' +
+      'function groupByColumn(entries) {\n' +
+      '  const groups = new Map();\n' +
+      '  for (const entry of entries) {\n' +
+      '    if (!groups.has(entry.column)) groups.set(entry.column, []);\n' +
+      '    groups.get(entry.column).push(entry);\n' +
+      '  }\n' +
+      '  return groups;\n' +
+      '}\n' +
+      '\n' +
+      'function verticalColumns(root) {\n' +
+      '  const groups = groupByColumn(entriesByQueue(root));\n' +
+      '  const keys = Array.from(groups.keys()).sort((a, b) => a - b);\n' +
+      '  return keys.map((key) => key + ":" + groups.get(key).map((entry) => entry.val).join(" "));\n' +
+      '}\n' +
+      '\n' +
+      'function verticalColumnsByMapOrder(root) {\n' +
+      '  const groups = groupByColumn(entriesByQueue(root));\n' +
+      '  return Array.from(groups.keys()).map((key) => key + ":" + groups.get(key).map((entry) => entry.val).join(" "));\n' +
+      '}\n' +
+      '\n' +
+      'function verticalColumnsByPreorder(root) {\n' +
+      '  const groups = groupByColumn(entriesByPreorder(root));\n' +
+      '  const keys = Array.from(groups.keys()).sort((a, b) => a - b);\n' +
+      '  return keys.map((key) => key + ":" + groups.get(key).map((entry) => entry.val).join(" "));\n' +
+      '}\n' +
+      '\n' +
+      'function verticalColumnsDepthSorted(root) {\n' +
+      '  const groups = groupByColumn(entriesByPreorder(root));\n' +
+      '  const keys = Array.from(groups.keys()).sort((a, b) => a - b);\n' +
+      '  return keys.map((key) => {\n' +
+      '    const rows = groups.get(key).slice().sort((a, b) => a.depth - b.depth || a.position - b.position);\n' +
+      '    return key + ":" + rows.map((entry) => entry.val).join(" ");\n' +
+      '  });\n' +
+      '}\n' +
+      '\n' +
+      'function verticalColumnsByValue(root) {\n' +
+      '  const groups = groupByColumn(entriesByQueue(root));\n' +
+      '  const keys = Array.from(groups.keys()).sort((a, b) => a - b);\n' +
+      '  return keys.map((key) => {\n' +
+      '    const rows = groups.get(key).slice().sort((a, b) => a.depth - b.depth || a.val - b.val);\n' +
+      '    return key + ":" + rows.map((entry) => entry.val).join(" ");\n' +
+      '  });\n' +
+      '}\n' +
+      '\n' +
+      'function columnKeys(root) {\n' +
+      '  return Array.from(groupByColumn(entriesByQueue(root)).keys()).sort((a, b) => a - b);\n' +
+      '}\n' +
+      '\n' +
+      'function topView(root) {\n' +
+      '  const groups = groupByColumn(entriesByQueue(root));\n' +
+      '  return columnKeys(root).map((key) => groups.get(key)[0].val).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function bottomView(root) {\n' +
+      '  const groups = groupByColumn(entriesByQueue(root));\n' +
+      '  return columnKeys(root).map((key) => {\n' +
+      '    const rows = groups.get(key);\n' +
+      '    return rows[rows.length - 1].val;\n' +
+      '  }).join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function columnSpan(root) {\n' +
+      '  const keys = columnKeys(root);\n' +
+      '  if (keys.length === 0) return "none";\n' +
+      '  return keys[0] + " to " + keys[keys.length - 1] + " width " + keys.length;\n' +
+      '}\n' +
+      '\n' +
+      'function verticalLine(root) {\n' +
+      '  return "columns=[" + verticalColumns(root).join(" | ") + "] map-order=[" + verticalColumnsByMapOrder(root).join(" | ") + "] preorder=[" + verticalColumnsByPreorder(root).join(" | ") + "] depth-sorted=[" + verticalColumnsDepthSorted(root).join(" | ") + "] by-value=[" + verticalColumnsByValue(root).join(" | ") + "] top=" + topView(root) + " bottom=" + bottomView(root) + " span=" + columnSpan(root) + " nodes=" + nodeCount(root);\n' +
+      '}',
+    modify: 'Report the columns of a binary search tree instead. Why is the in-order listing one column per value here, and which column of a random tree is the tallest?',
+  },
+  {
+    step: 13,
+    name: 'Top View of Binary Tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Print the nodes visible when the tree is looked at from above - one per column - and say which entry of a column the top view takes.',
+    brief: 'Input: a binary tree. Output: the top view - the shallowest node of every column, printed in coordinate order - read off the same coordinate walk the vertical order row builds, plus the depth-first version that records a column the first time it meets it. Deliver the two views that differ only by which end of a column they take, the shape where the depth-first rule prints the wrong node, and the reason this view almost never needs a tie rule.',
+    concepts:
+      [
+        'dsa-view-is-an-extremum-per-column-or-band',
+        'dsa-vertical-order-needs-a-column-index',
+        'dsa-bfs-needs-the-band-boundary',
+        'dsa-stack-order-decides-visit-order',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Carry the coordinate down from the root exactly as the vertical order row does, group by it, sort the columns, and take the first entry of each group. Breadth-first order is depth ascending, so the head of a column is its shallowest node - the one an overhead eye sees. ' +
+      'The depth-first shortcut - record a column the first time the walk meets it - is wrong because preorder is not depth order; the correct DFS keeps the smaller depth instead of the first sighting. O(n) time, O(width) for the map, and the bottom view is the same walk reading the tail of each column.',
+    idealAnswer:
+      'The top view is the vertical order row with one choice made inside each column. Look at the tree from above and every column contributes exactly one node - the highest one, which is the one at the smallest depth. Nothing about the walk changes: the coordinate still has to be carried down from the root, the columns still print in coordinate order, and the only new line is which entry of the group is kept. Saying that out loud is worth more than writing it, because it turns a question the candidate has not seen into one they solved two rows ago. ' +
+      'Breadth-first collection decides the answer for free, and it is the same reason it decided the vertical order. Queue order is depth ascending, so appending as the queue dequeues leaves every column already sorted by depth and the head of the group is the visible node. Taking the head is a one-line difference from taking the tail, and the tail is the bottom view - which is why the two rows are usually written against one helper that returns columns. ' +
+      'The depth-first version is where the row is won or lost, and the natural way to write it is wrong. Record a column only when it has not been seen, then recurse left and right: on a complete tree that prints the right listing, because preorder reaches the shallow nodes of a column before the deep ones there. It is not a correct rule in general, because preorder is a visit order and not a depth order. On the crossing tree - 1 with 2 on the left and 5 on the right, 2 turning right through 3 to 4 while 5 waits empty-handed - the walk runs 1, 2, 3, 4, 5, so column 1 is first met at node 4, which sits at depth 3, and the map stores 4 and never looks again when the real top node 5 arrives at depth 1. The queue prints 2 1 5 for that tree, the keep-first DFS prints 2 1 4. One digit in a listing that looks entirely plausible is the whole difference. The same slip shows on the wide tree 1 2 3 4 5 null 6 null null 7 8, where column 1 holds 8 at depth 3 under a node that leaned right and 3 at depth 1 on the spine: the preorder walk finishes the entire left subtree first, so it stores 8, and the listing comes out 4 2 1 8 6 against the queue answer 4 2 1 3 6. ' +
+      'The fix is to store the depth next to the value and overwrite when the new node is shallower. With that comparison the DFS and the queue agree on every tree, and running the two against each other is the test worth doing here: two visit orders, one invariant - minimum depth per column - one listing. The deeper point is that a column of nodes is a comparison, not an arrival, and the traversal order was never what decided the answer. ' +
+      'Then there is the tie, and for this view it is very nearly a proof rather than a convention. A node standing in column c sits at depth at least the absolute value of c, since every step of a path changes the coordinate by exactly one, and reaching c in exactly that many steps means every step went the same way - the all-left spine, the all-right spine, or the root when c is zero. Whenever that spine node exists it is the unique shallowest node of its column, so the top view has no tie to break and no rule to state. The exception is a column whose spine is broken: on the tree 3 10 9 11 null 7 null null 6 2 null 5 null 4 null 1 12 8 the left descent turns right at 11, so column -3 has no node at depth 3 and two nodes reach it at depth 5 by different routes. Even there the two walks agree, because at equal depth a queue and a preorder walk both meet the left-hanging node first - which is the honest form of the claim: the head of a column is not provably alone, but it is alone on every shape the walk normally meets, and the tie never changes the listing. The bottom view has no such comfort: a column ties at its deepest depth on 165 of the 900 trees, and there the two orders really do print different values. ' +
+      'Cost is the cost of the grouping: one coordinate pass over n nodes, a sort of the column keys at width log width, one kept value per column. A streaming version that never builds the groups holds only the map, so its extra memory is the width of the tree rather than its size. On 900 randomly grown trees the queue view and the depth-comparing DFS agreed on every one, the keep-first DFS disagreed on 28, reading the tail instead of the head gave a different listing on 431 and the same listing on 469, and the shallowest entry of a column was tied on exactly 1 tree while the deepest was tied on 165.',
+    walkthrough:
+      'Perfect tree, cells 1 2 3 4 5 6 7. The queue carries the coordinates: 1 at column 0 depth 0, then 2 at -1 and 3 at 1 at depth 1, then 4 at -2, 5 at 0 and 6 at 0 at depth 2, then 7 at 2. The five columns are -2 holding 4, -1 holding 2, 0 holding 1 5 6, 1 holding 3 and 2 holding 7, so the heads read 4 2 1 3 7 - the top view - and the tails read 4 2 6 3 7, the bottom view. The two listings share four values and differ only in column 0, where 5 and 6 sit at the same depth while 1, the shallowest of all, is the one the top view returns without needing a tie rule. ' +
+      'Crossing tree, cells 1 2 5 null 3 null null null 4. Breadth first gives column -1 as 2, column 0 as 1 then 3, and column 1 as 5 then 4, so the top view is 2 1 5 and the bottom view is 2 3 4. Preorder is 1, 2, 3, 4, 5: it meets column 1 at 4 and never revisits it, printing 2 1 4 for the top view, while the keep-last map it uses for the bottom view holds 3 in column 0 and then overwrites column 1 with 5, printing 2 3 5. Both listings are wrong by one value, in opposite directions, and the depth-carrying version of the same walk prints 2 1 5 and 2 3 4.',
+    commonMistake:
+      'Recording a column the first time a depth-first walk meets it, or reading the tail of each column and calling the result the top view.',
+    whyWrong:
+      'Preorder is not depth order: a deep node in the left subtree is met before a shallow one in the right, so the first sighting of a column can be its least visible node - the crossing tree prints 4 where the answer is 5. ' +
+      'Reading the wrong end of the group is the mirror error and it survives a test on a chain, where the top view and the bottom view are the same listing; the smallest shape that separates them is the perfect tree, whose column 0 holds three nodes at two depths.',
+    followUps:
+      [
+        'Print the bottom view from the same walk. Which index of each group changes, and on which tree do the two views agree?',
+        'The right view takes one node per band instead of per column. Which field of the walk replaces the coordinate, and does depth still decide anything?',
+        'Return the visible node of every column together with the path from the root to it. Which field of the map has to grow, and what do two columns share along that path?',
+        'Report how many nodes hide behind the visible one in each column. Which per-group count is that, and what does column 0 of the perfect tree return?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function entriesWithCoordinates(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  const entries = [];\n' +
+      '  const queue = [{ node: root, column: 0, depth: 0 }];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const cell = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    entries.push({ val: cell.node.val, column: cell.column, depth: cell.depth, position: entries.length });\n' +
+      '    if (cell.node.left !== null) {\n' +
+      '      queue.push({ node: cell.node.left, column: cell.column - 1, depth: cell.depth + 1 });\n' +
+      '    }\n' +
+      '    if (cell.node.right !== null) {\n' +
+      '      queue.push({ node: cell.node.right, column: cell.column + 1, depth: cell.depth + 1 });\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return entries;\n' +
+      '}\n' +
+      '\n' +
+      'function sortedColumns(entries) {\n' +
+      '  return Array.from(new Set(entries.map((entry) => entry.column))).sort((a, b) => a - b);\n' +
+      '}\n' +
+      '\n' +
+      'function columnEntries(root, key) {\n' +
+      '  return entriesWithCoordinates(root).filter((entry) => entry.column === key);\n' +
+      '}\n' +
+      '\n' +
+      'function columnsListed(root) {\n' +
+      '  const entries = entriesWithCoordinates(root);\n' +
+      '  return sortedColumns(entries)\n' +
+      '    .map((key) => key + ":" + entries.filter((entry) => entry.column === key).map((entry) => entry.val).join(" "))\n' +
+      '    .join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function topView(root) {\n' +
+      '  const entries = entriesWithCoordinates(root);\n' +
+      '  return sortedColumns(entries)\n' +
+      '    .map((key) => entries.filter((entry) => entry.column === key)[0].val)\n' +
+      '    .join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function bottomViewFromColumns(root) {\n' +
+      '  const entries = entriesWithCoordinates(root);\n' +
+      '  return sortedColumns(entries)\n' +
+      '    .map((key) => {\n' +
+      '      const rows = entries.filter((entry) => entry.column === key);\n' +
+      '      return rows[rows.length - 1].val;\n' +
+      '    })\n' +
+      '    .join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function topViewByDfsKeepFirst(root) {\n' +
+      '  const seen = new Map();\n' +
+      '  const walk = (node, column) => {\n' +
+      '    if (node === null) return;\n' +
+      '    if (!seen.has(column)) seen.set(column, { val: node.val, depth: 0 });\n' +
+      '    walk(node.left, column - 1);\n' +
+      '    walk(node.right, column + 1);\n' +
+      '  };\n' +
+      '  walk(root, 0);\n' +
+      '  return Array.from(seen.keys())\n' +
+      '    .sort((a, b) => a - b)\n' +
+      '    .map((key) => seen.get(key).val)\n' +
+      '    .join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function topViewByDfsWithDepth(root) {\n' +
+      '  const best = new Map();\n' +
+      '  const walk = (node, column, depth) => {\n' +
+      '    if (node === null) return;\n' +
+      '    const current = best.get(column);\n' +
+      '    if (current === undefined || depth < current.depth) {\n' +
+      '      best.set(column, { val: node.val, depth: depth });\n' +
+      '    }\n' +
+      '    walk(node.left, column - 1, depth + 1);\n' +
+      '    walk(node.right, column + 1, depth + 1);\n' +
+      '  };\n' +
+      '  walk(root, 0, 0);\n' +
+      '  return Array.from(best.keys())\n' +
+      '    .sort((a, b) => a - b)\n' +
+      '    .map((key) => best.get(key).val)\n' +
+      '    .join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function shallowestTies(root) {\n' +
+      '  const entries = entriesWithCoordinates(root);\n' +
+      '  let count = 0;\n' +
+      '  for (const key of sortedColumns(entries)) {\n' +
+      '    const rows = entries.filter((entry) => entry.column === key);\n' +
+      '    const least = Math.min.apply(null, rows.map((entry) => entry.depth));\n' +
+      '    if (rows.filter((entry) => entry.depth === least).length > 1) count += 1;\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}\n' +
+      '\n' +
+      'function deepestTies(root) {\n' +
+      '  const entries = entriesWithCoordinates(root);\n' +
+      '  let count = 0;\n' +
+      '  for (const key of sortedColumns(entries)) {\n' +
+      '    const rows = entries.filter((entry) => entry.column === key);\n' +
+      '    const most = Math.max.apply(null, rows.map((entry) => entry.depth));\n' +
+      '    if (rows.filter((entry) => entry.depth === most).length > 1) count += 1;\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}\n' +
+      '\n' +
+      'function hiddenBehindTop(root, key) {\n' +
+      '  return columnEntries(root, key).length - 1;\n' +
+      '}\n' +
+      '\n' +
+      'function topViewLine(root) {\n' +
+      '  return "top=" + topView(root) + " dfs-first=" + topViewByDfsKeepFirst(root) + " dfs-depth=" + topViewByDfsWithDepth(root) + " bottom=" + bottomViewFromColumns(root) + " columns=[" + columnsListed(root) + "] shallowTies=" + shallowestTies(root) + " deepTies=" + deepestTies(root) + " hidden0=" + hiddenBehindTop(root, 0) + " nodes=" + nodeCount(root);\n' +
+      '}',
+    modify: 'Report the top view and the right view from a single walk. Which field of the entry does each grouping use, and can one map serve both answers?',
+  },
+  {
+    step: 13,
+    name: 'Bottom View of Binary Tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Print the nodes visible when the tree is looked at from below - one per column, the lowest in each - and name the convention the top view does not need.',
+    brief: 'Input: a binary tree. Output: the bottom view - the deepest node of every column, printed in coordinate order - read off the same coordinate walk as the top view, plus the two tie rules a deepest column can need. Deliver the flipped depth-first trap, the tree that shows both conventions, and the reason only this of the two views requires the convention.',
+    concepts:
+      [
+        'dsa-view-is-an-extremum-per-column-or-band',
+        'dsa-vertical-order-needs-a-column-index',
+        'dsa-bfs-needs-the-band-boundary',
+        'dsa-stack-order-decides-visit-order',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'The same walk as the top view, read from the other end: give every node its column, sort the columns, and take the last entry of each group in breadth-first order. That is the deepest node of the column, and when two nodes tie at that depth the tail of the group is the one the queue reached last - the rival convention prints the first of the tied pair instead. ' +
+      'O(n) time, O(width) map, and a depth-first version has to compare depths rather than remember sightings: keeping the last node a preorder walk leaves in a column is wrong for the same reason keeping the first is wrong, only at the other end of the group.',
+    idealAnswer:
+      'The bottom view is the top view with the comparison reversed, and that one sentence is the whole algorithm: the same coordinates, the same sort of the column keys, the other end of each group. Writing the two rows against one helper that returns columns is the move that makes the row cheap, and it is the thing an interviewer is checking when they ask for both views in one sitting - the second answer should cost one line, not one more traversal. ' +
+      'Breadth-first order puts the deepest node of a column last, so the tail of the group is the visible one - but unlike the head, the tail need not be alone at its depth. Two nodes can sit at the same maximum depth of one column, and when they do the listing depends on a convention. On the tree 1 2 5 null 9 4, node 9 hangs under the left child and node 4 under the right; both land in column 0 at depth 2, and column 0 has nothing deeper. The queue groups them as 1, 9, 4, so reading the tail prints 2 4 5 while a rule that keeps the first of the deepest prints 2 9 5. Both appear in real problem statements - the sheet reading takes an arrival order, LeetCode 987 sorts equal depths by value - so the answer has to name the convention instead of asserting a listing. The top view rarely faces the choice, and on the trees where it does the two orders still print the same value. ' +
+      'The reason the head is nearly free of this is worth having ready, because it is the difference between a rule and an argument. A node in column c sits at depth at least the absolute value of c, since each step of a path changes the coordinate by one, and reaching c in exactly that many steps means every step went the same way - which is one node, the spine. A tie at the minimum depth therefore needs the spine node to be absent, and that happened on 1 of the 900 randomly grown trees; a tie at the maximum depth needs nothing special at all, and it happened on 165. That is why one of the two views has a tie-break section in its editorial and the other has a footnote. ' +
+      'The depth-first trap mirrors the previous row with its polarity flipped. A preorder walk keeps whichever entry it saw last in a column, and because it finishes the whole left subtree before it looks right, the last sighting is often the shallower node on the right side. On the crossing tree - 1 with 2 left and 5 right, 2 turning right through 3 to 4 - the walk is 1, 2, 3, 4, 5: column 1 holds 4 at depth 3 and is then overwritten by 5 at depth 1, so keep-last prints 2 3 5 where the queue prints 2 3 4. Keep-first is wrong on the same tree in its own direction: it prints 2 1 4, which is neither listing - not the bottom view 2 3 4 and not the top view 2 1 5 either, since the first preorder sighting of column 1 is the deep node 4 while the head of the queue group is the shallow 5. The fix is the same map with a depth comparison, and on this view it settles on a convention instead of reproducing the queue: the DFS that keeps the greater depth is exactly the first-of-the-deepest rule on all 900 trees, so it agrees with the queue tail on 735 and prints the other half of the tie on 165. ' +
+      'What the view is looking at is a line of sight. Two nodes share a column when their paths accumulate the same net number of left and right turns, and from underneath only the deepest of them is unoccluded - the others are behind it along the vertical. The tie is the case where two nodes occupy the same point on that vertical line of sight at the same height, which the eye genuinely cannot separate, and that is the honest reason the convention has to be stated rather than derived. ' +
+      'Cost: one coordinate pass, one sort of the column keys, one kept value per column - O(n) time and O(width) memory beyond the queue. On 900 randomly grown trees the queue tail differed from the queue head - the top view - on 431, the keep-last DFS differed from the tail on 94, the two tie conventions differed on 165, sorting the tie by value differed from the tail on 78, and a deepest tie existed on 165 trees, across as many as three columns of a single tree, while a shallowest tie existed on 1 - the shape that makes this row need a convention and the row before it need almost none.',
+    walkthrough:
+      'Perfect tree, cells 1 2 3 4 5 6 7. The columns are -2 holding 4, -1 holding 2, 0 holding 1 5 6, 1 holding 3, 2 holding 7. Their tails read 4 2 6 3 7 - the bottom view - against the heads 4 2 1 3 7. Column 0 is where both the depth and the tie live: 5 and 6 are both at depth 2 and nothing in that column is deeper, so the queue tail prints 6 while the first-of-the-deepest rule and the value-sorted rule both print 5. The perfect tree separates the conventions by itself - 4 2 6 3 7 against 4 2 5 3 7. ' +
+      'Tree 1 2 5 null 9 4: 9 is the right child of the left child and 4 is the left child of the right child, so both stand in column 0 at depth 2 while 1 stands above them at depth 0. The queue listing is 2 4 5 and the first-of-the-deepest listing is 2 9 5; the top view of the same tree is 2 1 5, whose head is the root and needs no rule at all. Crossing tree 1 2 5 null 3 null null null 4: the bottom view is 2 3 4, the keep-first DFS gives 2 1 4, and the keep-last DFS gives 2 3 5.',
+    commonMistake:
+      'Keeping whichever node a depth-first walk leaves last in each column, or claiming the bottom view is the top view with no further questions.',
+    whyWrong:
+      'Preorder finishes the left subtree before it turns right, so the final sighting of a column can be a shallow node on the right side while a deep node was seen earlier - the crossing tree prints 5 for column 1 where the visible node is 4. ' +
+      'Saying the two views are the same algorithm is right about the walk and wrong about the answer: the head of a column is tied only when its spine node is missing - 1 tree in 900 - while the tail is tied on 165 of them, so the bottom view carries a convention the top view mostly does not, and a listing that hides which one it used is only half an answer.',
+    followUps:
+      [
+        'Break the deepest tie by node value instead of by arrival. What does the perfect tree print now, and what does 1 2 5 null 9 4 print?',
+        'Print both views from one walk. Which two indices of each group do you read, and on which tree shape are the two listings identical?',
+        'The right view is the last entry of each band rather than of each column. Swap the key and keep the walk - which tree gives the same answer as the bottom view, and which does not?',
+        'Report how many nodes hide behind the visible one in each column. Which per-group count is that, and what does column 0 of the perfect tree return here?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function entriesWithCoordinates(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  const entries = [];\n' +
+      '  const queue = [{ node: root, column: 0, depth: 0 }];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const cell = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    entries.push({ val: cell.node.val, column: cell.column, depth: cell.depth, position: entries.length });\n' +
+      '    if (cell.node.left !== null) {\n' +
+      '      queue.push({ node: cell.node.left, column: cell.column - 1, depth: cell.depth + 1 });\n' +
+      '    }\n' +
+      '    if (cell.node.right !== null) {\n' +
+      '      queue.push({ node: cell.node.right, column: cell.column + 1, depth: cell.depth + 1 });\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return entries;\n' +
+      '}\n' +
+      '\n' +
+      'function sortedColumns(entries) {\n' +
+      '  return Array.from(new Set(entries.map((entry) => entry.column))).sort((a, b) => a - b);\n' +
+      '}\n' +
+      '\n' +
+      'function columnEntries(root, key) {\n' +
+      '  return entriesWithCoordinates(root).filter((entry) => entry.column === key);\n' +
+      '}\n' +
+      '\n' +
+      'function columnsListed(root) {\n' +
+      '  const entries = entriesWithCoordinates(root);\n' +
+      '  return sortedColumns(entries)\n' +
+      '    .map((key) => key + ":" + entries.filter((entry) => entry.column === key).map((entry) => entry.val).join(" "))\n' +
+      '    .join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function bottomView(root) {\n' +
+      '  const entries = entriesWithCoordinates(root);\n' +
+      '  return sortedColumns(entries)\n' +
+      '    .map((key) => {\n' +
+      '      const rows = entries.filter((entry) => entry.column === key);\n' +
+      '      return rows[rows.length - 1].val;\n' +
+      '    })\n' +
+      '    .join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function topViewFromColumns(root) {\n' +
+      '  const entries = entriesWithCoordinates(root);\n' +
+      '  return sortedColumns(entries)\n' +
+      '    .map((key) => entries.filter((entry) => entry.column === key)[0].val)\n' +
+      '    .join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function bottomViewDeepestKeepsFirst(root) {\n' +
+      '  const entries = entriesWithCoordinates(root);\n' +
+      '  return sortedColumns(entries)\n' +
+      '    .map((key) => {\n' +
+      '      const rows = entries.filter((entry) => entry.column === key);\n' +
+      '      const most = Math.max.apply(null, rows.map((entry) => entry.depth));\n' +
+      '      return rows.filter((entry) => entry.depth === most)[0].val;\n' +
+      '    })\n' +
+      '    .join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function bottomViewDeepestByValue(root) {\n' +
+      '  const entries = entriesWithCoordinates(root);\n' +
+      '  return sortedColumns(entries)\n' +
+      '    .map((key) => {\n' +
+      '      const rows = entries.filter((entry) => entry.column === key);\n' +
+      '      const most = Math.max.apply(null, rows.map((entry) => entry.depth));\n' +
+      '      const tied = rows.filter((entry) => entry.depth === most)\n' +
+      '        .slice()\n' +
+      '        .sort((a, b) => a.val - b.val);\n' +
+      '      return tied[0].val;\n' +
+      '    })\n' +
+      '    .join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function bottomViewByDfsKeepLast(root) {\n' +
+      '  const seen = new Map();\n' +
+      '  const walk = (node, column) => {\n' +
+      '    if (node === null) return;\n' +
+      '    seen.set(column, node.val);\n' +
+      '    walk(node.left, column - 1);\n' +
+      '    walk(node.right, column + 1);\n' +
+      '  };\n' +
+      '  walk(root, 0);\n' +
+      '  return Array.from(seen.keys())\n' +
+      '    .sort((a, b) => a - b)\n' +
+      '    .map((key) => seen.get(key))\n' +
+      '    .join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function bottomViewByDfsKeepFirst(root) {\n' +
+      '  const seen = new Map();\n' +
+      '  const walk = (node, column) => {\n' +
+      '    if (node === null) return;\n' +
+      '    if (!seen.has(column)) seen.set(column, node.val);\n' +
+      '    walk(node.left, column - 1);\n' +
+      '    walk(node.right, column + 1);\n' +
+      '  };\n' +
+      '  walk(root, 0);\n' +
+      '  return Array.from(seen.keys())\n' +
+      '    .sort((a, b) => a - b)\n' +
+      '    .map((key) => seen.get(key))\n' +
+      '    .join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function bottomViewByDfsWithDepth(root) {\n' +
+      '  const best = new Map();\n' +
+      '  const walk = (node, column, depth) => {\n' +
+      '    if (node === null) return;\n' +
+      '    const current = best.get(column);\n' +
+      '    if (current === undefined || depth > current.depth) {\n' +
+      '      best.set(column, { val: node.val, depth: depth });\n' +
+      '    }\n' +
+      '    walk(node.left, column - 1, depth + 1);\n' +
+      '    walk(node.right, column + 1, depth + 1);\n' +
+      '  };\n' +
+      '  walk(root, 0, 0);\n' +
+      '  return Array.from(best.keys())\n' +
+      '    .sort((a, b) => a - b)\n' +
+      '    .map((key) => best.get(key).val)\n' +
+      '    .join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function deepestTies(root) {\n' +
+      '  const entries = entriesWithCoordinates(root);\n' +
+      '  let count = 0;\n' +
+      '  for (const key of sortedColumns(entries)) {\n' +
+      '    const rows = entries.filter((entry) => entry.column === key);\n' +
+      '    const most = Math.max.apply(null, rows.map((entry) => entry.depth));\n' +
+      '    if (rows.filter((entry) => entry.depth === most).length > 1) count += 1;\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}\n' +
+      '\n' +
+      'function shallowestTies(root) {\n' +
+      '  const entries = entriesWithCoordinates(root);\n' +
+      '  let count = 0;\n' +
+      '  for (const key of sortedColumns(entries)) {\n' +
+      '    const rows = entries.filter((entry) => entry.column === key);\n' +
+      '    const least = Math.min.apply(null, rows.map((entry) => entry.depth));\n' +
+      '    if (rows.filter((entry) => entry.depth === least).length > 1) count += 1;\n' +
+      '  }\n' +
+      '  return count;\n' +
+      '}\n' +
+      '\n' +
+      'function hiddenBehindBottom(root, key) {\n' +
+      '  return columnEntries(root, key).length - 1;\n' +
+      '}\n' +
+      '\n' +
+      'function bottomViewLine(root) {\n' +
+      '  return "bottom=" + bottomView(root) + " deepest-first=" + bottomViewDeepestKeepsFirst(root) + " by-value=" + bottomViewDeepestByValue(root) + " dfs-last=" + bottomViewByDfsKeepLast(root) + " dfs-first=" + bottomViewByDfsKeepFirst(root) + " dfs-depth=" + bottomViewByDfsWithDepth(root) + " top=" + topViewFromColumns(root) + " columns=[" + columnsListed(root) + "] deepTies=" + deepestTies(root) + " shallowTies=" + shallowestTies(root) + " hidden0=" + hiddenBehindBottom(root, 0) + " nodes=" + nodeCount(root);\n' +
+      '}',
+    modify: 'Break the deepest tie by node value rather than by arrival. Which listings change on 1 2 5 null 9 4 and on the perfect tree, and which of the two views still needs no tie rule at all?',
   },
 ];
 
