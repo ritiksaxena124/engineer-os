@@ -1737,6 +1737,34 @@ export const DSA_CONCEPTS = {
     terms: ['holds at every subtree', 'root difference is not enough', 'carry height with the answer', 'sentinel lets the fold bail', 'recomputing heights costs'],
     weight: 4,
   },
+  'dsa-diameter-is-two-heights-meeting-at-a-node': {
+    slug: 'dsa-diameter-is-two-heights-meeting-at-a-node',
+    name: 'The longest route turns at one node, where two heights add',
+    detail: 'Any path between two nodes goes up from one end to a single turning node and back down to the other end, so its length is the deeper left path plus the deeper right path plus the two edges leaving the turn. That gives one candidate per node and the tree answer is the best candidate. Asking for each candidate with a fresh height walk is correct and costs height times nodes; the fold that returns height and best together makes it linear.',
+    terms: ['one turning node per path', 'candidate is both heights plus two', 'answer is the best candidate', 'height and best travel upward together', 'the turn need not be the root'],
+    weight: 4,
+  },
+  'dsa-max-path-sum-clips-a-negative-branch': {
+    slug: 'dsa-max-path-sum-clips-a-negative-branch',
+    name: 'A downward gain is clamped at zero, so a losing branch is dropped and not subtracted',
+    detail: 'A path that continues upward through a node can carry only one child side, and carrying a side whose best contribution is negative makes the path worse than starting at the node itself. Clamping each child gain at zero is what lets the same fold answer a tree where every node is negative. The turning candidate adds both clamped gains to the node value while the returned gain adds only the larger one, and mixing the two produces a path that forks.',
+    terms: ['gain takes one branch', 'clamp each child at zero', 'candidate takes both', 'all-negative answers with one node', 'forking the gain is the bug'],
+    weight: 4,
+  },
+  'dsa-identical-is-shape-and-value-together': {
+    slug: 'dsa-identical-is-shape-and-value-together',
+    name: 'Identical is the same shape carrying the same values in the same places',
+    detail: 'Two trees are identical when their node pairs match in value and both child pairs are identical, so the test has one condition per pair and cannot drop any of them. A value-only test passes on a different shape, a shape-only test passes on different numbers, and a missing left child is a different tree from a missing right child even when the value listing is the same string. A level-order listing that keeps its nulls is a canonical form: equal strings exactly when the trees are identical.',
+    terms: ['shape and value at once', 'a missing left is not a missing right', 'value-only passes on wrong shapes', 'nulls make the listing canonical', 'one comparison per paired node'],
+    weight: 3,
+  },
+  'dsa-two-stack-zigzag-push-order-is-the-direction': {
+    slug: 'dsa-two-stack-zigzag-push-order-is-the-direction',
+    name: 'A stack prints a band in the reverse of the order its children were pushed',
+    detail: 'A band comes off a stack in the opposite order to the one it went in, so the push rule is the direction rule: while a band is popped left to right its children go on left then right, which makes the next band pop right to left, and the other way round for the opposite direction. Getting the same listing as the band-parity walk without calling reverse anywhere is the point of the two-stack walk. Fixing the push rule instead of alternating it produces a listing that is neither level order nor spiral order, and that a flat multiset comparison still accepts.',
+    terms: ['push order is the direction', 'no reverse call needed', 'alternating rule, not fixed rule', 'flat listings agree, band splits differ', 'band count equals height plus one'],
+    weight: 3,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -23194,6 +23222,782 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '  return "balanced=" + isBalanced(root) + " foldFrames=" + foldSteps(root) + " naive=" + isBalancedNaive(root) + " naiveFrames=" + naiveSteps(root) + " worst=" + maxImbalance(root) + " nodes=" + nodeCount(root) + " height=" + rawHeight(root);\n' +
       '}',
     modify: 'Make the fold return the node whose subtree is the worst imbalance instead of a count. Which extra field has to travel upward with the height, and what does a subtree that already failed hand to its parent?',
+  },
+  {
+    step: 13,
+    name: 'Diameter of Binary Tree',
+    difficulty: 'Easy',
+    topicSlug: TREES,
+    stem: 'Return the length of the longest path between any two nodes of a binary tree, and say whether the answer is counted in edges or in nodes.',
+    brief: 'Input: a binary tree given as level-order cells. Output: the diameter - the longest route between any two nodes - measured in edges and in nodes, computed once by asking every node for the route that turns at it and once by a fold that carries height and best together. Deliver the two costs, the per-node candidates, and the case where the longest path never touches the root.',
+    concepts:
+      [
+        'dsa-diameter-is-two-heights-meeting-at-a-node',
+        'dsa-height-is-the-longest-downward-path',
+        'dsa-postorder-is-the-bottom-up-recording-time',
+        'dsa-tree-cells-carry-shape',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Every path turns at exactly one node, and at that node it is the deepest left route plus the deepest right route plus the two edges leaving the turn. So the diameter is the best of one candidate per node: two plus the height of the left subtree plus the height of the right subtree. ' +
+      'Measuring each candidate with its own height walk is correct and costs height times nodes. The linear version is the same fold as the height row with one extra field: return the height of the subtree and the best diameter found inside it together, and combine them once per node. O(n) time, O(h) frames, and the answer is the best field at the root.',
+    idealAnswer:
+      'The first attempt is almost always the height of the tree, and the height is the longest route from the root down, while the diameter is the longest route anywhere. They agree on a chain, which is the shape every hand-written test contains, and they diverge the moment a tree has two deep sides. The gap tree makes both mistakes visible: its height is 3 edges, its diameter is 5, and the route that achieves 5 - 4, 2, 1, 3, 5, 6 - is not from the root down at all, it turns at the root and goes down twice. ' +
+      'The turn is the whole idea. A path between two nodes rises to a lowest common ancestor and falls again, so at that ancestor the path is exactly the two deepest downward routes glued together: height of the left subtree plus height of the right subtree plus 2 edges. Every node offers such a candidate, and the tree answer is the maximum. Printing the candidates is the clearest way to see the structure, and on the gap tree they read 5 at node 1, 1 at node 2, 2 at node 3, 0 at node 4, 1 at node 5 and 0 at node 6 - the maximum happens to sit at the root here, and it does not have to. The wide tree is not a counterexample either, its best candidate is at the root as well, so the honest statement is that a root-wearing maximum is luck rather than construction: 91 of the 900 randomly grown trees have their winning turn below the root, the first being 3 12 null 1 10 8 null 6 null 4 5 null null 7 9 11 2, whose diameter is 6 edges while the candidate at its own root is 5. The smallest shape in this file that does it is 1 with a left child 2 that has two deep sides of its own - cells 1 2 null 3 4 5 null 6 - with a diameter of 4 edges turning at node 2 against a candidate of 3 at the root, and a height of 3 that the answer beats. ' +
+      'The naive walk is correct and quadratic-ish, and the honest way to say its cost is to count. Asking each of the n nodes for a candidate means measuring two subtrees per node, and those measurements overlap completely: the leaves are re-measured once per ancestor. The fold removes the repetition by returning a pair - the height of this subtree and the best diameter inside it - and taking the maximum of the left best, the right best and the candidate at the node. It visits each node once and each empty child once: 2n plus 1 frames, 15 on the perfect tree and 13 on the gap tree, against the 34 and 30 height measurements the naive walk spends on the same two shapes. On 900 randomly grown trees the two implementations returned the same diameter every time, the fold cost exactly 2n plus 1 frames on every one of them, and the naive walk went past that figure on 622 trees, the widest gap being 81 extra measurements on a single 12-node tree. ' +
+      'Then there is the convention, and for the diameter it is not cosmetic. The same path is 5 edges or 6 nodes, and the two questions are different questions: this step asks for the number of edges between two nodes, a later row asks for the number of nodes on the longest route, and a tree whose diameter is 0 edges - a single node - has 1 node on its path. The empty tree is the sharpest edge: 0 edges, 0 nodes, and a candidate function that returns 2 plus a height of -1 twice answers -1 unless null is special-cased first. ' +
+      'What the pair-fold is really for: once a node combines two heights, the same shape of answer carries anything additive over the two sides - the longest path with a constraint, the widest band, the best sum, the burn time of the tree. The diameter is the smallest example where the fold must carry two numbers, because the candidate at a node uses information from both children while the value returned upward can only use the deeper one. That asymmetry - both sides for the answer, one side for the parent - is the thing to be able to point at in the code.',
+    walkthrough:
+      'Gap tree, cells 1 2 3 null 4 5 null null null 6. The fold runs bottom-up. Node 4 is a leaf: pair (height 0, best 0), since two empty children give 2 plus -1 plus -1 = 0. Node 2 has an empty left and node 4 on the right, so its candidate is 2 plus -1 plus 0 = 1 and its pair is (1, 1). Node 6 is a leaf at (0, 0); node 5 has 6 on the left and nothing on the right, giving candidate 2 plus 0 plus -1 = 1 and pair (1, 1); node 3 has 5 on the left and nothing on the right, candidate 2 plus 1 plus -1 = 2, pair (2, 2). ' +
+      'At the root the two pairs are (1, 1) on the left and (2, 2) on the right, so the candidate is 2 plus 1 plus 2 = 5 and the best is the maximum of 5, 1 and 2, which is 5. Thirteen frames for six nodes, which is the 2n plus 1 identity, and the same answer the naive walk reaches by asking every node for a candidate and measuring two subtrees each time - 30 height measurements for the same six nodes. Read breadth first, the per-node candidates are 5 at node 1, 1 at node 2, 2 at node 3, 0 at node 4, 1 at node 5 and 0 at node 6, and in nodes the answer is 6: the route 4, 2, 1, 3, 5, 6.',
+    commonMistake:
+      'Reporting the height of the tree as its diameter, or keeping the per-node height measurements and quoting O(n) because each individual height call is linear.',
+    whyWrong:
+      'Height is one downward route and the diameter is two upward-glued routes, so the two numbers differ on any tree with depth on both sides of some node - the gap tree is 3 against 5. ' +
+      'The naive version is right but its cost is the number of height calls, not the cost of one of them: a candidate per node measures the same subtree once per ancestor, which is why it goes past the 2n plus 1 frames the fold needs on the very trees where it matters. The convention slip is the third way to be wrong while printing a plausible number: an edge count and a node count differ by exactly one on every tree, so a test written against one shape cannot catch it.',
+    followUps:
+      [
+        'Count the nodes on the longest route instead of the edges. Which single line changes, and what does the empty tree answer now?',
+        'Make the fold also return the values along one longest path. Which side of the pair has to keep the path, and what does the parent do with two candidate paths of equal length?',
+        'Constrain the path to pass through a given node. Which candidates survive, and how does the answer change when that node is a leaf?',
+        'The same pair-fold solves the burn-the-tree row later in this step, where the path is measured in time rather than edges. What is the second field of the pair there, and why is it still combined from both children?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function diameterThrough(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 2 + heightOf(root.left) + heightOf(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function diameterNaive(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  const here = diameterThrough(root);\n' +
+      '  return Math.max(here, diameterNaive(root.left), diameterNaive(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'let heightVisits = 0;\n' +
+      '\n' +
+      'function countedHeight(root) {\n' +
+      '  heightVisits += 1;\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(countedHeight(root.left), countedHeight(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function throughCounted(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 2 + countedHeight(root.left) + countedHeight(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function diameterCounted(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return Math.max(throughCounted(root), diameterCounted(root.left), diameterCounted(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function naiveHeightCalls(root) {\n' +
+      '  heightVisits = 0;\n' +
+      '  diameterCounted(root);\n' +
+      '  return heightVisits;\n' +
+      '}\n' +
+      '\n' +
+      'function diameterCandidates(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    rows.push(node.val + ":" + diameterThrough(node));\n' +
+      '    if (node.left !== null) queue.push(node.left);\n' +
+      '    if (node.right !== null) queue.push(node.right);\n' +
+      '  }\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'let foldVisits = 0;\n' +
+      '\n' +
+      'function diameterPair(root) {\n' +
+      '  foldVisits += 1;\n' +
+      '  if (root === null) return { height: -1, best: 0 };\n' +
+      '  const left = diameterPair(root.left);\n' +
+      '  const right = diameterPair(root.right);\n' +
+      '  return {\n' +
+      '    height: 1 + Math.max(left.height, right.height),\n' +
+      '    best: Math.max(2 + left.height + right.height, left.best, right.best),\n' +
+      '  };\n' +
+      '}\n' +
+      '\n' +
+      'function diameterFold(root) {\n' +
+      '  return diameterPair(root).best;\n' +
+      '}\n' +
+      '\n' +
+      'function foldFrames(root) {\n' +
+      '  foldVisits = 0;\n' +
+      '  diameterPair(root);\n' +
+      '  return foldVisits;\n' +
+      '}\n' +
+      '\n' +
+      'function foldHeight(root) {\n' +
+      '  return diameterPair(root).height;\n' +
+      '}\n' +
+      '\n' +
+      'function diameterNodes(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return diameterFold(root) + 1;\n' +
+      '}\n' +
+      '\n' +
+      'function diameterLine(root) {\n' +
+      '  return "edges=" + diameterFold(root) + " nodes=" + diameterNodes(root) + " naive=" + diameterNaive(root) + " naiveCalls=" + naiveHeightCalls(root) + " foldFrames=" + foldFrames(root) + " total=" + nodeCount(root);\n' +
+      '}',
+    modify: 'Return the values along one longest path instead of its length. Which half of the pair has to grow a path, and what does a node do when its two candidates are the same length?',
+  },
+  {
+    step: 13,
+    name: 'Maximum Path Sum in Binary Tree',
+    difficulty: 'Hard',
+    topicSlug: TREES,
+    stem: 'Find the largest sum of node values on any path in a binary tree, where a path may start and end at any node and may not fork.',
+    brief: 'Input: a binary tree whose nodes carry values, possibly negative. Output: the maximum path sum over all paths that turn at most once, computed by a fold that returns the best downward gain of a subtree and the best path inside it, plus the naive per-node version and the call counts that separate them. Deliver the clamping rule, the all-negative case, and the difference between the answer and the gain a node hands to its parent.',
+    concepts:
+      [
+        'dsa-max-path-sum-clips-a-negative-branch',
+        'dsa-diameter-is-two-heights-meeting-at-a-node',
+        'dsa-postorder-is-the-bottom-up-recording-time',
+        'dsa-recursive-decomposition',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Same shape as the diameter row, with sums instead of heights and one extra rule: a child contribution that is negative is not carried, it is dropped. The gain of a node - the best downward path starting at it - is its value plus the larger of zero and the two child gains. ' +
+      'The candidate that turns at the node is its value plus both clamped gains. The fold returns the gain and the best path found anywhere inside the subtree, and the answer is the best at the root. O(n) time, O(h) frames, and a tree whose every node is negative answers with its single least-negative node.',
+    idealAnswer:
+      'The path here is not a root-to-leaf path and not a chain: it is any downward-then-upward route that turns at most once, which is exactly the diameter definition with values in place of edges. That makes the algorithm the pair-fold from the previous row - one number goes up to the parent, a different number is assembled locally from both children - with a single change that is easy to state and easy to get wrong. ' +
+      'A child subtree contributes its gain only when that gain is positive. The reason is that the path may start at the turning node: nothing forces it to extend into a side that subtracts. Clamping at zero is what makes an all-negative tree answerable at all, because then every candidate degenerates to a single node and the best candidate is the largest value in the tree - -1 on the tree -3 with children -2 and -1, and -3 on the single node -3. Writing the gain as a plain maximum over the two children instead of over zero and the two children is the bug, and it is a sneaky one: on the tree -3 with children -2 and -1 the maximum over the candidates still rescues it and answers -1, while on 2 with a child -1 it answers 1 - a path that reached into the branch it was free to refuse. One shape hides it, the next one exposes it, which is exactly what a single hand-written test does. Across 900 randomly valued trees the unclamped walk disagreed with the clamped fold on 190 of them, and every one of the 70 trees whose values are all negative answered with its single largest value. ' +
+      'The other slip is the mirror of it: handing the two-sided candidate up to the parent. A parent can extend a path through only one of its children, because a path that used both sides of a node and then continued upward would visit that node twice; so the returned value is the gain - one clamped side - while the local answer uses both. On the LeetCode example tree rooted at 5 with left 4, 11, 7, 2 and right 8, 13, 4, 1, the gain at the root is 27 and the answer is 48: the path 7, 11, 4, 5, 8, 13. The two numbers come from the same pair of child gains and differ by which side they allow. ' +
+      'Two independent implementations settle the rest: the fold and a naive walk that asks every node for its own turning candidate - each candidate measuring the downward gains of both subtrees from scratch. They agreed on every one of the 900 randomly valued trees, the fold cost exactly 2n plus 1 frames on every tree of them, and the naive walk went past that figure on 638 trees, the widest gap being 81 extra measurements on a single 12-node tree - the same cost split the diameter row measures. ' +
+      'Edges worth naming: the empty tree has no path, so the answer is not zero but no answer at all - the fold returns null there, and returning 0 is a silent wrong answer for any tree whose real best is negative; a single node answers with its own value; a two node tree of 2 and -1 answers with 2 and not 1, because the -1 is a branch worth refusing; and a chain answers with the sum of the whole chain when all values are positive, which is the only shape where the turning path is not really turning.',
+    walkthrough:
+      'Take the tree -10 with left 9 and right 20 carrying 15 and 7. The gains come up first: 9 is a leaf at 9, 15 and 7 are leaves, 20 has gain 20 plus the larger of 15 and 7 = 35. ' +
+      'Now the candidates: at node 20 the path that turns there is 20 plus 15 plus 7 = 42; at node 9 it is 9; at the root it is -10 plus the clamped left gain 9 plus the clamped right gain 35 = 34. The best of 42, 9 and 34 is 42, and the root hands upward only 25 - its own value plus 35 - never 42, because 42 already used both sides. Eleven frames for five nodes, which is the 2n plus 1 identity, and the same 42 from the naive walk, which measures the two downward gains again at every node and spends 22 measurements to do it.',
+    commonMistake:
+      'Taking the maximum of the two child gains without clamping at zero, or returning the two-sided candidate as the gain so the parent can extend a path that already turned.',
+    whyWrong:
+      'Without the clamp a negative side is subtracted even though the path is allowed to stop before it, so 2 with a child -1 returns 1 instead of 2. ' +
+      'The slip is not universal, and that is what makes it dangerous: a tree whose values are all negative still answers with its single largest value, because the maximum over the candidates picks a leaf out of the wreckage - all 70 all-negative trees in the random set did. What the clamp fixes is the node whose two sides are both worth refusing while the best path passes through it, and 190 of the 900 randomly valued trees contain such a node. ' +
+      'Returning the turning candidate upward is the fork bug: the parent adds its own side to a value that already contains two, and the result is a shape that is not a path. It survives a positive-only test tree because with every value positive the two quantities differ only on nodes whose subtree is not on the best route - which is why the discriminating case is a tree with a negative branch off to one side.',
+    followUps:
+      [
+        'Require the path to be non-empty but allow it to be a single node. Which base case changes, and what does the empty tree return now?',
+        'Report the values along the best path, not only its sum. Which of the two numbers in the pair has to carry a listing, and at which point is the listing complete?',
+        'Make every leaf-to-leaf path invalid unless it has at least two nodes. How does the fold change, and which tree shape breaks the answer first?',
+        'Reuse the same fold for the maximum sum chain in a grid-shaped tree where only one child may be taken. What disappears from the candidate, and what stays in the pair?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function maxDown(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return root.val + Math.max(0, maxDown(root.left), maxDown(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function sumThrough(root) {\n' +
+      '  if (root === null) return Number.NEGATIVE_INFINITY;\n' +
+      '  return root.val + Math.max(0, maxDown(root.left)) + Math.max(0, maxDown(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function maxPathSumNaive(root) {\n' +
+      '  if (root === null) return Number.NEGATIVE_INFINITY;\n' +
+      '  const here = sumThrough(root);\n' +
+      '  return Math.max(here, maxPathSumNaive(root.left), maxPathSumNaive(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'let downVisits = 0;\n' +
+      '\n' +
+      'function countedDown(root) {\n' +
+      '  downVisits += 1;\n' +
+      '  if (root === null) return 0;\n' +
+      '  return root.val + Math.max(0, countedDown(root.left), countedDown(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function countedThrough(root) {\n' +
+      '  if (root === null) return Number.NEGATIVE_INFINITY;\n' +
+      '  return root.val + Math.max(0, countedDown(root.left)) + Math.max(0, countedDown(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function sumNaiveCounted(root) {\n' +
+      '  if (root === null) return Number.NEGATIVE_INFINITY;\n' +
+      '  return Math.max(countedThrough(root), sumNaiveCounted(root.left), sumNaiveCounted(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function naiveDownCalls(root) {\n' +
+      '  downVisits = 0;\n' +
+      '  sumNaiveCounted(root);\n' +
+      '  return downVisits;\n' +
+      '}\n' +
+      '\n' +
+      'let foldVisits = 0;\n' +
+      '\n' +
+      'function sumFold(root) {\n' +
+      '  foldVisits += 1;\n' +
+      '  if (root === null) return { gain: 0, best: Number.NEGATIVE_INFINITY };\n' +
+      '  const left = sumFold(root.left);\n' +
+      '  const right = sumFold(root.right);\n' +
+      '  return {\n' +
+      '    gain: root.val + Math.max(0, left.gain, right.gain),\n' +
+      '    best: Math.max(root.val + Math.max(0, left.gain) + Math.max(0, right.gain), left.best, right.best),\n' +
+      '  };\n' +
+      '}\n' +
+      '\n' +
+      'function maxPathSum(root) {\n' +
+      '  if (root === null) return null;\n' +
+      '  return sumFold(root).best;\n' +
+      '}\n' +
+      '\n' +
+      'function gainOf(root) {\n' +
+      '  return sumFold(root).gain;\n' +
+      '}\n' +
+      '\n' +
+      'function foldFrames(root) {\n' +
+      '  foldVisits = 0;\n' +
+      '  sumFold(root);\n' +
+      '  return foldVisits;\n' +
+      '}\n' +
+      '\n' +
+      'function sumCandidates(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    rows.push(node.val + ":" + sumThrough(node));\n' +
+      '    if (node.left !== null) queue.push(node.left);\n' +
+      '    if (node.right !== null) queue.push(node.right);\n' +
+      '  }\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function downUnclamped(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return root.val + Math.max(downUnclamped(root.left), downUnclamped(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function throughUnclamped(root) {\n' +
+      '  if (root === null) return Number.NEGATIVE_INFINITY;\n' +
+      '  return root.val + downUnclamped(root.left) + downUnclamped(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function withoutClamp(root) {\n' +
+      '  if (root === null) return Number.NEGATIVE_INFINITY;\n' +
+      '  return Math.max(throughUnclamped(root), withoutClamp(root.left), withoutClamp(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function pathSumLine(root) {\n' +
+      '  return "best=" + String(maxPathSum(root)) + " gain=" + gainOf(root) + " naive=" + String(maxPathSumNaive(root)) + " naiveCalls=" + naiveDownCalls(root) + " foldFrames=" + foldFrames(root) + " total=" + nodeCount(root) + " unclamped=" + String(withoutClamp(root));\n' +
+      '}',
+    modify: 'Allow the path to be empty and require at least two nodes instead. Which base case of the pair changes, and how do the all-negative trees answer once a single node is no longer a legal path?',
+  },
+  {
+    step: 13,
+    name: 'Check if two trees are identical or not',
+    difficulty: 'Easy',
+    topicSlug: TREES,
+    stem: 'Decide whether two binary trees are identical, and say which of the shape-only, value-only and size-only tests can be fooled.',
+    brief: 'Input: two binary trees given as level-order cells. Output: whether the two are identical, plus the cheaper tests - same shape, same values, same node count - each with the pair that fools it, the pair-call count of the real walk, and the canonical listing that agrees with it. Deliver the mirror pair, which is the same walk asked of one tree.',
+    concepts:
+      [
+        'dsa-identical-is-shape-and-value-together',
+        'dsa-tree-cells-carry-shape',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'One comparison per pair of nodes and three conditions: both sides empty means identical, exactly one side empty means not identical, different values means not identical, and otherwise both child pairs have to be identical. ' +
+      'Identical is shape and value at the same time, so no shape test, no value test and no size test can stand in for it. O(min nodes) time on a mismatch and 2n plus 1 pair calls on two identical trees of n nodes; a mismatch stops the walk, so the call count reads as the depth to which the two agree.',
+    idealAnswer:
+      'The walk is four lines and the interesting part of it is what is not in it. There is no height comparison, no node-count comparison, no listing comparison: the recursion compares position and value together, which is the only way to compare the two things a tree actually carries - a shape and a labelling of that shape. The base cases hold the shape test by themselves. Reaching a pair with both sides empty is a match that has run out of nodes; reaching a pair with exactly one side empty is a shape mismatch, and it is the case that a hand-written version most often drops. Collapsing both into a single line - if either side is empty, answer whether both are - is the whole of it. ' +
+      'The cheaper tests each fail in a different direction and the reference set supplies a pair for each. Two trees of the same shape wearing different numbers - 1 2 3 4 5 6 7 against 4 2 6 1 3 5 7 - pass the shape test and also pass a value-multiset test, because both carry the values 1 through 7, and they are not identical. Two trees carrying the same values in different shapes - 1 2 against 1 null 2, which is a left child against a right child - pass the value test, fail the shape test, and are not identical either. The first pair is the one worth memorising, because it is what a candidate answers true to when the comparison looks only at the values, and the second is what they answer true to when the level listing drops its empty slots: without the nulls both of those trees print 1 2, which is why keeping the empty slots is what turns a level listing into a canonical form. Null-keeping level-listing equality agreed with the pairwise walk on every pair the random set produced. ' +
+      'The pair-call count is a diagnostic rather than a cost claim. Two identical trees of n nodes cost exactly 2n plus 1 calls - one per paired node and one per paired empty child, so 15 on the perfect tree, 13 on the gap tree and 1 on the pair of empty trees. A pair that disagrees at the root costs 1. In between, the count is how deep the two trees agreed before they stopped: the gap tree against its own mirror takes two calls, because the root values match, the left pair is node 2 against mirrored node 3, the values differ, and the right side is never visited. That short-circuit is the reason node-count and height pre-checks are not a speedup - the walk already stops at the first pair that cannot match, and it stops there without measuring anything. ' +
+      'Identical is also the shape of two later rows. The symmetric-tree row is this walk asked of one tree read twice, with the two arguments entered as the left and right children of the root; the mirror test is the same walk with the pairings crossed. Comparing a tree with its own mirror is the cheapest way to find out whether it is symmetric, and it is a good check on the base cases, because a tree and its mirror have the same node count, the same height and the same value multiset always - they differ only in placement, which is exactly the thing the pairwise walk is built to see. ' +
+      'The random set gives the sizes of all of these effects. Walking a tree against itself returned true on all 900 and cost exactly 2n plus 1 calls on all 900. The null-keeping listing matched the walk on every pair tried - self, mirror and consecutive, 2700 comparisons - and disagreed on none of them, which is what makes it a canonical form rather than a heuristic. Consecutive pairs were identical 37 times; the value-multiset test passed on 49 pairs that are not identical; the shape test passed on 12, and those 12 are exactly the pairs where both cheap tests pass, because every tree in the set carries the values 1 through n, so same shape always implies same multiset. The first such pair is 2 3 null 1 against 3 2 null 1: three nodes each, the same shape string, the same three values, different trees, settled in one call because the root values differ. Asking every tree whether it is identical to its own mirror returned 278 yes answers, which is precisely the 179 empty trees plus the 99 single nodes - and one further tree whose mirror has the same shape string without the same values in it. Symmetry of shape is common enough; symmetry of shape and value together is almost never seen, which is why the symmetric-tree row needs the value condition and cannot be done with a shape test. ' +
+      'Edges: two empty trees are identical, and that single call is the only case where an empty pair means true; empty against a single node is false; two single nodes with equal values are identical with 3 calls, since the pair plus its two empty child pairs is the whole walk; and a tree compared with itself is trivially true, which is why the useful tests on this row are pairs, not the identity of a tree with itself.',
+    walkthrough:
+      'Compare the gap tree, cells 1 2 3 null 4 5 null null null 6, with itself. The pairs run (1,1), then (2,2), then the empty pair at its left, then (4,4) with the two empty pairs under it, then (3,3), (5,5), (6,6) with its two empty pairs, the empty pair at the right of 5 and the empty pair at the right of 3. Thirteen calls for six nodes on each side, every one of them matching, so identical with true. ' +
+      'Now compare it with its own mirror. The mirror has 1 with left the mirrored 3-subtree and right the mirrored 2-subtree, so the first pair is (1,1) and the values match. The next pair the walk makes is the left one: node 2 against the mirrored node 3. Their values differ, that call returns false, and because the left side of the root already failed the right side is never compared. Two calls for two trees with six nodes each, the same height and the same values, and only a placement that differs.',
+    commonMistake:
+      'Comparing node counts, heights, value listings or null-dropping level listings instead of walking the pairs, or writing the empty case as two separate branches and losing the case where exactly one side is empty.',
+    whyWrong:
+      'A count, a height and a value multiset are properties of a shape or of a labelling, never of both at once: 1 2 3 4 5 6 7 and 4 2 6 1 3 5 7 share the shape and the multiset and are different trees, and 1 2 and 1 null 2 share the multiset and put the same value in different places. ' +
+      'Dropping the one-sided empty case is the more expensive bug because it makes the answer true on trees of different sizes - with a base case that returns true whenever either side is empty, 1 2 3 4 5 6 7 is called identical to 1 2 3 4 5 6, since the pair (7, empty) answers true and nothing else in the walk can object.',
+    followUps:
+      [
+        'Reuse the walk to decide whether one tree is symmetric. What are the two arguments the first call passes, and which base case does it now lean on?',
+        'Reuse it again to decide whether one tree is the mirror of another. Which pair of recursive calls swaps sides, and what does the value condition do?',
+        'Compare the two trees by their null-keeping level listings instead of by walking pairs. What does that cost in memory, and what does it lose compared to the walk?',
+        'Report the first pair that failed instead of a yes or no. Which node do you get on 1 2 3 4 5 6 7 against 4 2 6 1 3 5 7, and which node on the gap tree against its mirror?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function isIdentical(a, b) {\n' +
+      '  if (a === null && b === null) return true;\n' +
+      '  if (a === null || b === null) return false;\n' +
+      '  if (a.val !== b.val) return false;\n' +
+      '  return isIdentical(a.left, b.left) && isIdentical(a.right, b.right);\n' +
+      '}\n' +
+      '\n' +
+      'let pairCalls = 0;\n' +
+      '\n' +
+      'function countedIdentical(a, b) {\n' +
+      '  pairCalls += 1;\n' +
+      '  if (a === null && b === null) return true;\n' +
+      '  if (a === null || b === null) return false;\n' +
+      '  if (a.val !== b.val) return false;\n' +
+      '  return countedIdentical(a.left, b.left) && countedIdentical(a.right, b.right);\n' +
+      '}\n' +
+      '\n' +
+      'function identityPairs(a, b) {\n' +
+      '  pairCalls = 0;\n' +
+      '  countedIdentical(a, b);\n' +
+      '  return pairCalls;\n' +
+      '}\n' +
+      '\n' +
+      'function identicalBySerialization(a, b) {\n' +
+      '  return serializeLevel(a) === serializeLevel(b);\n' +
+      '}\n' +
+      '\n' +
+      'function shapeOf(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("_");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push("N");\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "_") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function sameShape(a, b) {\n' +
+      '  return shapeOf(a) === shapeOf(b);\n' +
+      '}\n' +
+      '\n' +
+      'function valueList(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) continue;\n' +
+      '    rows.push(node.val);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  return rows;\n' +
+      '}\n' +
+      '\n' +
+      'function sameValuesOnly(a, b) {\n' +
+      '  const left = valueList(a).sort(function (x, y) { return x - y; }).join(" ");\n' +
+      '  const right = valueList(b).sort(function (x, y) { return x - y; }).join(" ");\n' +
+      '  return left === right;\n' +
+      '}\n' +
+      '\n' +
+      'function mirrorTree(root) {\n' +
+      '  if (root === null) return null;\n' +
+      '  return { val: root.val, left: mirrorTree(root.right), right: mirrorTree(root.left) };\n' +
+      '}\n' +
+      '\n' +
+      'function symmetricByMirror(root) {\n' +
+      '  return isIdentical(root, mirrorTree(root));\n' +
+      '}\n' +
+      '\n' +
+      'function identityLine(a, b) {\n' +
+      '  return "identical=" + isIdentical(a, b) + " pairs=" + identityPairs(a, b) + " serialization=" + identicalBySerialization(a, b) + " shape=" + sameShape(a, b) + " values=" + sameValuesOnly(a, b) + " nodes=" + nodeCount(a) + "/" + nodeCount(b);\n' +
+      '}',
+    modify: 'Compare a tree against its own mirror, and against a second tree whose every value is one higher. Which of the three conditions does each test lean on, and where does the pair-call count land in each case?',
+  },
+  {
+    step: 13,
+    name: 'Zig-Zag or Spiral Traversal in Binary Tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Print a binary tree band by band in zig-zag order - one band left to right, the next right to left - and say what the direction is a property of.',
+    brief: 'Input: a binary tree. Output: the spiral listing, built once by reversing alternating bands and once by a two-stack walk that never calls reverse. Deliver the band sizes and band count, the fixed-push-order walk whose listing is neither order, and the trees on which every wrong variant agrees with the right one.',
+    concepts:
+      [
+        'dsa-bfs-needs-the-band-boundary',
+        'dsa-spiral-reverses-bands-not-subtrees',
+        'dsa-two-stack-zigzag-push-order-is-the-direction',
+        'dsa-tree-cells-carry-shape',
+        'dsa-complexity-counting',
+      ],
+    shortAnswer:
+      'Spiral order is level order with a direction that alternates by depth: build the bands, then reverse the odd-indexed ones. The direction belongs to the depth and to nothing else, so no subtree is ever reversed on its own and the band contents are unchanged. ' +
+      'A two-stack walk produces the same listing without reversing anything, because a stack prints a band in the reverse of the order its children were pushed - so the push rule alternates with the band. O(n) time, O(width) space, and the band count is the height plus one.',
+    idealAnswer:
+      'The whole row turns on one sentence: the direction is a property of the band index, not of the node and not of the subtree. Build the bands the level-order row builds them - a queue, and a count of how many nodes the band held when it started - and the spiral is the same rows with the odd ones flipped. On the perfect tree the bands are 1, then 2 3, then 4 5 6 7, so the listing is 1 | 3 2 | 4 5 6 7: the middle band flips and the last one does not. Flipping every band instead gives 1 | 3 2 | 7 6 5 4, which is wrong from the first even band that holds two or more nodes - depth 2 on this tree. Reversing from the other parity gives 1 | 2 3 | 7 6 5 4, wrong in the other direction. Both errors are invisible on a chain, where every band has one node, and invisible on a two-node tree, which has no band 2 at all: the level listing, the spiral, the all-reversed listing and the wrong-parity listing are one string there. That is the trap in this row - the shape most people test on is the shape that cannot tell right from wrong. ' +
+      'The two-stack walk is the version that has to be understood rather than memorised, because its rule is the same fact seen from inside the data structure. A band comes off a stack in the opposite order to the one it went in, so the push rule is the direction rule. While the current band is popped left to right, its children go on left then right, which makes the next band pop right to left; while the current band is popped right to left, its children go on right then left, which makes the next band pop left to right. On the perfect tree: band 0 pops 1 and pushes 2, 3; band 1 therefore pops 3, 2, and while doing so pushes 7, 6 then 5, 4, so band 2 pops 4, 5, 6, 7 - forward again, exactly where the parity rule says it should be. No call to reverse appears anywhere in the walk, and it printed the same three bands as the parity version. ' +
+      'Fixing the push rule instead of alternating it is the most instructive wrong answer, because it is not a mirror image of the right one. Push left then right always: band 1 still pops 3, 2, since one band of the flip is free, but band 2 is built by popping 3, 2 and pushing 6, 7 then 4, 5, so it pops 5, 4, 7, 6 - the perfect tree reads 1 | 3 2 | 5 4 7 6, which is a listing no zig-zag definition produces. And it is the wrong answer a test cannot catch by looking at the flat output: every variant on this row lists the same values in the same tree, so a comparison of the multiset - or of the band sizes, which are 1, 2, 4 for all of them - passes. Only the band split with its contents tells the versions apart, which is why the row asks for band sizes and band contents rather than a single string. ' +
+      'Where the band boundary comes from is the level-order row earlier in this step, and the honest framing here is that zig-zag is not a traversal question. The traversal is breadth-first with a band; the only new thing is a parity test on the band index, which costs one condition. The two-stack formulation exists because an interviewer wants to see whether the direction can be produced by the data structure rather than by post-processing, and because it exposes the same invariant the queue version uses a size counter for. Space is the band, not the path: the walk never holds more than one band plus its children, so the cost is the width of the tree rather than its height, which is the opposite trade to the three depth-first orders. ' +
+      'The random set sizes how much each variant hides. The two-stack walk produced the band-parity listing on all 900 trees. The fixed-push walk disagreed on 254, the every-band-reversed walk on 299 and the wrong-parity walk on 342, while 578 trees - those with no band below depth 0 holding more than one node - accept all four listings as if they were one answer. None of the disagreement is visible in a flat comparison: every variant lists the same values, every variant splits them into the same band sizes, the contents of each band matched the level-order band by band on all 900, and the band count was the height plus one on all 900, the deepest shape in the run reaching 6 bands with 4 nodes in its widest. The order inside a band is the only thing any of these bugs moves, so a check that does not look at the bands cannot see it at all. ' +
+      'Edges: the empty tree has no bands and prints nothing; a single node is one band of one and every variant agrees; a chain of any length has one node per band and the same agreement, so a chain is a useless test for this row; and a tree whose depth-2 band is a single node also hides the all-reversed bug, which is why the discriminating shape needs depth at least 2 and at least two nodes at depth 2. The five-node tree 1 2 3 4 5 is the smallest shape that qualifies, and the perfect tree is the cleanest write-up of it.',
+    walkthrough:
+      'Perfect tree, cells 1 2 3 4 5 6 7. The bands are 1, then 2 3, then 4 5 6 7, so the level listing reads 1 | 2 3 | 4 5 6 7 and the spiral reads 1 | 3 2 | 4 5 6 7 with the single flip at index 1. The two-stack walk reaches the same rows: push 2, 3 after popping 1, so band 1 pops 3 then 2; while popping them push right-then-left - 7, 6 from node 3 and 5, 4 from node 2 - so band 2 pops 4, 5, 6, 7. ' +
+      'Gap tree, cells 1 2 3 null 4 5 null null null 6. Its bands are 1, then 2 3, then 4 5, then 6, giving a spiral of 1 | 3 2 | 4 5 | 6. This is the shape where the all-reversed variant is caught and the wrong-parity variant is caught: band 2 has two nodes and must stay forward, so 1 | 3 2 | 5 4 | 6 is wrong, and 1 | 2 3 | 4 5 | 6 is wrong at band 1. Four bands against a height of 3 edges, which is the height-plus-one identity holding on a tree whose deepest node sits at the end of a 1, 3, 5, 6 descent.',
+    commonMistake:
+      'Reversing every band rather than alternating ones, reversing whole subtrees instead of bands, or testing the walk on a chain or a two-node tree where the level listing and the spiral listing are the same string.',
+    whyWrong:
+      'The direction is indexed by depth, so flipping every band reverses the even bands that have to stay forward and the listing is wrong from the first even band with two nodes in it; starting the flip one band late is the same error mirrored. ' +
+      'Reversing a subtree changes which values sit next to each other inside a band, which no zig-zag definition ever does - the bands and their contents are fixed, only their order is not. And a chain has one node per band, so it accepts the correct walk, the fixed-push walk, the all-reversed walk and the wrong-parity walk alike; a test suite built on chains reports this row as passing while every direction rule in it is broken.',
+    followUps:
+      [
+        'Print the spiral as one flat string instead of bands. Which bug does that hide, and what single extra check brings it back?',
+        'Do the walk with one queue and no stack. Where does the parity test go, and what does the queue version cost that the two-stack version does not?',
+        'Make the direction depend on the band being the widest instead of on its index. Which trees now answer the same as zig-zag, and which break first?',
+        'Use the same band split to print the right view, the left view and the level averages. What stays in the walk and what changes in the record step?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function bands(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  const rows = [];\n' +
+      '  let level = [root];\n' +
+      '  while (level.length > 0) {\n' +
+      '    const values = [];\n' +
+      '    const next = [];\n' +
+      '    for (let index = 0; index < level.length; index += 1) {\n' +
+      '      const node = level[index];\n' +
+      '      values.push(node.val);\n' +
+      '      if (node.left !== null) next.push(node.left);\n' +
+      '      if (node.right !== null) next.push(node.right);\n' +
+      '    }\n' +
+      '    rows.push(values);\n' +
+      '    level = next;\n' +
+      '  }\n' +
+      '  return rows;\n' +
+      '}\n' +
+      '\n' +
+      'function joinRows(rows) {\n' +
+      '  return rows.map(function (row) { return row.join(" "); }).join(" | ");\n' +
+      '}\n' +
+      '\n' +
+      'function flattenRows(rows) {\n' +
+      '  const values = [];\n' +
+      '  for (let index = 0; index < rows.length; index += 1) {\n' +
+      '    const row = rows[index];\n' +
+      '    for (let inner = 0; inner < row.length; inner += 1) values.push(row[inner]);\n' +
+      '  }\n' +
+      '  return values.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function levelLine(root) {\n' +
+      '  return joinRows(bands(root));\n' +
+      '}\n' +
+      '\n' +
+      'function reversedEveryBand(root) {\n' +
+      '  return bands(root).map(function (row) { return row.slice().reverse(); });\n' +
+      '}\n' +
+      '\n' +
+      'function spiralRows(root) {\n' +
+      '  return bands(root).map(function (row, index) {\n' +
+      '    return index % 2 === 1 ? row.slice().reverse() : row.slice();\n' +
+      '  });\n' +
+      '}\n' +
+      '\n' +
+      'function spiralOppositeStart(root) {\n' +
+      '  return flattenRows(bands(root).map(function (row, index) {\n' +
+      '    return index % 2 === 0 ? row.slice().reverse() : row.slice();\n' +
+      '  }));\n' +
+      '}\n' +
+      '\n' +
+      'function spiralAllReversed(root) {\n' +
+      '  return flattenRows(reversedEveryBand(root));\n' +
+      '}\n' +
+      '\n' +
+      'function spiralList(root) {\n' +
+      '  return flattenRows(spiralRows(root));\n' +
+      '}\n' +
+      '\n' +
+      'function spiralTwoStackRows(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  const rows = [];\n' +
+      '  let band = [root];\n' +
+      '  let leftToRight = true;\n' +
+      '  while (band.length > 0) {\n' +
+      '    const printed = [];\n' +
+      '    const children = [];\n' +
+      '    while (band.length > 0) {\n' +
+      '      const node = band.pop();\n' +
+      '      printed.push(node.val);\n' +
+      '      if (leftToRight) {\n' +
+      '        if (node.left !== null) children.push(node.left);\n' +
+      '        if (node.right !== null) children.push(node.right);\n' +
+      '      } else {\n' +
+      '        if (node.right !== null) children.push(node.right);\n' +
+      '        if (node.left !== null) children.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    rows.push(printed);\n' +
+      '    band = children;\n' +
+      '    leftToRight = !leftToRight;\n' +
+      '  }\n' +
+      '  return rows;\n' +
+      '}\n' +
+      '\n' +
+      'function spiralFixedPushRows(root) {\n' +
+      '  if (root === null) return [];\n' +
+      '  const rows = [];\n' +
+      '  let band = [root];\n' +
+      '  while (band.length > 0) {\n' +
+      '    const printed = [];\n' +
+      '    const children = [];\n' +
+      '    while (band.length > 0) {\n' +
+      '      const node = band.pop();\n' +
+      '      printed.push(node.val);\n' +
+      '      if (node.left !== null) children.push(node.left);\n' +
+      '      if (node.right !== null) children.push(node.right);\n' +
+      '    }\n' +
+      '    rows.push(printed);\n' +
+      '    band = children;\n' +
+      '  }\n' +
+      '  return rows;\n' +
+      '}\n' +
+      '\n' +
+      'function spiralBandSizes(root) {\n' +
+      '  return bands(root).map(function (row) { return row.length; }).join(",");\n' +
+      '}\n' +
+      '\n' +
+      'function bandCount(root) {\n' +
+      '  return bands(root).length;\n' +
+      '}\n' +
+      '\n' +
+      'function bandsPreserved(root) {\n' +
+      '  const level = bands(root);\n' +
+      '  const spiral = spiralRows(root);\n' +
+      '  if (level.length !== spiral.length) return false;\n' +
+      '  const sorted = function (row) {\n' +
+      '    return row.slice().sort(function (x, y) { return x - y; }).join(" ");\n' +
+      '  };\n' +
+      '  for (let index = 0; index < level.length; index += 1) {\n' +
+      '    if (sorted(level[index]) !== sorted(spiral[index])) return false;\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function directionIsVisible(root) {\n' +
+      '  return bands(root).some(function (row, index) {\n' +
+      '    return index % 2 === 1 && row.length > 1;\n' +
+      '  });\n' +
+      '}\n' +
+      '\n' +
+      'function spiralLine(root) {\n' +
+      '  return "level=[" + joinRows(bands(root)) + "] spiral=[" + joinRows(spiralRows(root)) + "] two-stack=[" + joinRows(spiralTwoStackRows(root)) + "] fixed=[" + joinRows(spiralFixedPushRows(root)) + "] reversed=" + spiralAllReversed(root) + " opposite=" + spiralOppositeStart(root) + " bands=" + bandCount(root) + " sizes=" + spiralBandSizes(root) + " visible=" + directionIsVisible(root);\n' +
+      '}',
+    modify: 'Alternate the direction by the band being wider than the one before it instead of by its index. Which trees still print the zig-zag listing, which break first, and what does the walk have to remember that it does not remember now?',
   },
 ];
 
