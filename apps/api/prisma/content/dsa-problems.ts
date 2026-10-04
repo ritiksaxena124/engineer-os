@@ -1966,6 +1966,54 @@ export const DSA_CONCEPTS = {
     terms: ['save right before moving left up', 'the left tail is the splice point', 'the chain is the preorder listing', 'overwriting right loses 1286 of 4345', '1043 tail steps for 4345 nodes'],
     weight: 4,
   },
+  'dsa-copy-per-row-makes-the-path-cost-quadratic-in-depth': {
+    slug: 'dsa-copy-per-row-makes-the-path-cost-quadratic-in-depth',
+    name: 'One shared array costs a push per node; copying the prefix into every child row costs the depth again',
+    detail:
+    'Carrying a single array and popping on the way out touches each node once - 4345 pushes for the 4345 nodes of the measured population, printing 1499 rows that hold 7361 cells. Building each row from the rows of the children prepends the label once per row per level, so the same listing allocates 22167 cells. On one long route the gap is the whole argument: a 64 node left chain has a single path, and the shared array pushes 64 values while the copying version allocates 2079 - a row of every length from 2 to 64. The recursion stack is depth either way; what the copy adds is work proportional to the rows still below the current node.',
+    terms: ['push on entry, pop on exit', 'copying prepends to every child row', '2079 cells for one 64 node route', 'the printed rows are the irreducible cost', '4345 pushes against 22167 copied cells'],
+    weight: 4,
+  },
+  'dsa-the-leaf-test-decides-how-many-rows-come-out': {
+    slug: 'dsa-the-leaf-test-decides-how-many-rows-come-out',
+    name: 'Print at the leaf, at the null or at the node and you have answered three different questions',
+    detail:
+    'A row appears where the emission test fires, so the test is the specification. Testing that both children are empty gives one row per leaf: 1499 rows for the 1499 leaves of the population, 4 for the perfect 7 node tree. Descending into the empty side and printing there gives one row per empty side: 8 for the same tree and 5066 for the population, because each of the 721 non-empty trees prints one row for every node plus one. Printing at every node gives the root to node listing - 4345 rows - and only the empty tree makes the three counts agree. On a chain of 3 the leaf test prints 1 row and the null test prints 4, which is the smallest case where the two are visibly different questions.',
+    terms: ['the test location is the specification', 'one row per leaf is 1499', 'printing at nulls counts empty sides', 'a row per node is the other sheet question', 'chains expose the difference fastest'],
+    weight: 4,
+  },
+  'dsa-one-postorder-fold-returns-height-and-carries-the-diameter': {
+    slug: 'dsa-one-postorder-fold-returns-height-and-carries-the-diameter',
+    name: 'Return the height, update a best held outside - the fold that makes the diameter linear',
+    detail:
+    'The candidate at a node is its two child heights plus the two edges leaving it, and both heights are in hand the moment the recursion comes back from the children. So the walk returns one number, the height, and updates another, the best candidate seen anywhere: 4345 visits for 4345 nodes. The textbook version asks for a fresh height at every node and gets the same answers - 0 disagreements over 900 trees - while spending 11450 height calls. The shape that shows it is the thin one: a chain of 100 nodes costs 4950 height calls against 100 visits, because recomputing down a spine is the sum of 1 through n.',
+    terms: ['height goes up, best goes sideways', 'one visit per node', '4345 visits against 11450 height calls', 'a chain costs n times n over 2 the second way', 'a correct answer can still be quadratic'],
+    weight: 4,
+  },
+  'dsa-diameter-units-mix-when-the-null-height-is-rewritten': {
+    slug: 'dsa-diameter-units-mix-when-the-null-height-is-rewritten',
+    name: 'Edges, nodes and a mix of the two: three numbers out of one traversal',
+    detail:
+    'With the convention that an empty subtree has height minus one, the through-candidate is left plus right plus 2 and the answer counts edges - 4 for the perfect 7 node tree, 0 for a single node. With the node convention, empty is 0, the candidate is left plus right plus 1 and the answer counts nodes on the route - 5 for that tree, and exactly one above the edge answer on all 721 non-empty trees of the measured population. Mixing them, an edge-convention height with a plus 1, produces a third number that is one short of the diameter on every tree that has a route at all (622 of 900) and equal to it only on the 278 whose diameter is already 0. Read the unit off the empty tree and the single node before writing the recursion.',
+    terms: ['state the unit before the code', 'empty is minus one or zero, never both', 'nodes answer is edges answer plus one', 'the mix is one short on 622 of 900', 'a chain makes height and diameter equal'],
+    weight: 4,
+  },
+  'dsa-a-parent-map-trades-a-sweep-for-a-second-walk': {
+    slug: 'dsa-a-parent-map-trades-a-sweep-for-a-second-walk',
+    name: 'A breadth-first parent map answers by walking up twice instead of folding down',
+    detail:
+    'Record the parent of every node during one level sweep, walk from a to the root marking what it passes, then walk from b upward until a marked label appears. The map costs a full sweep plus an entry per node and hands back the route, the depth and the distance for free. Two shapes break it that do not break the recursion. Its presence counter increments once per node, so a pair naming the same value twice looks half present and answers nothing - the single node asked for the ancestor of 1 and 1 says none from the map and 1 from the guarded walk. And when labels repeat, the map keeps one parent per label, so a label can name its own parent: 933 such edges in the duplicate label population, and the upward walk enters a label loop 601 times across the sampled pairs before the bound stops it.',
+    terms: ['sweep once, then two upward walks', 'route, depth and distance come free', 'a same-label pair looks half present', 'repeated labels make a self edge', 'bound the upward walk'],
+    weight: 3,
+  },
+  'dsa-guard-the-lca-against-a-half-present-pair': {
+    slug: 'dsa-guard-the-lca-against-a-half-present-pair',
+    name: 'A plain recursion cannot tell a missing partner from a one-sided find',
+    detail:
+    'The one pass walk answers as soon as it stands on a node carrying one of the pair, so an absent partner never surfaces: asked for the ancestor of 4 and 99 in the perfect 7 node tree it returns 4 after 7 visits, while the version that checks presence first spends 11 steps to say nothing. Over the measured population the unguarded walk answered all 721 half-present pairs and returned the node that does exist in every one of them; the guarded, presence-checked, route and parent versions said nothing 721 times out of 721. The guard is not free - it is two searches before the descent - so name the contract out loud: either both values are promised to be present, or a value that is not there answers nothing.',
+    terms: ['absence looks like a one-sided hit', '721 of 721 half pairs answered wrongly', 'the guard costs two searches', 'promise presence or reject it', 'the sibling pair test hides both bugs'],
+    weight: 4,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -28599,6 +28647,786 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '}',
     modify:
       'Flatten the tree by inorder instead of preorder - every node has no left child and the right pointers spell the inorder listing. Which pointer does the splice have to move now, and does the tail search get cheaper or dearer?',
+  },
+  {
+    step: 13,
+    name: 'Root to Leaf Paths',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Print every route from the root down to a leaf as a listing of its values, and account for where a row gets printed, what one shared array costs, and what copying the prefix into every child row costs instead.',
+    brief: 'Input: a binary tree of integer labels. Output: one row per root to leaf route, values joined by an arrow, in the order the walk meets the leaves. Deliver the backtrack on a single shared array, the version that copies the prefix into each child row, the stack version that carries its own prefix, and the two versions that print at the wrong place.',
+    concepts:
+      [
+        'dsa-copy-per-row-makes-the-path-cost-quadratic-in-depth',
+        'dsa-the-leaf-test-decides-how-many-rows-come-out',
+        'dsa-path-is-a-stack-that-must-unwind',
+        'dsa-three-orders-one-walk',
+        'dsa-boundary-conditions',
+      ],
+    shortAnswer:
+      'Push the value on entry, print when both children are empty, pop on the way out: one shared array is the whole backtrack, so over the measured population it touches each of the 4345 nodes exactly once and prints 1499 rows for the 1499 leaves. Printing the array reference instead of its text, or leaving out the pop, keeps the row count and breaks the rows - the no-pop version emits 1499 rows of which 778 are not routes to any leaf. Copying the prefix into every child row is correct and dearer: 22167 allocated cells for the same 7361 cells of output, and 2079 cells for the single route of a 64 node chain against 64 pushes.',
+    idealAnswer:
+      'The walk is preorder with an exit action. A depth-first recursion stands on a node with exactly its ancestors below it on the call stack, so an array that takes the value on entry and gives it back on exit holds the current route at every instant of the walk. The emission test is the leaf test - both children empty - and the row is the joined array at that moment. On the perfect 7 node tree the rows come out 1->2->4, 1->2->5, 1->3->6, 1->3->7: 4 rows, 12 cells of output, 7 pushes and 15 calls, the extra 8 calls being the null children the walk asks about and returns from immediately. ' +
+      'Two mistakes live in those three lines and both keep the row count. Print the array reference rather than its text and every entry of the result is the same array - four entries for the perfect tree, each of length 0 once the walk has unwound, because the pop that removed the last value emptied the row the caller is still holding. Do not pop at all and the array only grows: the perfect tree then yields 1->2->4, 1->2->4->5, 1->2->4->5->3->6, 1->2->4->5->3->6->7. There are still 4 rows for 4 leaves, so a count passes; over the population the same bug emits 1499 rows of which 778 are not routes to any leaf, in 342 of the 900 trees, and prints 9793 cells where the correct listing is 7361. The right-only chain is the shape that hides it: one leaf, one row, and that row is correct because the walk never revisits a node. ' +
+      'The copying version is correct and pays for it. Building a node answer from its children - take the left rows, take the right rows, prepend the label to each - allocates the prefix once per row per level. For the perfect tree that is 20 allocated cells to print 12; over the population it is 22167 cells for 7361. On one long route the difference is the whole complexity story: a 64 node left chain has exactly one path, the shared array pushes 64 values and pops 64, and the copying version allocates 2079 cells because it rebuilds a row of length 2, then 3, up to 64. Quote the two costs separately - the recursion stack is depth in both versions, the copy adds work proportional to the rows still below the current node, and the printed listing itself is 7361 cells no matter which version you write. ' +
+      'The iterative version carries the prefix instead of the position. A stack of frames holding a node and its route so far needs no pop, because nothing is shared: pop a frame, print it if it is a leaf, otherwise push the right child with its extended route and then the left, so the left side is walked first. It emits the same listing as the recursion on all 900 trees with 0 disagreements, and its container peaks at 1344 frames summed over the population, 4 in any single tree - the frames of the current route plus the siblings that are waiting. That peak is a different quantity from the recursion depth: the shared array holds one route, the stack holds the routes that have been promised. For the perfect tree the peak is 3 at depth 3; for the 8 node tree whose longest route is 4 levels it is still 3. ' +
+      'Where the emission test sits changes the answer, not just the code. Print at every null child instead of at every leaf and the perfect tree gives 8 rows - two for each of its 4 leaves - because the walk descends through the empty side of a leaf and prints there too; the population gives 5066 rows against the 1499 real ones. Print at every node and you have the root to node listing: 4345 rows, one per node, which is a different sheet question. Print at the leaf and both a two-child-free interior node and a real leaf behave. Only the empty tree makes the three counts agree, at 0; a single node already separates them into 1, 2 and 1. ' +
+      'Two contracts are worth naming before writing. The first is order: the rows come out in the order the walk meets the leaves, which is preorder, so they are not sorted by depth - 1->2->4 and 1->3->6 are both at depth 2, and a tree of 4 levels prints its depth 4 leaf before a shallower one in another band. The second is identity: labels are not nodes. On the duplicate label population - 4284 nodes across 900 trees - the walk still prints 1476 rows for its 1476 leaves, but 114 of them are the same string as another row, so a caller that asks for the path to 3 cannot say which 3 was meant. A row of values answers a route only while the labels are unique; otherwise carry the node objects and let the caller read them.',
+    walkthrough:
+      'Walk the perfect 7 node tree with one shared array. Enter 1, push 1. Enter 2, push 2. Enter 4, push 4, both children empty, print 1->2->4, pop. Ask 4 for its children: two null calls return at once. Enter 5, push, print 1->2->5, pop, then pop 2. Enter 3, push. Enter 6, print 1->3->6, pop. Enter 7, print 1->3->7, pop, pop 3, pop 1. Seven pushes, seven pops, four rows, and the array is empty again at the end - that is the invariant that says the unwind is balanced. Now delete the pop and the same walk prints 1->2->4, 1->2->4->5, 1->2->4->5->3->6, 1->2->4->5->3->6->7: still four rows, and the last three are not routes to any leaf.',
+    commonMistake:
+      'Pushing the shared array itself into the result list, or leaving out the pop on the way back up, so the array keeps growing across branches.',
+    whyWrong:
+      'Both keep the row count and break the rows. Holding the reference gives four entries for the perfect tree, each of length 0 after the walk unwinds, because every entry is the same object. Skipping the pop emits 1499 rows over the population with 778 of them naming nodes that are not on the route, in 342 of the 900 trees, and prints 9793 cells for a listing that is 7361 long. A length check on the result passes on both, which is why the version that joins the array at the leaf is the one to write.',
+    followUps:
+      [
+        'The rows have to come out sorted by their depth rather than in preorder. Which version makes that cheap, and which one makes you keep the leaves by band?',
+        'The tree carries parent pointers. Give the leaf up to root version and say what it costs per row that the top down version does not pay.',
+        'Return only the longest route, without materialising the others. What does the walk hold at each node, and what does it save on a 64 node chain?',
+        'A caller asks for the path to a node that is not in the tree. Which of your four versions answers nothing, which one answers a prefix, and what would you change to make the first behaviour the only one?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function leafCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  if (root.left === null && root.right === null) return 1;\n' +
+      '  return leafCount(root.left) + leafCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function collect(root) {\n' +
+      '  const seen = new Set();\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null || seen.has(node)) continue;\n' +
+      '    seen.add(node);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  return Array.from(seen);\n' +
+      '}\n' +
+      '\n' +
+      'function findNode(root, target) {\n' +
+      '  const nodes = collect(root);\n' +
+      '  for (const node of nodes) if (node.val === target) return node;\n' +
+      '  return null;\n' +
+      '}\n' +
+      '\n' +
+      'function pathsInPlace(root, counter) {\n' +
+      '  const out = [];\n' +
+      '  const path = [];\n' +
+      '  const walk = (node) => {\n' +
+      '    if (counter !== undefined) counter.calls += 1;\n' +
+      '    if (node === null) return;\n' +
+      '    path.push(String(node.val));\n' +
+      '    if (counter !== undefined) counter.pushes += 1;\n' +
+      '    if (node.left === null && node.right === null) out.push(path.join("->"));\n' +
+      '    walk(node.left);\n' +
+      '    walk(node.right);\n' +
+      '    path.pop();\n' +
+      '  };\n' +
+      '  walk(root);\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function pathsByCopying(root, counter) {\n' +
+      '  const build = (node) => {\n' +
+      '    if (node === null) return [];\n' +
+      '    const label = String(node.val);\n' +
+      '    if (node.left === null && node.right === null) return [label];\n' +
+      '    const rows = [];\n' +
+      '    const left = build(node.left);\n' +
+      '    const right = build(node.right);\n' +
+      '    for (const row of left) {\n' +
+      '      if (counter !== undefined) counter.cells += row.split("->").length + 1;\n' +
+      '      rows.push(label + "->" + row);\n' +
+      '    }\n' +
+      '    for (const row of right) {\n' +
+      '      if (counter !== undefined) counter.cells += row.split("->").length + 1;\n' +
+      '      rows.push(label + "->" + row);\n' +
+      '    }\n' +
+      '    return rows;\n' +
+      '  };\n' +
+      '  return build(root);\n' +
+      '}\n' +
+      '\n' +
+      'function pathsEmittingNulls(root) {\n' +
+      '  const out = [];\n' +
+      '  const path = [];\n' +
+      '  const walk = (node) => {\n' +
+      '    if (node === null) {\n' +
+      '      if (path.length > 0) out.push(path.join("->"));\n' +
+      '      return;\n' +
+      '    }\n' +
+      '    path.push(String(node.val));\n' +
+      '    walk(node.left);\n' +
+      '    walk(node.right);\n' +
+      '    path.pop();\n' +
+      '  };\n' +
+      '  walk(root);\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function pathsIterative(root) {\n' +
+      '  const out = [];\n' +
+      '  if (root === null) return [out, 0];\n' +
+      '  const stack = [[root, String(root.val)]];\n' +
+      '  let peak = 0;\n' +
+      '  while (stack.length > 0) {\n' +
+      '    if (stack.length > peak) peak = stack.length;\n' +
+      '    const frame = stack.pop();\n' +
+      '    const node = frame[0];\n' +
+      '    const prefix = frame[1];\n' +
+      '    if (node.left === null && node.right === null) {\n' +
+      '      out.push(prefix);\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    if (node.right !== null) stack.push([node.right, prefix + "->" + String(node.right.val)]);\n' +
+      '    if (node.left !== null) stack.push([node.left, prefix + "->" + String(node.left.val)]);\n' +
+      '  }\n' +
+      '  return [out, peak];\n' +
+      '}\n' +
+      '\n' +
+      'function pathsAtEveryNode(root) {\n' +
+      '  const out = [];\n' +
+      '  const path = [];\n' +
+      '  const walk = (node) => {\n' +
+      '    if (node === null) return;\n' +
+      '    path.push(String(node.val));\n' +
+      '    out.push(path.join("->"));\n' +
+      '    walk(node.left);\n' +
+      '    walk(node.right);\n' +
+      '    path.pop();\n' +
+      '  };\n' +
+      '  walk(root);\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function pathOf(root, target, counter) {\n' +
+      '  const walk = (node, trail) => {\n' +
+      '    if (node === null) return null;\n' +
+      '    if (counter !== undefined) counter.steps += trail.length + 1;\n' +
+      '    const next = trail.concat([String(node.val)]);\n' +
+      '    if (node.val === target) return next;\n' +
+      '    const left = walk(node.left, next);\n' +
+      '    if (left !== null) return left;\n' +
+      '    return walk(node.right, next);\n' +
+      '  };\n' +
+      '  return walk(root, []);\n' +
+      '}\n' +
+      '\n' +
+      'function pathsWithoutPop(root) {\n' +
+      '  const out = [];\n' +
+      '  const path = [];\n' +
+      '  const walk = (node) => {\n' +
+      '    if (node === null) return;\n' +
+      '    path.push(String(node.val));\n' +
+      '    if (node.left === null && node.right === null) out.push(path.join("->"));\n' +
+      '    walk(node.left);\n' +
+      '    walk(node.right);\n' +
+      '  };\n' +
+      '  walk(root);\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function pathsAliasingRows(root) {\n' +
+      '  const out = [];\n' +
+      '  const path = [];\n' +
+      '  const walk = (node) => {\n' +
+      '    if (node === null) return;\n' +
+      '    path.push(String(node.val));\n' +
+      '    if (node.left === null && node.right === null) out.push(path);\n' +
+      '    walk(node.left);\n' +
+      '    walk(node.right);\n' +
+      '    path.pop();\n' +
+      '  };\n' +
+      '  walk(root);\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function valueTotal(rows) {\n' +
+      '  let total = 0;\n' +
+      '  for (const row of rows) total += row.split("->").length;\n' +
+      '  return total;\n' +
+      '}\n' +
+      '\n' +
+      'function longestRow(rows) {\n' +
+      '  let best = [];\n' +
+      '  for (const row of rows) {\n' +
+      '    const parts = row.split("->");\n' +
+      '    if (parts.length > best.length) best = parts;\n' +
+      '  }\n' +
+      '  return best.join("->");\n' +
+      '}\n' +
+      '\n' +
+      'function pathLine(root) {\n' +
+      '  const counter = { calls: 0, pushes: 0 };\n' +
+      '  const inPlace = pathsInPlace(root, counter);\n' +
+      '  const copyCounter = { cells: 0 };\n' +
+      '  const copied = pathsByCopying(root, copyCounter);\n' +
+      '  const nulls = pathsEmittingNulls(root);\n' +
+      '  const swept = pathsIterative(root);\n' +
+      '  return "paths=" + inPlace.length + " leaves=" + leafCount(root) + " values=" + valueTotal(inPlace) +\n' +
+      '    " pushes=" + counter.pushes + " calls=" + counter.calls + " copyCells=" + copyCounter.cells +\n' +
+      '    " copyAgrees=" + (copied.join(" | ") === inPlace.join(" | ")) +\n' +
+      '    " iterativeAgrees=" + (swept[0].join(" | ") === inPlace.join(" | ")) + " stackPeak=" + swept[1] +\n' +
+      '    " nullEmit=" + nulls.length + " nullEmitAgrees=" + (nulls.join(" | ") === inPlace.join(" | ")) +\n' +
+      '    " everyNode=" + pathsAtEveryNode(root).length +\n' +
+      '    " levels=" + (heightOf(root) + 1) + " longest=[" + longestRow(inPlace) + "]" +\n' +
+      '    " nodes=" + nodeCount(root) + " tree=[" + serializeLevel(root) + "]";\n' +
+      '}',
+    modify:
+      'Print the routes from any given node down to its own leaves instead of from the root, keeping the same three line backtrack. What changes in the entry condition, and does the number of rows change if the start node is an interior node with one child?',
+  },
+  {
+    step: 13,
+    name: 'Diameter of Tree - Optimized O(N)',
+    difficulty: 'Easy',
+    topicSlug: TREES,
+    stem: 'Find the longest route in the tree in a single traversal, and account for what the two recursion version recomputes and which unit the answer is written in.',
+    brief: 'Input: a binary tree. Output: the number of edges on the longest path between any two nodes. Deliver the fold that returns the height and updates a shared best, the version that asks for a fresh height at every node, and the three readings that go wrong: the node count, the candidate taken only at the root, and the mix of an edge height with a plus one.',
+    concepts:
+      [
+        'dsa-one-postorder-fold-returns-height-and-carries-the-diameter',
+        'dsa-diameter-units-mix-when-the-null-height-is-rewritten',
+        'dsa-diameter-is-two-heights-meeting-at-a-node',
+        'dsa-height-is-the-longest-downward-path',
+        'dsa-recursive-decomposition',
+      ],
+    shortAnswer:
+      'One postorder fold: the recursion returns the height of its subtree and, at each node, the candidate for the diameter is the left height plus the right height plus the two edges leaving the node; the best over all nodes is the answer. Every node is visited once - 4345 visits for 4345 nodes, against 11450 height calls for the version that recomputes. The unit matters as much as the traversal: the same fold written in nodes returns 5 for the tree whose edge answer is 4, and the through-candidate written as left plus right plus one is one short of the diameter on the 622 trees of the population that have a route at all.',
+    idealAnswer:
+      'A route between two nodes goes up from one end to a single turning node and back down to the other end, so its length is the deeper left arm plus the deeper right arm plus the two edges leaving the turn. That gives one candidate per node and makes the tree answer the maximum of the candidates. Both heights are in hand the moment the recursion returns from the children, which is why the fold is one pass: return the height, update a best held outside the recursion, and never ask for a height twice. On the perfect 7 node tree the two arms of the root have height 1 each in edge units, so its candidate is 1 + 1 + 2 = 4 and no node beats it. ' +
+      'The textbook version is correct - 0 disagreements with the fold over 900 trees, and the same total of 2630 diameter edges - and it pays for the same subtrees over and over, because it calls a fresh height walk at every node: 11450 height calls for 4345 nodes. The shapes that show it are the thin ones. A chain of 100 nodes spends 4950 calls, which is 100 times 99 over 2, against the 100 visits of the fold; a chain of 63 spends 1953 against 63. The recomputation is worst on a spine because every height walk starts at the top of it and walks most of it again. ' +
+      'The units are the part that gets an otherwise correct answer marked wrong. With empty equal to minus one the candidate is left plus right plus 2, a single node answers 0 and the perfect 7 node tree answers 4, which is the edge count the statement asks for. Write the same fold with empty equal to 0 and it answers in nodes on the route - 5 for that tree - and it comes out exactly one above the edge answer on all 721 non-empty trees of the population, while the empty tree is the one case where the relation breaks (0 nodes, 0 edges, so nodes is not edges plus one). Mix the two - an edge-convention height with a plus 1 - and you get a third number that is one short on every tree with a route, 3 for the perfect tree where the answer is 4, and equal to the diameter only on the 278 trees whose diameter is already 0. Read the unit off the empty tree and the single node before writing the recursion. ' +
+      'The candidate has to be taken at every node, not only at the root. Answering with the two heights of the root is right on 809 of the 900 trees and short on the 91 whose longest route turns below the root. The 7 node tree given as 1 2 null 3 4 5 6 7 is one of them: the root has only a left side, so its candidate is 3 edges, while the route 5->3->2->4->7 through node 2 is 4. The fold sees both because it evaluates the candidate on the way back up at every node. A version that returns the height and forgets the update answers 3 for that tree - the height, which happens to equal the root candidate, and is one short of the diameter. ' +
+      'Traversing once gives more than the diameter. Holding the best per node instead of globally also gives the height of every subtree, and the route itself comes out by taking the node whose candidate won and walking the deepest arm down each side - 4->2->1->3->6 for the perfect tree, 7->5->2->1->3->6 for the 8 node tree whose answer is 5 edges, 5->3->2->4->7 for the lopsided one. On a chain the two arms are the whole tree, so the turn is the root and the trail is the chain: 99 edges for 100 nodes, and the height, the root candidate and the diameter are the same number - which is exactly why testing on a chain hides the root-only bug and the unit bug at once. ' +
+      'Edge cases name the convention rather than the code. An empty tree has no route: 0 edges, with height minus one, and a fold that seeds its best at 0 answers 0 where one that seeds at minus infinity answers the candidate of a null node. A single node is 0 edges and 1 node, and the node-counting fold answers 1 where the edge fold answers 0. A two node tree is 1 edge. Anything the caller reports as a distance is edges; anything it reports as a count of nodes on the longest route is that plus one - and the population makes the two answers differ by exactly 1 on 721 of the 900 trees, so a grader cannot tell which one you meant unless you say it first.',
+    walkthrough:
+      'Take the tree 1 2 null 3 4 5 6 7: root 1 with left child 2 and no right child, node 2 with children 3 and 4, node 3 with children 5 and 6, node 4 with child 7. The fold descends to 5, whose two children are null: candidate -1 + -1 + 2 = 0, and it returns height 0. Same at 6 and at 7. Node 3 has two leaf children: candidate 0 + 0 + 2 = 2, returns height 1. Node 4 has one child: candidate 0 + -1 + 2 = 1, returns height 1. Node 2 has 1 on each side: candidate 1 + 1 + 2 = 4, the best so far, returns height 2. Node 1 has an empty right side: candidate 2 + -1 + 2 = 3. The answer is 4 and the root never held it. Take the candidate only at the root and the same tree answers 3.',
+    commonMistake:
+      'Answering with the two heights of the root, or writing the through-candidate with the constant that belongs to the other height convention so the answer is a node count where edges were asked.',
+    whyWrong:
+      'The root-only candidate is right on 809 of 900 random trees and one or more edges short on the 91 whose longest route turns below the root - the lopsided 7 node tree answers 3 against a true 4. The wrong constant answers 5 where the statement wants 4, and the mixed reading of left plus right plus one is one short of the diameter on all 622 trees that have a route, matching only where the diameter is already 0. Both survive a test suite built on chains, where height, root candidate and diameter are the same number.',
+    followUps:
+      [
+        'Return the longest route as a listing of values, not its length. Which node do you have to remember alongside the best, and what does each arm walk cost?',
+        'The caller wants the diameter in nodes. Show the two line change and say which convention you moved - the candidate constant, the base case, or both.',
+        'Give the version that also answers the height of every subtree in the same pass. What does it hold per node instead of a single global best?',
+        'A tree where every node has two children and depth d has diameter 2d. Compare the fold and the recomputing version on that shape, then on a chain of the same size.',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function leafCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  if (root.left === null && root.right === null) return 1;\n' +
+      '  return leafCount(root.left) + leafCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function collect(root) {\n' +
+      '  const seen = new Set();\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null || seen.has(node)) continue;\n' +
+      '    seen.add(node);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  return Array.from(seen);\n' +
+      '}\n' +
+      '\n' +
+      'function findNode(root, target) {\n' +
+      '  const nodes = collect(root);\n' +
+      '  for (const node of nodes) if (node.val === target) return node;\n' +
+      '  return null;\n' +
+      '}\n' +
+      '\n' +
+      'function heightWork(root, counter) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  if (counter !== undefined) counter.calls += 1;\n' +
+      '  const left = heightWork(root.left, counter);\n' +
+      '  const right = heightWork(root.right, counter);\n' +
+      '  return 1 + Math.max(left, right);\n' +
+      '}\n' +
+      '\n' +
+      'function diameterNaive(root, counter) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  const through = heightWork(root.left, counter) + heightWork(root.right, counter) + 2;\n' +
+      '  const left = diameterNaive(root.left, counter);\n' +
+      '  const right = diameterNaive(root.right, counter);\n' +
+      '  return Math.max(through, left, right);\n' +
+      '}\n' +
+      '\n' +
+      'function diameterOptimized(root, counter) {\n' +
+      '  const best = { value: 0 };\n' +
+      '  const depth = (node) => {\n' +
+      '    if (node === null) return -1;\n' +
+      '    if (counter !== undefined) counter.visits += 1;\n' +
+      '    const left = depth(node.left);\n' +
+      '    const right = depth(node.right);\n' +
+      '    if (left + right + 2 > best.value) best.value = left + right + 2;\n' +
+      '    return 1 + Math.max(left, right);\n' +
+      '  };\n' +
+      '  depth(root);\n' +
+      '  return best.value;\n' +
+      '}\n' +
+      '\n' +
+      'function diameterAtRootOnly(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return heightOf(root.left) + heightOf(root.right) + 2;\n' +
+      '}\n' +
+      '\n' +
+      'function diameterInNodes(root) {\n' +
+      '  const best = { value: 0 };\n' +
+      '  const depth = (node) => {\n' +
+      '    if (node === null) return 0;\n' +
+      '    const left = depth(node.left);\n' +
+      '    const right = depth(node.right);\n' +
+      '    if (left + right + 1 > best.value) best.value = left + right + 1;\n' +
+      '    return 1 + Math.max(left, right);\n' +
+      '  };\n' +
+      '  depth(root);\n' +
+      '  return best.value;\n' +
+      '}\n' +
+      '\n' +
+      'function diameterMixedUnits(root) {\n' +
+      '  const nodes = collect(root);\n' +
+      '  let best = 0;\n' +
+      '  for (const node of nodes) {\n' +
+      '    const through = heightOf(node.left) + heightOf(node.right) + 1;\n' +
+      '    if (through > best) best = through;\n' +
+      '  }\n' +
+      '  return best;\n' +
+      '}\n' +
+      '\n' +
+      'function deepestArm(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  const left = deepestArm(node.left);\n' +
+      '  const right = deepestArm(node.right);\n' +
+      '  return left.length >= right.length ? [String(node.val)].concat(left) : [String(node.val)].concat(right);\n' +
+      '}\n' +
+      '\n' +
+      'function diamLine(root) {\n' +
+      '  const naiveCounter = { calls: 0 };\n' +
+      '  const naive = diameterNaive(root, naiveCounter);\n' +
+      '  const fastCounter = { visits: 0 };\n' +
+      '  const fast = diameterOptimized(root, fastCounter);\n' +
+      '  const nodes = diameterInNodes(root);\n' +
+      '  const mixed = diameterMixedUnits(root);\n' +
+      '  const rootOnly = diameterAtRootOnly(root);\n' +
+      '  return "nodes=" + nodeCount(root) + " edges=" + fast + " naive=" + naive + " agree=" + (naive === fast) +\n' +
+      '    " naiveHeightCalls=" + naiveCounter.calls + " fastVisits=" + fastCounter.visits +\n' +
+      '    " height=" + heightOf(root) + " inNodes=" + nodes + " nodesAgrees=" + (nodes === fast + 1) +\n' +
+      '    " mixedUnits=" + mixed + " rootOnly=" + rootOnly + " rootOnlyAgrees=" + (rootOnly === fast) +\n' +
+      '    " " + diameterTrailInner(root) + " tree=[" + serializeLevel(root) + "]";\n' +
+      '}\n' +
+      '\n' +
+      'function diameterTrailInner(root) {\n' +
+      '  const nodes = collect(root);\n' +
+      '  let bestNode = null;\n' +
+      '  let bestEdges = -1;\n' +
+      '  for (const node of nodes) {\n' +
+      '    const through = heightOf(node.left) + heightOf(node.right) + 2;\n' +
+      '    if (through > bestEdges) {\n' +
+      '      bestEdges = through;\n' +
+      '      bestNode = node;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  if (bestNode === null) return "trail=[]";\n' +
+      '  const left = deepestArm(bestNode.left);\n' +
+      '  const right = deepestArm(bestNode.right);\n' +
+      '  const trail = left.reverse().concat([String(bestNode.val)], right);\n' +
+      '  const inside = bestNode !== root ? "inside" : "at root";\n' +
+      '  return "trail=[" + trail.join("->") + "] where=" + inside;\n' +
+      '}',
+    modify:
+      'Make the fold answer the longest route whose endpoints are leaves only, rather than any two nodes. Which candidate changes, what does a node with one child contribute now, and how does the answer move on the lopsided 7 node tree?',
+  },
+  {
+    step: 13,
+    name: 'Lowest Common Ancestor for Two Given Nodes',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Given two values naming nodes of the tree, return the deepest node that is an ancestor of both, and account for the pair that is only half present, the pair where one node is the ancestor of the other, and the pair of labels that name more than one node.',
+    brief: 'Input: a binary tree and two integer labels. Output: the label of their lowest common ancestor, or nothing when the tree does not hold both. Deliver the one pass postorder, the version that checks presence before it descends, the two route comparison, and the breadth-first parent map - then say which contract each one is shipping.',
+    concepts:
+      [
+        'dsa-guard-the-lca-against-a-half-present-pair',
+        'dsa-a-parent-map-trades-a-sweep-for-a-second-walk',
+        'dsa-lca-is-where-two-routes-diverge',
+        'dsa-path-is-a-stack-that-must-unwind',
+        'dsa-boundary-conditions',
+      ],
+    shortAnswer:
+      'One postorder pass: a node answers with itself if it carries one of the pair, with itself if both sides below report, and with whichever side reported otherwise. The second case is the hit case, and it is what makes an ancestor pair correct - 518 of the 622 measured pairs answer at one of the two named nodes. It is also what makes a half-present pair wrong: with no presence check the walk returns the node it did find, so all 721 one-sided pairs of the population get an answer where the guarded versions answer nothing.',
+    idealAnswer:
+      'Start from the definition: the lowest common ancestor of a and b is the deepest node that has both on its downward routes, and a node counts as being on its own route - so when a is an ancestor of b the answer is a, not a node below it. The recursion then has exactly three cases and the hit case is the one that gets omitted: return the node if its value is a or b; otherwise ask both sides, and if both reported, the answer is this node; otherwise return whichever side did. For the pair 2 and 4 in the perfect 7 node tree the walk returns at 2 and never looks inside that subtree for the other one. ' +
+      'Cost. The naive descent asks whether each subtree holds each value and then walks down the side that holds both - correct, and 19996 node steps for the 622 measured pairs against 1978 visits for the one pass, a factor of just over ten, with the worst single pair costing 130 steps against 12 visits. The two route comparison sits between them: 14445 steps and 3996 cells of trail, because it walks from the root to each node and compares the routes label by label. That is the cheapest way to also get the depth of every node and the distance between the pair, which the postorder form throws away. ' +
+      'The guard. A plain recursion cannot tell an absent partner from a one-sided find, because the hit case is satisfied by one side only. Ask the perfect 7 node tree for the ancestor of 4 and 99: the one pass returns 4 after 7 visits; the presence-checked version spends 11 steps to say nothing; the route version and the parent map say nothing too. Over the population the unguarded form answered all 721 half-present pairs and returned the node that exists in all 721. That is not a rare corner, it is what happens whenever a caller may name a value that is not in the tree. Name the contract: either both values are promised present - which is what lets the short version skip the check - or an absent value answers nothing, and the check is two searches before the descent. ' +
+      'The fourth shape is breadth first: sweep the tree once recording each node with its parent, walk from a to the root marking every label it passes, then walk from b upward until a marked label appears. It costs a full sweep and a map with an entry per node, and it makes the route, the depth and the distance available for anything else the caller asks. Two things break it that do not break the recursion. Its presence test counts how many of the pair it saw, one per node, so a pair naming the same value twice looks half present: the single node tree asked for the ancestor of 1 and 1 answers nothing from the map and 1 from the guarded walk, and the pair 4 and 4 behaves the same on the perfect tree. And when labels repeat, the map keeps one parent per label, so a label can name its own parent - 933 such edges in the duplicate label population - and the upward walk has to be bounded or it never returns; it enters a label loop 601 times across the sampled pairs before the bound stops it. ' +
+      'The deeper problem is that a value keyed question is not well posed when labels repeat. On the duplicate label population - 4187 nodes across the sampled trees, 1208 labels naming two or more nodes, 520 of the 611 sampled pairs with at least one ambiguous side - the five implementations agree on only 252 pairs. The answer depends on which occurrence each version reaches first: the preorder walk takes the first, the breadth-first map takes the shallowest, the route comparison takes whichever route it built. The honest signature takes node references, or states which occurrence a label means. ' +
+      'Edge cases. The empty tree answers nothing for every pair, and both the guarded and the plain forms reach that by returning null rather than throwing. The single node separates the implementations: for the pair 1 and 1 the hit case returns the node while a rule that requires two reporting sides has no node to return - and more than four out of five of the measured pairs (518 of 622) are exactly that shape, where one node sits on the route to the other and no split ever fires. Both targets can also sit below the same child: the pair 5 and 6 in the tree 1 2 null 3 4 5 6 7 answers at 3, one level below the node 2 that both sides report from, and the pair 7 and 5 in the same tree answers at 2, so the descent has to keep going after a one-sided report.',
+    walkthrough:
+      'Take the perfect 7 node tree and the pair 4 and 5. The walk stands at 1: neither label, so it descends left. At 2: neither, descend left. At 4 the hit case fires and returns 4. Back at 2 the right side is asked and returns 5, so both children reported and the answer is 2. The walk counted 7 visits because it also asked 3 and its two children before finishing. Now the pair 2 and 4: the walk returns at 2 itself, five visits, and no split fires anywhere. Now 4 and 99: the left side returns 4, the right side returns nothing, and the pass-through hands 4 back up to the root as the answer. Adding a presence check on 99 is what turns that into nothing.',
+    commonMistake:
+      'Requiring both sides to report before answering, or answering with the node that was found when the other half of the pair is not in the tree.',
+    whyWrong:
+      'The rule that only fires on a split reads the answer as the node where two reports meet, and on 518 of the 622 measured pairs there is no such node - one of the two values is on the route to the other, so the walk reports up a single side the whole way. The unguarded hit rule fails in the opposite direction: all 721 half-present pairs of the population come back answered, and the answer is whichever node exists. A pair of siblings in a full tree - 4 and 5 - is the test everyone writes first, and both rules pass it.',
+    followUps:
+      [
+        'The tree carries parent pointers. Give the answer as two upward walks with no recursion, and say what the first walk has to mark for the second to stop at the right node.',
+        'Both values are promised present and one may be the ancestor of the other. Which of the three cases fires, and what breaks if you delete the hit case instead of the presence check?',
+        'Return the distance between the two nodes as well. Which implementation gives it without a second pass, and what does the postorder form have to add to get it?',
+        'A caller names a label that sits on two nodes. Walk through what each of the four versions answers and say which signature makes the question well posed.',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function leafCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  if (root.left === null && root.right === null) return 1;\n' +
+      '  return leafCount(root.left) + leafCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function collect(root) {\n' +
+      '  const seen = new Set();\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null || seen.has(node)) continue;\n' +
+      '    seen.add(node);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  return Array.from(seen);\n' +
+      '}\n' +
+      '\n' +
+      'function findNode(root, target) {\n' +
+      '  const nodes = collect(root);\n' +
+      '  for (const node of nodes) if (node.val === target) return node;\n' +
+      '  return null;\n' +
+      '}\n' +
+      '\n' +
+      'function hasValue(root, target, counter) {\n' +
+      '  if (root === null) return false;\n' +
+      '  if (counter !== undefined) counter.steps += 1;\n' +
+      '  if (root.val === target) return true;\n' +
+      '  return hasValue(root.left, target, counter) || hasValue(root.right, target, counter);\n' +
+      '}\n' +
+      '\n' +
+      'function lcaNaive(root, a, b, counter) {\n' +
+      '  if (root === null) return null;\n' +
+      '  if (counter !== undefined) counter.steps += 1;\n' +
+      '  if (!hasValue(root, a, counter) || !hasValue(root, b, counter)) return null;\n' +
+      '  if (hasValue(root.left, a, counter) && hasValue(root.left, b, counter)) {\n' +
+      '    return lcaNaive(root.left, a, b, counter);\n' +
+      '  }\n' +
+      '  if (hasValue(root.right, a, counter) && hasValue(root.right, b, counter)) {\n' +
+      '    return lcaNaive(root.right, a, b, counter);\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function lcaOnePass(root, a, b, counter) {\n' +
+      '  if (root === null) return null;\n' +
+      '  if (counter !== undefined) counter.visits += 1;\n' +
+      '  if (root.val === a || root.val === b) return root;\n' +
+      '  const left = lcaOnePass(root.left, a, b, counter);\n' +
+      '  const right = lcaOnePass(root.right, a, b, counter);\n' +
+      '  if (left !== null && right !== null) return root;\n' +
+      '  return left === null ? right : left;\n' +
+      '}\n' +
+      '\n' +
+      'function lcaGuarded(root, a, b) {\n' +
+      '  if (a === b) {\n' +
+      '    const node = findNode(root, a);\n' +
+      '    return node !== null && node.val === a ? node : null;\n' +
+      '  }\n' +
+      '  if (!hasValue(root, a) || !hasValue(root, b)) return null;\n' +
+      '  const answer = { node: null };\n' +
+      '  const walk = (node) => {\n' +
+      '    if (node === null) return false;\n' +
+      '    const left = walk(node.left);\n' +
+      '    const right = walk(node.right);\n' +
+      '    const here = node.val === a || node.val === b;\n' +
+      '    if ((left && right) || (here && (left || right))) {\n' +
+      '      if (answer.node === null) answer.node = node;\n' +
+      '    }\n' +
+      '    return left || right || here;\n' +
+      '  };\n' +
+      '  walk(root);\n' +
+      '  return answer.node;\n' +
+      '}\n' +
+      '\n' +
+      'function lcaByPaths(root, a, b, counter) {\n' +
+      '  const first = pathOf(root, a, counter);\n' +
+      '  const second = pathOf(root, b, counter);\n' +
+      '  if (first === null || second === null) return null;\n' +
+      '  let shared = null;\n' +
+      '  const limit = Math.min(first.length, second.length);\n' +
+      '  for (let index = 0; index < limit; index += 1) {\n' +
+      '    if (first[index] !== second[index]) break;\n' +
+      '    shared = Number(first[index]);\n' +
+      '  }\n' +
+      '  return shared;\n' +
+      '}\n' +
+      '\n' +
+      'function pathOf(root, target, counter) {\n' +
+      '  const walk = (node, trail) => {\n' +
+      '    if (node === null) return null;\n' +
+      '    if (counter !== undefined) counter.steps += trail.length + 1;\n' +
+      '    const next = trail.concat([String(node.val)]);\n' +
+      '    if (node.val === target) return next;\n' +
+      '    const left = walk(node.left, next);\n' +
+      '    if (left !== null) return left;\n' +
+      '    return walk(node.right, next);\n' +
+      '  };\n' +
+      '  return walk(root, []);\n' +
+      '}\n' +
+      '\n' +
+      'function lcaByParents(root, a, b, counter) {\n' +
+      '  const parents = new Map();\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let found = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) continue;\n' +
+      '    if (node.val === a || node.val === b) found += 1;\n' +
+      '    if (node.left !== null) {\n' +
+      '      parents.set(node.left.val, node.val);\n' +
+      '      queue.push(node.left);\n' +
+      '    }\n' +
+      '    if (node.right !== null) {\n' +
+      '      parents.set(node.right.val, node.val);\n' +
+      '      queue.push(node.right);\n' +
+      '    }\n' +
+      '  }\n' +
+      '  if (found < 2) return null;\n' +
+      '  const ancestors = new Set();\n' +
+      '  let walker = a;\n' +
+      '  while (walker !== undefined && !ancestors.has(walker)) {\n' +
+      '    ancestors.add(walker);\n' +
+      '    walker = parents.get(walker);\n' +
+      '  }\n' +
+      '  if (walker !== undefined && counter !== undefined) counter.stuck += 1;\n' +
+      '  const seen = new Set();\n' +
+      '  let other = b;\n' +
+      '  while (other !== undefined && !seen.has(other)) {\n' +
+      '    if (ancestors.has(other)) return other;\n' +
+      '    seen.add(other);\n' +
+      '    other = parents.get(other);\n' +
+      '  }\n' +
+      '  if (other !== undefined && counter !== undefined) counter.stuck += 1;\n' +
+      '  return null;\n' +
+      '}\n' +
+      '\n' +
+      'function lcaLine(root, a, b) {\n' +
+      '  const naiveCounter = { steps: 0 };\n' +
+      '  const naive = lcaNaive(root, a, b, naiveCounter);\n' +
+      '  const fastCounter = { visits: 0 };\n' +
+      '  const fast = lcaOnePass(root, a, b, fastCounter);\n' +
+      '  const guarded = lcaGuarded(root, a, b);\n' +
+      '  const byPath = lcaByPaths(root, a, b);\n' +
+      '  const byParent = lcaByParents(root, a, b);\n' +
+      '  const name = (node) => (node === null ? "none" : String(node.val));\n' +
+      '  return "a=" + a + " b=" + b + " present=" + (hasValue(root, a) && hasValue(root, b)) +\n' +
+      '    " naive=" + name(naive) + " naiveSteps=" + naiveCounter.steps +\n' +
+      '    " onePass=" + name(fast) + " onePassVisits=" + fastCounter.visits +\n' +
+      '    " guarded=" + name(guarded) + " byPaths=" + name2(byPath) + " byParents=" + name2(byParent) +\n' +
+      '    " agree=" + (name(naive) === name(fast) && name(fast) === name(guarded) &&\n' +
+      '      name(guarded) === name2(byPath) && name2(byPath) === name2(byParent)) +\n' +
+      '    " depthA=" + (pathOf(root, a) === null ? 0 : pathOf(root, a).length) +\n' +
+      '    " pathA=[" + (pathOf(root, a) === null ? "" : pathOf(root, a).join("->")) + "]" +\n' +
+      '    " tree=[" + serializeLevel(root) + "]";\n' +
+      '}\n' +
+      '\n' +
+      'function name2(value) {\n' +
+      '  return value === null || value === undefined ? "none" : String(value);\n' +
+      '}',
+    modify:
+      'Answer the lowest common ancestor for a list of k nodes instead of a pair, in one pass. Which case of the recursion changes, how many sides can report at once now, and when does a node that holds none of the list become the answer?',
   },
 ];
 
