@@ -7,6 +7,7 @@ import { LessonModule } from './lesson/lesson.module';
 import { MasteryModule } from './mastery/mastery.module';
 import { QuestionModule } from './question/question.module';
 import { AssessmentModule } from './assessment/assessment.module';
+import { InterviewModule } from './interview/interview.module';
 import { HealthController } from './health/health.controller';
 import { loadEnv } from './config/env';
 import { requestId } from './common/request-id.middleware';
@@ -21,6 +22,7 @@ import { requestId } from './common/request-id.middleware';
     MasteryModule,
     QuestionModule,
     AssessmentModule,
+    InterviewModule,
   ],
   controllers: [HealthController],
 })

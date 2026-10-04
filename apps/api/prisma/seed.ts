@@ -3,6 +3,7 @@ import { ALL_PHASES, ALL_TOPICS, validateCurriculum, validateLessons } from './c
 import { LESSONS } from './content/lessons';
 import { ALL_QUESTIONS, validateQuestions } from './content/questions';
 import { ASKED_AT, COMPANIES, validateCompanies } from './content/companies';
+import { INTERVIEW_SCENARIOS, validateInterviewScenarios } from './content/interview-scenarios';
 import type { ConceptSpec } from './content/types';
 import {
   ATTEMPT_VERDICTS,
@@ -41,7 +42,9 @@ async function runInChunks(prisma: PrismaClient, operations: Operation[], size =
  * Content is code here, so seeding is the deploy step. It validates the authored graph before
  * writing, then upserts by natural key so re-running it is a no-op rather than a duplicate.
  */
-export async function seedContent(prisma: PrismaClient): Promise<{ topics: number; phases: number; questions: number }> {
+export async function seedContent(
+  prisma: PrismaClient,
+): Promise<{ topics: number; phases: number; questions: number; scenarios: number }> {
   const problems = validateCurriculum();
   if (problems.length > 0) throw new Error(`curriculum content invalid:\n${problems.join('\n')}`);
   const lessonProblems = validateLessons();
@@ -59,6 +62,10 @@ export async function seedContent(prisma: PrismaClient): Promise<{ topics: numbe
   const referenceProblems = validateReference();
   if (referenceProblems.length > 0) {
     throw new Error(`reference content invalid:\n${referenceProblems.join('\n')}`);
+  }
+  const scenarioProblems = validateInterviewScenarios();
+  if (scenarioProblems.length > 0) {
+    throw new Error(`interview scenario content invalid:\n${scenarioProblems.join('\n')}`);
   }
 
   const order = topologicalOrder(ALL_TOPICS.map(asGraphTopic));
@@ -153,8 +160,89 @@ export async function seedContent(prisma: PrismaClient): Promise<{ topics: numbe
   await runInChunks(prisma, await buildEdgeOperations(prisma, idBySlug, positionOf));
   await runInChunks(prisma, await buildLessonOperations(prisma, idBySlug));
   await buildQuestionOperations(prisma, idBySlug);
+  const scenarios = await seedInterviewScenarios(prisma);
 
-  return { topics: ALL_TOPICS.length, phases: ALL_PHASES.length, questions: ALL_QUESTIONS.length };
+  return {
+    topics: ALL_TOPICS.length,
+    phases: ALL_PHASES.length,
+    questions: ALL_QUESTIONS.length,
+    scenarios,
+  };
+}
+
+/**
+ * A scenario's files and fixes are keyed by their path inside the project, so re-seeding an edited
+ * scenario updates the rows the room reads instead of leaving a stale second copy behind.
+ */
+async function seedInterviewScenarios(prisma: PrismaClient): Promise<number> {
+  for (const scenario of INTERVIEW_SCENARIOS) {
+    await prisma.interviewScenario.upsert({
+      where: { slug: scenario.slug },
+      create: {
+        slug: scenario.slug,
+        title: scenario.title,
+        roleKey: scenario.roleKey,
+        ticketTitle: scenario.ticketTitle,
+        ticketBody: scenario.ticketBody,
+        signalNotes: scenario.signalNotes,
+        isActive: true,
+      },
+      update: {
+        title: scenario.title,
+        roleKey: scenario.roleKey,
+        ticketTitle: scenario.ticketTitle,
+        ticketBody: scenario.ticketBody,
+        signalNotes: scenario.signalNotes,
+        isActive: true,
+      },
+    });
+
+    for (const [index, file] of scenario.files.entries()) {
+      await prisma.interviewScenarioFile.upsert({
+        where: { scenarioSlug_path: { scenarioSlug: scenario.slug, path: file.path } },
+        create: {
+          scenarioSlug: scenario.slug,
+          path: file.path,
+          contents: file.contents,
+          position: index + 1,
+          isCheck: file.isCheck === true,
+        },
+        update: { contents: file.contents, position: index + 1, isCheck: file.isCheck === true },
+      });
+    }
+
+    const stored = await prisma.interviewScenarioFix.findMany({
+      where: { scenarioSlug: scenario.slug },
+      orderBy: { position: 'asc' },
+    });
+    for (const [index, fix] of scenario.fixes.entries()) {
+      const position = index + 1;
+      const found = stored.find((row) => row.filePath === fix.filePath && row.position === position);
+      const data = {
+        requiredText: fix.requiredText,
+        fixedText: fix.fixedText,
+        rationale: fix.rationale,
+        position,
+      };
+      if (found) {
+        await prisma.interviewScenarioFix.update({ where: { id: found.id }, data });
+      } else {
+        await prisma.interviewScenarioFix.create({
+          data: { ...data, scenarioSlug: scenario.slug, filePath: fix.filePath, isActive: true },
+        });
+      }
+    }
+    const authored = new Set(
+      scenario.fixes.map((fix, index) => `${fix.filePath}#${index + 1}`),
+    );
+    const stale = stored
+      .filter((row) => row.isActive && !authored.has(`${row.filePath}#${row.position}`))
+      .map((row) => row.id);
+    if (stale.length > 0) {
+      await prisma.interviewScenarioFix.updateMany({ where: { id: { in: stale } }, data: { isActive: false } });
+    }
+  }
+  return INTERVIEW_SCENARIOS.length;
 }
 
 /**
@@ -394,7 +482,9 @@ async function main() {
   const prisma = new PrismaClient();
   try {
     const result = await seedContent(prisma);
-    console.log(`seeded ${result.phases} phases, ${result.topics} topics, ${result.questions} questions`);
+    console.log(
+      `seeded ${result.phases} phases, ${result.topics} topics, ${result.questions} questions, ${result.scenarios} interview scenarios`,
+    );
   } finally {
     await prisma.$disconnect();
   }

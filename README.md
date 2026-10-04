@@ -20,6 +20,7 @@ actually answered scores at or above 60 with evidence behind it — which is why
 | **Weakness** | Three misses in a row on one topic opens a finding, and the finding walks the graph down to the deepest weak prerequisite. The report names what to repair, not what to keep failing. |
 | **Diagnostic** | 30 written questions, one per area. It decides where the graph opens and promotes nothing. |
 | **Exam** | Seven parts per phase, each a different kind of work: theory, implementation, debugging, architecture, production, interview, teaching. Every part must hold; the pass is what opens the next phase. |
+| **Interview rooms** | A buggy project, the ticket that describes its symptom and a prompt box, opened at a scheduled minute by a link only the candidate holds. A prompt specific enough to name the mechanism gets the patch applied and the checks re-run; everything the candidate types, saves and runs lands in a ledger the interviewer reads afterwards. |
 
 ## Layout
 
@@ -74,8 +75,10 @@ rubric grading, the assessment engine (diagnostic, topic drills and the seven-pa
 mastery engine with spaced repetition, weakness detection, and the web client. An exam passes only
 when every part holds, and that pass — never a finished lesson — is what recommends the next phase.
 What is thin is authored content: P00 and P01 carry question sets, so P00 is the only phase a learner
-can sit end to end today. Deferred deliberately: the AI mentor, an embedded code-execution sandbox,
-Redis, docker-compose, load tests.
+can sit end to end today. The interview rooms ship with two authored scenarios and a scripted fixer: the prompt
+is graded on the terms the fix actually needs, and a specific enough brief applies the real patch. Deferred
+deliberately: judging the candidate from the room ledger, replacing the scripted fixer with a live model behind
+the same interface, the AI mentor, Redis, docker-compose, load tests.
 
 ## Design documents
 

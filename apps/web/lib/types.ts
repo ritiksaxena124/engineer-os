@@ -233,3 +233,56 @@ export interface ExamReport {
   promotions: { topicSlug: string; levelKey: string; previousLevel: number; level: number }[];
   nextPhase: { key: string; title: string } | null;
 }
+
+export interface RoomFile {
+  path: string;
+  contents: string;
+  isCheck: boolean;
+}
+
+export interface CheckResultRow {
+  name: string;
+  passed: boolean;
+  message: string;
+}
+
+export interface RunReport {
+  results: CheckResultRow[];
+  logs: string[];
+  crashed: string | null;
+  summary: { passed: number; failed: number; allGreen: boolean };
+}
+
+export interface InterviewRoom {
+  phase: 'locked' | 'live' | 'expired';
+  id?: string;
+  candidateLabel?: string;
+  scheduledAt?: string;
+  closesAt?: string;
+  openedAt?: string | null;
+  endedAt?: string | null;
+  minutesRemaining?: number;
+  openedLate?: boolean;
+  ranOut?: boolean;
+  scenario?: {
+    slug: string;
+    title: string;
+    roleKey: string;
+    ticketTitle: string;
+    ticketBody: string;
+  };
+  files?: RoomFile[];
+}
+
+export interface PromptResult {
+  applied: {
+    filePath: string;
+    rationale: string;
+    diff: { sign: ' ' | '-' | '+'; text: string }[];
+    stats: { added: number; removed: number };
+  }[];
+  already: string[];
+  declined: { filePath: string; missing: string[] }[];
+  report: RunReport | null;
+  room: InterviewRoom;
+}

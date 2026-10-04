@@ -30,6 +30,7 @@ model User {
   journalEntries   JournalEntry[]
   decisions        ArchitectureDecision[]
   interviews       InterviewSession[]
+  interviewRooms   InterviewRoom[]
   lessonReads      LessonRead[]
   refreshTokens    RefreshToken[]
 
@@ -114,19 +115,19 @@ model Topic {
   isActive Boolean @default(true)
 
   phaseKey String
-  phase    Phase   @relation(fields: [phaseKey], references: [key], onDelete: Restrict)
+  phase    Phase  @relation(fields: [phaseKey], references: [key], onDelete: Restrict)
 
   skillKey String?
   skill    Skill?  @relation(fields: [skillKey], references: [key], onDelete: SetNull)
 
-  requires    TopicPrerequisite[] @relation("dependent")
-  requiredBy  TopicPrerequisite[] @relation("prerequisite")
-  concepts    Concept[]
-  lessons     Lesson[]
-  questions   Question[]
-  exercises   Exercise[]
+  requires       TopicPrerequisite[] @relation("dependent")
+  requiredBy     TopicPrerequisite[] @relation("prerequisite")
+  concepts       Concept[]
+  lessons        Lesson[]
+  questions      Question[]
+  exercises      Exercise[]
   masteryRecords MasteryRecord[]
-  resources   Resource[]
+  resources      Resource[]
 
   // unlock rule: a topic unlocks only when every critical prerequisite reaches this level
   unlockRequiredLevel Int @default(3)
@@ -173,7 +174,7 @@ model Concept {
   isActive Boolean @default(true)
 
   topicId String
-  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Restrict)
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Restrict)
 
   expectedBy QuestionExpectedConcept[]
   mistakes   Mistake[]
@@ -203,7 +204,7 @@ model Lesson {
   isActive Boolean @default(true)
 
   topicId String
-  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Restrict)
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Restrict)
 
   sections  LessonSection[]
   questions Question[]
@@ -216,14 +217,14 @@ model Lesson {
 
 // §43 lesson anatomy as rows so lessons stay editable content, not code
 model LessonSection {
-  id       String  @id @default(uuid())
+  id       String @id @default(uuid())
   lessonId String
   kindKey  String
   position Int
   body     String
 
-  lesson      Lesson              @relation(fields: [lessonId], references: [id], onDelete: Restrict)
-  sectionKind LessonSectionKind   @relation(fields: [kindKey], references: [key], onDelete: Restrict)
+  lesson      Lesson            @relation(fields: [lessonId], references: [id], onDelete: Restrict)
+  sectionKind LessonSectionKind @relation(fields: [kindKey], references: [key], onDelete: Restrict)
 
   @@index([lessonId, position])
   @@map("lesson_sections")
@@ -232,10 +233,10 @@ model LessonSection {
 // Append-only: a read is evidence of exposure only. It has no path to mastery_records,
 // which is what makes "reading a lesson marked you complete" impossible rather than discouraged.
 model LessonRead {
-  id     String   @id @default(uuid())
-  userId String
+  id       String   @id @default(uuid())
+  userId   String
   lessonId String
-  readAt DateTime @default(now())
+  readAt   DateTime @default(now())
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Restrict)
@@ -274,8 +275,8 @@ model QuestionCategory {
 }
 
 model Question {
-  id           String   @id @default(uuid())
-  slug         String   @unique
+  id           String  @id @default(uuid())
+  slug         String  @unique
   stem         String
   body         String
   difficulty   Int
@@ -283,7 +284,7 @@ model Question {
   isActive     Boolean @default(true)
 
   topicId String
-  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Restrict)
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Restrict)
 
   lessonId String?
   lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
@@ -319,14 +320,14 @@ model Company {
 }
 
 model QuestionCompany {
-  id         String  @id @default(uuid())
-  isActive   Boolean @default(true)
+  id       String  @id @default(uuid())
+  isActive Boolean @default(true)
 
   questionId String
   question   Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
 
   companyKey String
-  company    Company  @relation(fields: [companyKey], references: [key], onDelete: Restrict)
+  company    Company @relation(fields: [companyKey], references: [key], onDelete: Restrict)
 
   @@unique([questionId, companyKey])
   @@index([companyKey])
@@ -334,8 +335,8 @@ model QuestionCompany {
 }
 
 model QuestionAnswer {
-  id             String  @id @default(uuid())
-  questionId     String  @unique
+  id             String @id @default(uuid())
+  questionId     String @unique
   shortAnswer    String
   idealAnswer    String
   deepAnswer     String
@@ -391,7 +392,7 @@ model Signal {
   levelKey String
   level    MasteryLevel @relation(fields: [levelKey], references: [key], onDelete: Restrict)
 
-  records          MasteryRecordSignal[]
+  records            MasteryRecordSignal[]
   questionCategories QuestionCategory[]
 
   @@map("signals")
@@ -491,7 +492,7 @@ model Exercise {
   isActive    Boolean @default(true)
 
   topicId String
-  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Restrict)
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Restrict)
 
   lessonId String?
   lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
@@ -511,7 +512,7 @@ model Project {
   isActive     Boolean @default(true)
 
   phaseKey String
-  phase    Phase   @relation(fields: [phaseKey], references: [key], onDelete: Restrict)
+  phase    Phase  @relation(fields: [phaseKey], references: [key], onDelete: Restrict)
 
   @@index([phaseKey])
   @@map("projects")
@@ -639,7 +640,7 @@ model Incident {
 }
 
 model IncidentStep {
-  id         String  @id @default(uuid())
+  id         String @id @default(uuid())
   incidentId String
   position   Int
   prompt     String
@@ -661,7 +662,7 @@ model Resource {
   isActive  Boolean   @default(true)
 
   topicId String
-  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Restrict)
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Restrict)
 
   @@index([topicId])
   @@map("resources")
@@ -698,9 +699,8 @@ model Assessment {
 
   @@map("assessments")
 }
-
 model AssessmentPart {
-  id           String  @id @default(uuid())
+  id           String @id @default(uuid())
   assessmentId String
   label        String
   kindKey      String
@@ -713,4 +713,119 @@ model AssessmentPart {
 
   @@index([assessmentId, position])
   @@map("assessment_parts")
+}
+
+// ---------------------------------------------------------------------------
+// Interview rooms: a scheduled, shareable bug-fix session.
+//
+// A scenario is authored content (the project files with one deliberate defect, the checks that
+// see it, and the fix with the terms a prompt has to name). A room is one scheduled sitting of a
+// scenario: the candidate arrives through a hashed share token with no account, edits file buffers,
+// runs the checks, and submits a prompt. Everything they do lands in the event ledger, because the
+// judgement phase reads what was attempted rather than only whether it ended green.
+// ---------------------------------------------------------------------------
+
+model InterviewScenario {
+  id          String  @id @default(uuid())
+  slug        String  @unique
+  title       String
+  roleKey     String
+  ticketTitle String
+  ticketBody  String
+  // What the room is meant to reveal, shown to the interviewer, never to the candidate.
+  signalNotes String
+  isActive    Boolean @default(true)
+
+  files          InterviewScenarioFile[]
+  fixes          InterviewScenarioFix[]
+  interviewRooms InterviewRoom[]
+
+  @@map("interview_scenarios")
+}
+
+model InterviewScenarioFile {
+  id           String  @id @default(uuid())
+  scenarioSlug String
+  path         String
+  contents     String
+  position     Int
+  // Checks are files too, so the candidate can read exactly what a fix has to satisfy.
+  isCheck      Boolean @default(false)
+
+  scenario InterviewScenario @relation(fields: [scenarioSlug], references: [slug], onDelete: Restrict)
+
+  @@unique([scenarioSlug, path])
+  @@index([scenarioSlug, position])
+  @@map("interview_scenario_files")
+}
+
+model InterviewScenarioFix {
+  id           String  @id @default(uuid())
+  scenarioSlug String
+  // Groups of acceptable terms: one group is satisfied when any of its terms appear, and the fix
+  // unlocks when every group is satisfied. Text, so the shape is validated by the seed loader.
+  requiredText String
+  filePath     String
+  fixedText    String
+  rationale    String
+  position     Int
+  isActive     Boolean @default(true)
+
+  scenario InterviewScenario @relation(fields: [scenarioSlug], references: [slug], onDelete: Restrict)
+
+  @@index([scenarioSlug, position])
+  @@map("interview_scenario_fixes")
+}
+
+model InterviewRoom {
+  id             String    @id @default(uuid())
+  scenarioSlug   String
+  hostUserId     String
+  candidateLabel String
+  // sha256 of the secret in the share link, the same way refresh tokens are stored.
+  tokenHash      String    @unique
+  scheduledAt    DateTime
+  openMinutes    Int
+  openedAt       DateTime?
+  endedAt        DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  scenario InterviewScenario    @relation(fields: [scenarioSlug], references: [slug], onDelete: Restrict)
+  hostUser User                 @relation(fields: [hostUserId], references: [id], onDelete: Restrict)
+  files    InterviewRoomFile[]
+  events   InterviewRoomEvent[]
+
+  @@index([scenarioSlug])
+  @@index([hostUserId, createdAt])
+  @@map("interview_rooms")
+}
+
+model InterviewRoomFile {
+  id        String   @id @default(uuid())
+  roomId    String
+  path      String
+  contents  String
+  updatedAt DateTime @updatedAt
+
+  room InterviewRoom @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  @@unique([roomId, path])
+  @@map("interview_room_files")
+}
+
+// Append-only ledger: prompts, runs and applied fixes, in order, for the judgement phase to read.
+model InterviewRoomEvent {
+  id        String   @id @default(uuid())
+  roomId    String
+  kindKey   String
+  input     String
+  outcome   Json
+  createdAt DateTime @default(now())
+
+  room InterviewRoom @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  @@index([roomId, createdAt])
+  @@map("interview_room_events")
 }

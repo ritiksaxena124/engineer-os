@@ -13,6 +13,7 @@ const LINKS = [
   { href: '/dsa', label: 'DSA' },
   { href: '/interview', label: 'Interview' },
   { href: '/progress', label: 'Progress' },
+  { href: '/rooms', label: 'Interview rooms' },
   { href: '/diagnostic', label: 'Diagnostic' },
   { href: '/exam', label: 'Exam' },
 ];

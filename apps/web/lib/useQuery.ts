@@ -9,6 +9,8 @@ export interface Query<T> {
   loading: boolean;
   /** Re-reads the path. Passing null parks the query without a request. */
   reload: () => void;
+  /** Adopts a response a mutation already returned, so the screen does not read back what it wrote. */
+  setData: (value: T) => void;
 }
 
 /**
@@ -45,5 +47,5 @@ export function useQuery<T>(path: string | null): Query<T> {
     load();
   }, [load]);
 
-  return { data, error, loading, reload: load };
+  return { data, error, loading, reload: load, setData: (value: T) => setData(value) };
 }
