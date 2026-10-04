@@ -1918,6 +1918,54 @@ export const DSA_CONCEPTS = {
     terms: ['root is the last slot of the range', 'left size always comes from the inorder cut', 'inEnd minus cut is the right size, not the left', 'slice costs an array per frame', 'the base case protects the read before it happens'],
     weight: 4,
   },
+  'dsa-markers-are-what-make-a-serialization-injective': {
+    slug: 'dsa-markers-are-what-make-a-serialization-injective',
+    name: 'A listing of values names Catalan many trees and the null markers are what narrow it to one',
+    detail:
+    'Drop the markers and the listing stops being a tree: the marker-free preorder of a 7 node tree describes 429 shapes and of an 8 node tree 1430, because the only thing separating two shapes is where a side is empty. The marker preorder pays for that information exactly - one token per node plus one per empty child, 2n plus 1 tokens, which is 9590 tokens for the 4345 nodes of a 900 tree population. The level form is cheaper because trailing markers carry nothing: 9411 tokens are emitted over that population and 3059 of them are trailing nulls, leaving 6352 in the stored string. Both forms round trip on all 900 trees including the 179 empty ones, and both still round trip when labels repeat, which is the difference between serializing a tree and reconstructing one from two traversals.',
+    terms: ['one marker per empty child', 'marker preorder is 2n plus 1 tokens', 'trailing nulls carry no information', 'values alone name 429 trees at 7 nodes', 'a listing survives repeated labels'],
+    weight: 4,
+  },
+  'dsa-a-level-listing-is-consumed-two-tokens-per-real-node': {
+    slug: 'dsa-a-level-listing-is-consumed-two-tokens-per-real-node',
+    name: 'Nulls take child slots but never parent slots, so a position in a level listing is not a heap index',
+    detail:
+    'The decoder walks the listing with a queue of the nodes it has actually built: each real node pops one slot and consumes exactly two tokens, and a null token is consumed without ever becoming a parent. Read the same string as a heap array instead - children of position i at 2i plus 1 and 2i plus 2 - and it rebuilds 1 null 2 where the tree is 1 null 2 null 3, disagreeing on 496 of the 900 random trees while agreeing on the 333 complete ones, which is precisely the case where the two indexings coincide. The queue version rebuilds all 900 with no disagreement, and the same is true of the 4284 node duplicate-label population.',
+    terms: ['two tokens per real node', 'nulls never become parents', 'heap indexing is only for complete trees', '496 of 900 disagree under the heap reading', 'the queue is the decoder state'],
+    weight: 3,
+  },
+  'dsa-morris-borrows-the-null-right-pointer': {
+    slug: 'dsa-morris-borrows-the-null-right-pointer',
+    name: 'A thread is made exactly where a left subtree exists and the search that finds it stops on its own thread',
+    detail:
+    'The predecessor of a node is the last node of its left subtree, and a thread is only ever needed where a left subtree exists: over 4345 nodes of a random population the walk makes 2385 threads and breaks 2385, which is the count of nodes with a left child, while the other 1960 nodes - 1499 leaves and the rest right-only - are passed through with no write at all. Finding the predecessor walks the right spine of the left subtree, and it terminates because the spine ends either at a null pointer or at the thread pointing back at the node it came from; the whole population costs 2086 such steps, under half a step per node, and a right-only chain costs 0 threads and 0 steps. The stack version of the same walk peaks at 4 entries per tree and 1344 over the population; this one carries no container.',
+    terms: ['thread only where a left child exists', 'threads made equals threads broken', 'the search stops on its own thread', '2086 steps over 4345 nodes', 'a right-only chain needs no threads'],
+    weight: 4,
+  },
+  'dsa-morris-tunnels-through-the-tree-and-must-backfill': {
+    slug: 'dsa-morris-tunnels-through-the-tree-and-must-backfill',
+    name: 'The thread is the only way back up, so taking it down again is what keeps the input a tree',
+    detail:
+    'Following a thread is the return edge of the whole walk, which is why the second visit to a node is spent setting that pointer back to null. Delete the unthread step and nothing crashes - the walk still finishes on all 900 trees - but it emits only 1960 of the 4345 values, because the nodes that own a left subtree are only ever recorded on the branch that was removed, and 609 of the 900 trees are left with a cycle: the level walk over the damaged perfect tree reads 1 2 3 4 5 6 7 and then three times back into nodes it has already visited. The correct walk leaves 900 of 900 trees byte-identical to what it was given, which is the difference between constant space and constant space that destroys the caller.',
+    terms: ['the thread is the return path', 'nodes with a left child emit on the second visit', 'skip the unthread and 1960 of 4345 values survive', '609 of 900 trees keep a cycle', 'restore is the price of O(1)'],
+    weight: 4,
+  },
+  'dsa-which-node-emits-decides-pre-or-in': {
+    slug: 'dsa-which-node-emits-decides-pre-or-in',
+    name: 'The two Morris walks make the same edits and differ only in the moment they record a value',
+    detail:
+    'Run the threaded preorder and the threaded inorder over the same 900 trees and the counters are identical: 2385 threads made, 2385 broken, 2086 steps of predecessor search, and the same 1960 against 2385 split of nodes with no left child against nodes with one. Only the listing differs - 1 2 4 5 3 6 7 against 4 2 5 1 6 3 7 on the perfect 7 node tree - because preorder appends when it creates the thread and inorder appends when it follows one. That makes the emission line the entire difference between the two algorithms, and it is why a third order cannot be had the same way: postorder needs a value after both of its children, and a single forward thread does not know when that has happened.',
+    terms: ['same threads, same steps, different emit', 'record on thread creation for preorder', 'record on thread follow for inorder', 'the leaf branch records either way', 'postorder has no single moment to record'],
+    weight: 3,
+  },
+  'dsa-the-flatten-splice-hangs-the-right-subtree-on-the-left-tail': {
+    slug: 'dsa-the-flatten-splice-hangs-the-right-subtree-on-the-left-tail',
+    name: 'Save the right child, hang it on the rightmost node of the left subtree, then move the left up',
+    detail:
+    'Three assignments do the splice and they only work in that order: the right child is saved, attached at the tail of the left subtree, and then the left subtree replaces it. Do it without the save - overwrite right with left - and the perfect 7 node tree keeps 3 nodes, and a 4345 node population loses 1286 of them, with 342 of 900 trees coming out wrong. With the save the postcondition is exact on every tree: the chain is the preorder listing, no node still has a left child, and the 4345 nodes reachable afterwards are the same 4345 objects that went in. The walking cost is amortised rather than free - 1043 extra rightward steps over the population, 0 on a 64 node left chain because its left tail is always its own left child, 15 on a 32 node zig-zag - and the stack alternative needs no pointer surgery but holds up to 4 nodes per tree.',
+    terms: ['save right before moving left up', 'the left tail is the splice point', 'the chain is the preorder listing', 'overwriting right loses 1286 of 4345', '1043 tail steps for 4345 nodes'],
+    weight: 4,
+  },
 } satisfies Record<string, ConceptSpec>;
 
 const MATHS = 'dsa-maths-foundations';
@@ -27540,6 +27588,1017 @@ export const DSA_PROBLEMS: DsaProblem[] = [
       '}',
     modify:
       'Build from an inorder and a postorder listing in which one value occurs twice, and return every tree the pair admits instead of the first one the map chooses. Which frame becomes a branch point, and how many trees does the duplicate label population suggest that can be?',
+  },
+  {
+    step: 13,
+    name: 'Serialize and De-serialize Binary Tree',
+    difficulty: 'Hard',
+    topicSlug: TREES,
+    stem: 'Turn a binary tree into one string and the string back into the same tree, and account for what each form of the string costs and what it has to carry to name a single tree.',
+    brief: 'Input: a binary tree, labels possibly repeated, possibly empty. Output: a string that determines that tree and a decoder that returns it. Deliver the marker level form with its trimmed tail, the marker preorder with its cursor, the decoder that reads two tokens per real node, and the reason a listing of values alone cannot name a tree.',
+    concepts:
+      [
+        'dsa-markers-are-what-make-a-serialization-injective',
+        'dsa-a-level-listing-is-consumed-two-tokens-per-real-node',
+        'dsa-tree-cells-carry-shape',
+        'dsa-heap-array-layout',
+        'dsa-three-orders-one-walk',
+      ],
+    shortAnswer:
+      'The rule is that the string has to say where the tree is empty. The level form writes a token for every child slot and then drops only the tail: 9411 tokens emitted over the 4345 nodes of a 900 tree population, 3059 of them trailing nulls, 6352 stored. The marker preorder writes 2n plus 1 tokens - exactly 9590 for the same population - and needs no trimming rule at all. Both rebuild all 900 trees with 0 disagreements, and both still work when labels repeat.',
+    idealAnswer:
+      'A listing of node values is not a tree. Read a marker-free preorder of 7 values and 429 different shapes produce it; at 8 values it is 1430, and summed over the shapes in a random population of 900 trees the value-only listings stand for 15103617 trees. That is the whole argument for markers, and it is why the interesting question is not whether to encode the empties but which encoding of them to pay for. The two honest answers are the marker preorder, which writes a token for every node and a token for every empty child - 2n plus 1 tokens, and the shipped version counts exactly 9590 over 4345 nodes in 900 trees, which is the identity 2 times 4345 plus 900 - and the level form, which writes the same breadth first emission (9411 tokens) and then removes the 3059 that were trailing, leaving 6352.' +
+      'The trimming rule is the interesting part of the level form, because it is exact rather than cosmetic. A trailing null is the child of a node that does not exist one level up, so it carries no information a decoder could use: for the perfect 7 node tree the breadth first emission is 15 tokens, 8 of them trailing nulls, and the stored string is just 1 2 3 4 5 6 7. For the right-leaning chain of 3 the emission is 7 tokens and 2 are trimmed, leaving 1 null 2 null 3 - the interior nulls stay, because they are the only record that the left side is empty. The decoder cannot do the same compression: it has to be told which of those interior nulls exist, which is what makes the string a serialization and not a traversal.' +
+      'Decoding is a queue over the nodes that were actually built, and the discipline is that a null token is consumed but never becomes a parent. Each real node pops one slot and takes the next two tokens as its children, so 1 null 2 null 3 puts 2 on the right of 1 and 3 on the right of 2. The tempting shortcut is to read the string as heap layout - children of position i at 2i plus 1 and 2i plus 2, which is exactly right for a complete tree and is the reason the two indexings feel interchangeable. Ship that and 496 of the 900 random trees come back wrong; on the chain it builds 1 null 2, a 2 node tree where 3 belong. It agrees on precisely 333 trees, and 333 is how many of the population are complete - the decoder is correct exactly on the inputs where the shortcut and the queue coincide.' +
+      'The marker preorder trades that queue for a cursor. One recursive frame reads one token, returns null on the marker, and otherwise builds a node and asks for its two children in order; the cursor finishes at exactly 2n plus 1, and the shipped version reports preCursorEnded true on all 900 trees. Its cost is paid even on shapes that do not need it: the 3 node chain is 7 tokens where the trimmed level form is 5, because the marker form cannot trim anything - the last marker is the record that the last node has no right child. The choice between the two is a choice between a constant 2n plus 1 and a variable n plus interior nulls, and on spines the level form wins while on trees that are nearly perfect both cost about the same.' +
+      'Empty and duplicated inputs are where the two forms are tested rather than described. An empty tree serializes to the empty string in the level form and to a single marker in the preorder form, and both decode back to nothing - the level form has 0 tokens, the preorder 1. Repeated labels break the reconstruction of the previous two rows, not this one: over the 4284 node duplicate-label population both serializations round trip with 0 disagreements, because the string stores positions rather than identities and a decoder that reads markers never has to look a value up. The failure modes to name out loud are the decoder that enqueues null as a parent, which shifts every subsequent child one level to the left, and the serializer that trims interior nulls, which quietly converts a tree into the complete tree with the same values.',
+    walkthrough:
+      'Serialize 1 2 3 4 5 6 7: the queue starts with the root, each node emits its value and enqueues both children, so the emission is 1 2 3 4 5 6 7 followed by eight nulls - the children of the four leaves. Trim the tail and the stored string is 1 2 3 4 5 6 7. Decode it with the queue: the root takes tokens 2 and 3, the node 2 takes 4 and 5, the node 3 takes 6 and 7, the queue empties with the string consumed, and the rebuilt tree is byte-identical. Now the chain 1 null 2 null 3: the root consumes null and 2, so it has no left child and a right one; the node 2 consumes null and 3. Read the same string by heap positions instead and 3 lands as the left child of the null at position 1, which is discarded, and the result is 1 null 2 - 2 nodes for a 3 node tree.',
+    commonMistake:
+      'Trimming the null markers that are not at the end, or decoding a level listing by array position as if every slot of a heap were present.',
+    whyWrong:
+      'An interior null is the only statement that a side is empty, so removing it makes the tree look complete: the chain of 3 becomes 1 2 3, and the heap-style rebuild of the trimmed string reproduces the complete shape on 333 of the 900 random trees - the complete ones - and the wrong shape on the other 567. Position-as-heap-index fails for the same reason in the other direction: nulls consume child slots but never parent slots, so the array positions of a trimmed listing drift away from the heap indices as soon as one interior null appears, and 496 of 900 trees come back wrong.',
+    followUps:
+      [
+        'Your level form stores 6352 tokens for 4345 nodes while the marker preorder stores 9590 for the same trees. Which tokens does the second form spend that the first one trims, and when is the trimmed form the riskier one to parse?',
+        'Make the labels repeat. Which of the two forms still round trips, and why does the pair of traversals from the previous row stop working?',
+        'A decoder that enqueues null as a parent produces a tree with the right values and the wrong shape. Give the smallest input on which it differs from the queue-over-real-nodes version and say what the output is.',
+        'If the tree is known to be a binary search tree, the markers can disappear entirely. What replaces them, and what does that cost on a chain?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function heightOf(root) {\n' +
+      '  if (root === null) return -1;\n' +
+      '  return 1 + Math.max(heightOf(root.left), heightOf(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function levelTokens(root) {\n' +
+      '  if (root === null) {\n' +
+      '    const empty = [];\n' +
+      '    empty.trimmed = 0;\n' +
+      '    return empty;\n' +
+      '  }\n' +
+      '  const out = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      out.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    out.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  let trimmed = 0;\n' +
+      '  while (out.length > 0 && out[out.length - 1] === "null") {\n' +
+      '    out.pop();\n' +
+      '    trimmed += 1;\n' +
+      '  }\n' +
+      '  out.trimmed = trimmed;\n' +
+      '  return out;\n' +
+      '}\n' +
+      '\n' +
+      'function bfsLogLength(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  let emitted = 0;\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    emitted += 1;\n' +
+      '    if (node === null) continue;\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  return emitted;\n' +
+      '}\n' +
+      '\n' +
+      'function deserializeTokens(tokens) {\n' +
+      '  if (tokens.length === 0 || tokens[0] === "null") return null;\n' +
+      '  const root = { val: Number(tokens[0]), left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let index = 1;\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length && index < tokens.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (tokens[index] !== "null") {\n' +
+      '      node.left = { val: Number(tokens[index]), left: null, right: null };\n' +
+      '      queue.push(node.left);\n' +
+      '    }\n' +
+      '    index += 1;\n' +
+      '    if (index >= tokens.length) break;\n' +
+      '    if (tokens[index] !== "null") {\n' +
+      '      node.right = { val: Number(tokens[index]), left: null, right: null };\n' +
+      '      queue.push(node.right);\n' +
+      '    }\n' +
+      '    index += 1;\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function preorderTokens(root, out) {\n' +
+      '  const tokens = out === undefined ? [] : out;\n' +
+      '  if (root === null) {\n' +
+      '    tokens.push("null");\n' +
+      '    return tokens;\n' +
+      '  }\n' +
+      '  tokens.push(String(root.val));\n' +
+      '  preorderTokens(root.left, tokens);\n' +
+      '  preorderTokens(root.right, tokens);\n' +
+      '  return tokens;\n' +
+      '}\n' +
+      '\n' +
+      'function buildFromPreTokens(tokens, state) {\n' +
+      '  const cursor = state === undefined ? { index: 0 } : state;\n' +
+      '  const token = tokens[cursor.index];\n' +
+      '  cursor.index += 1;\n' +
+      '  if (token === undefined || token === "null") return null;\n' +
+      '  const node = { val: Number(token), left: null, right: null };\n' +
+      '  node.left = buildFromPreTokens(tokens, cursor);\n' +
+      '  node.right = buildFromPreTokens(tokens, cursor);\n' +
+      '  return node;\n' +
+      '}\n' +
+      '\n' +
+      'function preorderPlain(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  return String(root.val) + (preorderPlain(root.left) === "" ? "" : " " + preorderPlain(root.left)) +\n' +
+      '    (preorderPlain(root.right) === "" ? "" : " " + preorderPlain(root.right));\n' +
+      '}\n' +
+      '\n' +
+      'function levelPlain(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const out = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) continue;\n' +
+      '    out.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function countShapes(total, cache) {\n' +
+      '  const table = cache === undefined ? {} : cache;\n' +
+      '  const key = String(total);\n' +
+      '  if (table[key] !== undefined) return table[key];\n' +
+      '  if (total === 0) {\n' +
+      '    table[key] = 1;\n' +
+      '    return 1;\n' +
+      '  }\n' +
+      '  let sum = 0;\n' +
+      '  for (let left = 0; left < total; left += 1) {\n' +
+      '    sum += countShapes(left, table) * countShapes(total - 1 - left, table);\n' +
+      '  }\n' +
+      '  table[key] = sum;\n' +
+      '  return sum;\n' +
+      '}\n' +
+      '\n' +
+      'function tokensOf(listing) {\n' +
+      '  if (listing === "") return [];\n' +
+      '  return listing.split(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function buildAsHeap(tokens) {\n' +
+      '  if (tokens.length === 0 || tokens[0] === "null") return null;\n' +
+      '  const root = { val: Number(tokens[0]), left: null, right: null };\n' +
+      '  const slots = new Map();\n' +
+      '  slots.set(0, root);\n' +
+      '  for (let index = 1; index < tokens.length; index += 1) {\n' +
+      '    const token = tokens[index];\n' +
+      '    if (token === "null") continue;\n' +
+      '    const parent = slots.get(Math.floor((index - 1) / 2));\n' +
+      '    if (parent === undefined) continue;\n' +
+      '    const child = { val: Number(token), left: null, right: null };\n' +
+      '    slots.set(index, child);\n' +
+      '    if (index % 2 === 1) parent.left = child;\n' +
+      '    else parent.right = child;\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function serialLine(root) {\n' +
+      '  const tokens = levelTokens(root);\n' +
+      '  const pre = preorderTokens(root);\n' +
+      '  const backLevel = deserializeTokens(tokens);\n' +
+      '  const state = { index: 0 };\n' +
+      '  const backPre = buildFromPreTokens(pre, state);\n' +
+      '  const plain = levelPlain(root);\n' +
+      '  return "nodes=" + nodeCount(root) + " levelTokens=" + tokens.length + " trimmed=" + tokens.trimmed +\n' +
+      '    " bfsLog=" + bfsLogLength(root) + " preTokens=" + pre.length +\n' +
+      '    " levelRoundTrip=" + (serializeLevel(backLevel) === serializeLevel(root)) +\n' +
+      '    " preRoundTrip=" + (serializeLevel(backPre) === serializeLevel(root)) +\n' +
+      '    " preCursorEnded=" + (state.index === pre.length) +\n' +
+      '    " heapFromNulls=[" + serializeLevel(buildAsHeap(tokens)) + "] heapNullsAgree=" +\n' +
+      '    (serializeLevel(buildAsHeap(tokens)) === serializeLevel(root)) +\n' +
+      '    " heapFromPlain=[" + serializeLevel(buildAsHeap(tokensOf(plain))) + "] heapPlainAgree=" +\n' +
+      '    (serializeLevel(buildAsHeap(tokensOf(plain))) === serializeLevel(root)) +\n' +
+      '    " levelPlain=[" + plain + "] prePlain=[" + preorderPlain(root) + "]" +\n' +
+      '    " shapesForPlainPre=" + countShapes(nodeCount(root)) +\n' +
+      '    " height=" + heightOf(root) + " tree=[" + serializeLevel(root) + "]";\n' +
+      '}',
+    modify:
+      'Serialize the tree without any markers by writing, for each level, the count of nodes that have children at that level. Which shape information moves into the counts, and does the string stay shorter than 6352 tokens on the 900 tree population?',
+  },
+  {
+    step: 13,
+    name: 'Morris Preorder Traversal of a Binary Tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Walk a binary tree in preorder with constant extra space by threading the predecessor of each left subtree, and account for the threads, the search cost and what happens to the tree when they are not taken back down.',
+    brief: 'Input: a binary tree, mutable. Output: the preorder listing without a stack or recursion. Deliver the predecessor search that stops on its own thread, the emit-on-creation rule, the restore step, and the comparison against the stack version on the same input.',
+    concepts:
+      [
+        'dsa-morris-borrows-the-null-right-pointer',
+        'dsa-morris-tunnels-through-the-tree-and-must-backfill',
+        'dsa-recording-time-decides-which-order-a-stack-emits',
+        'dsa-three-orders-one-walk',
+        'dsa-node-holds-reference',
+      ],
+    shortAnswer:
+      'Whenever the current node has a left child, find the last node of that left subtree and point its empty right pointer back at the current node, emit the current node, and go left; the second time you arrive at that node the thread already exists, so you cut it and go right. Over 4345 nodes of a random population that is 2385 threads made and 2385 broken - exactly the count of nodes with a left child - 2086 steps of predecessor search, and 1960 nodes that are walked through with no write at all. The listing matches the recursive preorder on all 900 trees and the tree is left as it was found.',
+    idealAnswer:
+      'The reason a preorder needs a stack is that after finishing a left subtree you have to find your way back to the node that owns it, and the stack is simply the memory of that obligation. Morris removes the obligation by writing it into the tree: the last node of the left subtree always has an empty right pointer, and pointing it at the owner makes the return path physical. The walk is then two branches - no left child means emit and move right, a left child means go find the predecessor and ask whether its right pointer is empty. On the threaded population the first branch happens 1960 times and the second 2385, and 1960 plus 2385 is the 4345 nodes, so every node is accounted for by exactly one of them.' +
+      'The predecessor search is the only cost and it is smaller than it looks. Walking the right spine of the left subtree from the current node ends either at a null pointer, where the thread is made, or at a pointer that already returns to the current node, where the thread is taken down. That second condition is what makes the walk terminate and is the reason the search is written with two clauses rather than one. Over the population the searches cost 2086 steps in total, under half a step per node, and on a right-only chain of 3 they cost 0 steps and make 0 threads, because there is no left subtree to tunnel through. The amortised argument is the same one as for a stack-free reverse: a node is walked over only by the owner of the thread it carries, and there is at most one such owner.' +
+      'Emit on thread creation is the preorder rule. The preorder listing of a tree is the root, the left subtree, then the right subtree, and the moment the thread is made is the only moment the walk stands at the node before it has gone down its left side. Emit there and the listing is exact: 1 2 4 5 3 6 7 for the perfect 7 node tree, and 4345 values in the same order as the recursive walk over the population with 0 disagreements. Emit on thread follow instead and the same edits produce the inorder listing 4 2 5 1 6 3 7 - which is the next row of the sheet, and the counters of the two walks are identical down to the 2086 search steps, so the emission line is the only difference between them.' +
+      'The restore is not housekeeping, it is the invariant. Cutting the thread is what makes the tree a tree again, and it is also the second visit that the preorder walk does not use for emission - which is why a walk that forgets it can look plausible while producing garbage. Remove the unthread line and the walk still finishes on all 900 trees, but the nodes with a left child are never emitted, so only 1960 of the 4345 values survive, and 609 of the 900 trees are left with a cycle in them; describing the damaged perfect tree gives 1 2 3 4 5 6 7 and then three repeats of nodes the walk has already passed. The correct version compares the level form of the tree before and after on every one of the 900 and finds 0 differences, which is the sentence to say when the interviewer asks whether Morris is safe on a tree you do not own.' +
+      'Against the stack the trade is space for mutation. The iterative preorder that pushes the right child then the left needs no container on a right chain - the shipped counter reports a peak of 1 there - and over the population it peaks at up to 4 entries per tree, 1344 entries summed; Morris needs 0 pointers of storage but writes into the input on 2385 occasions and reads them back 2385 times. Choose the stack when the tree is const, shared, or being walked by another thread at the same time, and Morris when the space bound is the requirement and the caller accepts that its tree changes shape during the call. Both are linear in the node count; only one of them is honest about the cost of the return path.',
+    walkthrough:
+      'Perfect tree 1 2 3 4 5 6 7. At 1, the left subtree ends at 5, whose right pointer is empty, so 5 points back at 1 and 1 is emitted; go left. At 2, the left subtree ends at 4, so 4 points back at 2 and 2 is emitted; go left. At 4 there is no left child, so 4 is emitted and the walk moves right - along the thread - back to 2. At 2 again the predecessor 4 already points here, so the thread is cut and the walk moves right to 5. At 5 no left child: emit 5 and move right along the surviving 1 thread. At 1 again the predecessor 5 points here, cut it, move right to 3, and repeat: thread 6 to 3, emit 3, emit 6, cut, emit 7. The listing is 1 2 4 5 3 6 7, three threads were made and three broken, the search took 2 steps, and the tree is exactly what it was.',
+    commonMistake:
+      'Emitting when the thread is followed instead of when it is created, or leaving the threads in place once the walk is over.',
+    whyWrong:
+      'Emitting on the follow turns the same walk into an inorder one: the perfect tree comes out 4 2 5 1 6 3 7 rather than 1 2 4 5 3 6 7 while the thread counters are unchanged at 3 made and 3 broken, which is how the error hides. Leaving the threads is worse: the walk finishes and looks like it worked, but on the 900 tree population only 1960 of 4345 values are emitted and 609 trees are left with a cycle, so any later traversal by the caller walks a structure that is no longer a tree.',
+    followUps:
+      [
+        'The population makes 2385 threads over 4345 nodes and the search costs 2086 steps. Give the amortised argument for why the search cannot be quadratic.',
+        'Move the emit statement to the other branch. Which listing do you get, and what does that say about what the thread actually records?',
+        'Your walk writes 2385 pointers into a tree that belongs to the caller. What is the failure mode if the traversal is interrupted halfway, and how would you make the walk re-entrant?',
+        'Compare against the two-stack preorder on a right-only chain of 64 nodes: what does each one spend, and which number decides it?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function preList(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return [String(node.val)].concat(preList(node.left), preList(node.right));\n' +
+      '}\n' +
+      '\n' +
+      'function inList(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return inList(node.left).concat([String(node.val)], inList(node.right));\n' +
+      '}\n' +
+      '\n' +
+      'function predecessorOf(node) {\n' +
+      '  let steps = 0;\n' +
+      '  let cursor = node.left;\n' +
+      '  while (cursor.right !== null && cursor.right !== node && steps < 200) {\n' +
+      '    cursor = cursor.right;\n' +
+      '    steps += 1;\n' +
+      '  }\n' +
+      '  return [cursor, steps];\n' +
+      '}\n' +
+      '\n' +
+      'function morrisPreorder(root) {\n' +
+      '  const out = [];\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    if (cursor.left === null) {\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      cursor = cursor.right;\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const found = predecessorOf(cursor);\n' +
+      '    const predecessor = found[0];\n' +
+      '    if (predecessor.right === null) {\n' +
+      '      predecessor.right = cursor;\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      cursor = cursor.left;\n' +
+      '    } else {\n' +
+      '      predecessor.right = null;\n' +
+      '      cursor = cursor.right;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function morrisInorder(root) {\n' +
+      '  const out = [];\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    if (cursor.left === null) {\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      cursor = cursor.right;\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const predecessor = predecessorOf(cursor)[0];\n' +
+      '    if (predecessor.right === null) {\n' +
+      '      predecessor.right = cursor;\n' +
+      '      cursor = cursor.left;\n' +
+      '    } else {\n' +
+      '      predecessor.right = null;\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      cursor = cursor.right;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function morrisPreorderCounted(root) {\n' +
+      '  const out = [];\n' +
+      '  let threadMade = 0;\n' +
+      '  let threadBroken = 0;\n' +
+      '  let emittedPlain = 0;\n' +
+      '  let emittedThreaded = 0;\n' +
+      '  let steps = 0;\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    if (cursor.left === null) {\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      emittedPlain += 1;\n' +
+      '      cursor = cursor.right;\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const found = predecessorOf(cursor);\n' +
+      '    steps += found[1];\n' +
+      '    const predecessor = found[0];\n' +
+      '    if (predecessor.right === null) {\n' +
+      '      predecessor.right = cursor;\n' +
+      '      threadMade += 1;\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      emittedThreaded += 1;\n' +
+      '      cursor = cursor.left;\n' +
+      '    } else {\n' +
+      '      predecessor.right = null;\n' +
+      '      threadBroken += 1;\n' +
+      '      cursor = cursor.right;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return [out.join(" "), threadMade, threadBroken, emittedPlain, emittedThreaded, steps];\n' +
+      '}\n' +
+      '\n' +
+      'function stackPreorder(root) {\n' +
+      '  if (root === null) return ["", 0];\n' +
+      '  const out = [];\n' +
+      '  const stack = [root];\n' +
+      '  let peak = 0;\n' +
+      '  while (stack.length > 0) {\n' +
+      '    if (stack.length > peak) peak = stack.length;\n' +
+      '    const node = stack.pop();\n' +
+      '    out.push(String(node.val));\n' +
+      '    if (node.right !== null) stack.push(node.right);\n' +
+      '    if (node.left !== null) stack.push(node.left);\n' +
+      '  }\n' +
+      '  return [out.join(" "), peak];\n' +
+      '}\n' +
+      '\n' +
+      'function preLine(root) {\n' +
+      '  const before = serializeLevel(root);\n' +
+      '  const counted = morrisPreorderCounted(root);\n' +
+      '  const after = serializeLevel(root);\n' +
+      '  const stacked = stackPreorder(root);\n' +
+      '  const recursive = preList(root).join(" ");\n' +
+      '  return "morrisPre=[" + counted[0] + "] recursivePre=[" + recursive + "] agrees=" +\n' +
+      '    (counted[0] === recursive) + " stackPre=[" + stacked[0] + "] stackAgrees=" + (stacked[0] === recursive) +\n' +
+      '    " peakStack=" + stacked[1] + " morrisIn=[" + morrisInorder(root) + "] recursiveIn=[" +\n' +
+      '    inList(root).join(" ") + "] inAgrees=" + (morrisInorder(root) === inList(root).join(" ")) +\n' +
+      '    " threadsMade=" + counted[1] + " threadsBroken=" + counted[2] + " emittedPlain=" + counted[3] +\n' +
+      '    " emittedThreaded=" + counted[4] + " searchSteps=" + counted[5] + " restored=" + (before === after) +\n' +
+      '    " nodes=" + nodeCount(root) + " tree=[" + before + "]";\n' +
+      '}',
+    modify:
+      'Thread the tree so that the successor of each node points back to it instead - right subtree, leftmost node - and emit on the second visit. What order does that produce, and does the restore step still fire exactly once per thread?',
+  },
+  {
+    step: 13,
+    name: 'Morris Inorder Traversal of a Binary Tree',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Walk a binary tree in inorder with constant extra space, and account for the threads, the moment the value is recorded, and the state of the tree when the walk is over.',
+    brief: 'Input: a binary tree, mutable. Output: the inorder listing without a stack or recursion. Deliver the same threading as the preorder row with the emit moved to the follow, the counted comparison against the stack inorder, and what a missing restore does to the input.',
+    concepts:
+      [
+        'dsa-morris-tunnels-through-the-tree-and-must-backfill',
+        'dsa-which-node-emits-decides-pre-or-in',
+        'dsa-morris-borrows-the-null-right-pointer',
+        'dsa-recording-time-decides-which-order-a-stack-emits',
+        'dsa-three-orders-one-walk',
+      ],
+    shortAnswer:
+      'Same threading as the preorder row and one different line: the value is recorded when the thread is followed, not when it is made, because that is the moment the left subtree has been finished. Over 4345 random nodes it makes and breaks 2385 threads each, spends 2086 steps searching for predecessors, records 1960 values on the no-left-child branch and 2385 on the follow, and leaves every one of the 900 trees unchanged.',
+    idealAnswer:
+      'Inorder is left, node, right, so a node has to be recorded after everything below its left side has been recorded and before anything on its right side. In the threaded walk the second visit to a node is exactly that moment: the first visit made the thread and went down, and the only way to arrive again is to come back along that thread, which means the left subtree is done. So the emit moves from the thread-creation branch to the thread-follow branch, and the listing changes from 1 2 4 5 3 6 7 to 4 2 5 1 6 3 7 on the perfect tree while every other counter stays put - 3 threads made, 3 broken, 2 steps of search - which is the cleanest available demonstration that the order is a property of the recording moment and not of the traversal.' +
+      'The two branches are not symmetric in what they emit. The no-left-child branch fires 1960 times over the population and covers leaves and right-only nodes - a node with no left subtree is already finished on the left, so it records immediately - while the follow branch fires 2385 times and covers every node that owns a left subtree. 1960 plus 2385 is the 4345 nodes, each recorded once. The predecessor search is the same 2086 steps as in the preorder row, and for the same reason: the edits are identical and only the recording line moved.' +
+      'Against the stack version the equivalence is exact and the cost is the whole story. The iterative inorder descends the left spine pushing every node it passes, pops one, records it, and moves right, so its container holds the open left spine: peak 1 on a right-only chain, peak 3 on the perfect tree, 2736 entries summed over the 900 trees. Morris holds nothing and instead writes 2385 pointers and reads them back. The listings agree on all 900 trees and on the 4284 node duplicate-label population, where the threaded walk makes 2350 threads and disagrees with the recursive inorder 0 times - the threading never looks a value up, so repeated labels are invisible to it.' +
+      'The restore is the invariant again, and the inorder row is where its absence is most visible, because the follow branch is where the recording happens. Delete the unthread line and the walk no longer distinguishes a thread it made from a real edge: it keeps taking the else branch, records on the way, and the nodes it should emit are the ones it stops emitting properly. Measured with a 400 step guard on all 900 trees, the broken walk finishes every time, emits 1960 values instead of 4345, and leaves 609 trees with a cycle in them - the damaged perfect tree describes itself as 1 2 3 4 5 6 7 followed by three repeat visits to nodes already passed. The correct walk compares the tree before and after on every input and finds 0 changes, which is the sentence that makes O(1) space defensible.' +
+      'What Morris does not buy is generality. A node is recorded when the walk can prove its left side is closed, which is a single moment - postorder needs a moment after the right side closes too, and one forward thread does not carry that information, so the standard constant-space postorder either needs the dummy-node trick or goes back to a stack. The same caveat covers every other consumer of the tree during the walk: the shape is being edited, so a second traversal, a structural share, or an exception thrown between making and cutting a thread all leave the input in a state the caller did not ask for. Where the tree is read-only or shared, the 2736 stack entries are the cheaper price.',
+    walkthrough:
+      'Tree 1 2 null 3 - a left chain of 3 nodes whose inorder is 3 2 1. At 1 the left subtree ends at 2 and 2 has no right pointer, so 2 threads back to 1 and the walk goes left without recording. At 2 the same happens: 3 threads to 2, go left. At 3 there is no left child, so record 3 and move right along the thread into 2. Now the predecessor 3 already points here, so cut it and record 2 - that is the moment the left subtree of 2 is known closed. Move right along the surviving thread into 1, cut 2 to 1, record 1, move to the empty right side and stop. Two threads made, two broken, 0 steps of searching past a thread, and the emitted listing 3 2 1 is the recursive inorder. The stack version of the same walk pushes 3 nodes deep before its first pop.',
+    commonMistake:
+      'Recording the node when the thread is created, or assuming the tree is unchanged because the walk terminated.',
+    whyWrong:
+      'Recording on creation is the preorder row, and it shows up immediately: the left chain above emits 1 2 3 instead of 3 2 1 while making and breaking the same two threads, so no counter of the threading itself catches the mistake. Terminating is not the same as restoring either - a walk that skips the unthread step finishes on all 900 trees of the population and still emits only 1960 of the 4345 values, and 609 of the trees are left with a cycle, which the caller discovers on its next traversal rather than at the call.',
+    followUps:
+      [
+        'The two Morris walks report identical thread and search counters and differ only in one statement. Say precisely why the follow branch is the only point at which a node can be known to have finished its left side.',
+        'Why does the same trick not give postorder in one pass? What extra information would a thread have to carry?',
+        'Give the failure mode when an exception is thrown after a thread is made but before it is cut, and the repair that does not use a stack.',
+        'The stack version peaks at 2736 entries summed over the population and Morris at 0. What does Morris pay instead, and on which inputs is that the wrong trade?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function inList(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return inList(node.left).concat([String(node.val)], inList(node.right));\n' +
+      '}\n' +
+      '\n' +
+      'function preList(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return [String(node.val)].concat(preList(node.left), preList(node.right));\n' +
+      '}\n' +
+      '\n' +
+      'function predecessorOf(node) {\n' +
+      '  let steps = 0;\n' +
+      '  let cursor = node.left;\n' +
+      '  while (cursor.right !== null && cursor.right !== node && steps < 200) {\n' +
+      '    cursor = cursor.right;\n' +
+      '    steps += 1;\n' +
+      '  }\n' +
+      '  return [cursor, steps];\n' +
+      '}\n' +
+      '\n' +
+      'function morrisInorder(root) {\n' +
+      '  const out = [];\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    if (cursor.left === null) {\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      cursor = cursor.right;\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const predecessor = predecessorOf(cursor)[0];\n' +
+      '    if (predecessor.right === null) {\n' +
+      '      predecessor.right = cursor;\n' +
+      '      cursor = cursor.left;\n' +
+      '    } else {\n' +
+      '      predecessor.right = null;\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      cursor = cursor.right;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function morrisPreorder(root) {\n' +
+      '  const out = [];\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    if (cursor.left === null) {\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      cursor = cursor.right;\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const predecessor = predecessorOf(cursor)[0];\n' +
+      '    if (predecessor.right === null) {\n' +
+      '      predecessor.right = cursor;\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      cursor = cursor.left;\n' +
+      '    } else {\n' +
+      '      predecessor.right = null;\n' +
+      '      cursor = cursor.right;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function morrisInorderCounted(root) {\n' +
+      '  const out = [];\n' +
+      '  let threadMade = 0;\n' +
+      '  let threadBroken = 0;\n' +
+      '  let emittedNoLeft = 0;\n' +
+      '  let emittedOnThread = 0;\n' +
+      '  let steps = 0;\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    if (cursor.left === null) {\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      emittedNoLeft += 1;\n' +
+      '      cursor = cursor.right;\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const found = predecessorOf(cursor);\n' +
+      '    steps += found[1];\n' +
+      '    const predecessor = found[0];\n' +
+      '    if (predecessor.right === null) {\n' +
+      '      predecessor.right = cursor;\n' +
+      '      threadMade += 1;\n' +
+      '      cursor = cursor.left;\n' +
+      '    } else {\n' +
+      '      predecessor.right = null;\n' +
+      '      threadBroken += 1;\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      emittedOnThread += 1;\n' +
+      '      cursor = cursor.right;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return [out.join(" "), threadMade, threadBroken, emittedNoLeft, emittedOnThread, steps];\n' +
+      '}\n' +
+      '\n' +
+      'function cloneTree(root) {\n' +
+      '  if (root === null) return null;\n' +
+      '  return { val: root.val, left: cloneTree(root.left), right: cloneTree(root.right) };\n' +
+      '}\n' +
+      '\n' +
+      'function morrisInorderStuck(root, limit) {\n' +
+      '  const out = [];\n' +
+      '  let cursor = root;\n' +
+      '  let iterations = 0;\n' +
+      '  while (cursor !== null && iterations < limit) {\n' +
+      '    iterations += 1;\n' +
+      '    if (cursor.left === null) {\n' +
+      '      out.push(String(cursor.val));\n' +
+      '      cursor = cursor.right;\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    const predecessor = predecessorOf(cursor)[0];\n' +
+      '    if (predecessor.right === null) {\n' +
+      '      predecessor.right = cursor;\n' +
+      '      cursor = cursor.left;\n' +
+      '    } else {\n' +
+      '      cursor = cursor.right;\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return [out.join(" "), iterations, describeBounded(root, 40)];\n' +
+      '}\n' +
+      '\n' +
+      'function describeBounded(root, limit) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  const seen = new Set();\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length && rows.length < limit) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    if (seen.has(node)) {\n' +
+      '      rows.push("cycle");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    seen.add(node);\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function stuckLine(root) {\n' +
+      '  const copy = cloneTree(root);\n' +
+      '  const pristine = cloneTree(root);\n' +
+      '  const answer = morrisInorderStuck(copy, 400);\n' +
+      '  const truth = describeBounded(pristine, 40);\n' +
+      '  return "nodes=" + nodeCount(root) + " emitted=" + (answer[0] === "" ? 0 : answer[0].split(" ").length) +\n' +
+      '    " limit-hit=" + (answer[1] === 400) + " iterations=" + answer[1] + " damaged=" +\n' +
+      '    (answer[2] !== truth) + " survived=[" + answer[2] + "] truth=[" + truth + "]";\n' +
+      '}\n' +
+      '\n' +
+      'function stackInorder(root) {\n' +
+      '  const out = [];\n' +
+      '  const stack = [];\n' +
+      '  let cursor = root;\n' +
+      '  let peak = 0;\n' +
+      '  while (cursor !== null || stack.length > 0) {\n' +
+      '    while (cursor !== null) {\n' +
+      '      stack.push(cursor);\n' +
+      '      if (stack.length > peak) peak = stack.length;\n' +
+      '      cursor = cursor.left;\n' +
+      '    }\n' +
+      '    cursor = stack.pop();\n' +
+      '    out.push(String(cursor.val));\n' +
+      '    cursor = cursor.right;\n' +
+      '  }\n' +
+      '  return [out.join(" "), peak];\n' +
+      '}\n' +
+      '\n' +
+      'function inLine(root) {\n' +
+      '  const before = serializeLevel(root);\n' +
+      '  const counted = morrisInorderCounted(root);\n' +
+      '  const after = serializeLevel(root);\n' +
+      '  const stacked = stackInorder(root);\n' +
+      '  const recursive = inList(root).join(" ");\n' +
+      '  return "morrisIn=[" + counted[0] + "] recursiveIn=[" + recursive + "] agrees=" +\n' +
+      '    (counted[0] === recursive) + " stackAgrees=" + (stacked[0] === recursive) +\n' +
+      '    " peakStack=" + stacked[1] + " morrisPre=[" + morrisPreorder(root) + "] recursivePre=[" +\n' +
+      '    preList(root).join(" ") + "] preAgrees=" + (morrisPreorder(root) === preList(root).join(" ")) +\n' +
+      '    " threadsMade=" + counted[1] + " threadsBroken=" + counted[2] + " emittedNoLeft=" + counted[3] +\n' +
+      '    " emittedOnThread=" + counted[4] + " searchSteps=" + counted[5] + " restored=" + (before === after) +\n' +
+      '    " nodes=" + nodeCount(root) + " tree=[" + before + "]";\n' +
+      '}',
+    modify:
+      'Count how many times each node is visited by the walk and use the second visit of every node to emit a postorder listing without a stack. Which node has no second visit, and how do you give it one?',
+  },
+  {
+    step: 13,
+    name: 'Flatten Binary Tree to LinkedList',
+    difficulty: 'Medium',
+    topicSlug: TREES,
+    stem: 'Rearrange a binary tree in place so that every node has no left child and the right pointers spell the preorder listing, and account for the pointer surgery and what it costs to skip a save.',
+    brief: 'Input: a binary tree, modified in place. Output: the same nodes as one right-leaning chain in preorder order. Deliver the three-assignment splice at the tail of the left subtree, the stack alternative, the divide and conquer version that returns the tail, and the version that overwrites the right child.',
+    concepts:
+      [
+        'dsa-the-flatten-splice-hangs-the-right-subtree-on-the-left-tail',
+        'dsa-link-splice-order',
+        'dsa-node-holds-reference',
+        'dsa-three-orders-one-walk',
+        'dsa-boundary-conditions',
+      ],
+    shortAnswer:
+      'At each node with a left child, save the right child, walk to the last node of the left subtree, hang the saved right child there, then move the left subtree into the right pointer and clear the left. The chain that comes out is the preorder listing - it is the postcondition, not an extra pass - and over 4345 nodes of a random population the walk spends 1043 extra rightward steps on the tail searches, 0 on a 64 node left chain, and keeps all 4345 original objects.',
+    idealAnswer:
+      'The order is forced by the requirement. A flattened tree has to read as a single chain and the sheet asks for preorder, so at a node the sequence must be the node itself, then its whole left subtree, then its whole right subtree - which means the right subtree has to move behind the left one, and the only place to attach it is the end of the left subtree. Hence the splice: save right, find the rightmost node of the left subtree, attach the saved right there, set right to left, set left to null. Those three assignments are order-dependent: overwrite right with left before saving it and the right subtree is unreachable, which on the perfect 7 node tree keeps 3 nodes and on the population drops 1286 of 4345, with 342 of the 900 trees coming out wrong.' +
+      'The tail search is the only cost and it is amortised rather than absent. Walking the right spine of a left subtree costs one step per edge crossed, and a node can be crossed that way only by the owner of the thread it terminates - the shipped counter reports 1043 steps over 4345 nodes for the whole population, under a quarter per node. The shapes are instructive: a pure left chain of 64 nodes costs 0 steps, because every left subtree is itself a chain of one edge and its rightmost node is its own root, while a 32 node zig-zag costs 15 - half its nodes - because each splice walks the previously flattened segment. The naive alternative that searches from the root each time is the one that is actually quadratic, and it is worth saying which version you are holding.' +
+      'Two alternatives avoid the surgery and pay elsewhere. The stack version is the preorder walk with a twist: pop a node, push its right child then its left, clear both pointers of the popped node and attach it after the previous one, so the chain is built by the emission order and the peak container over the population is 1344 entries with 4 in any single tree. The divide and conquer version flattens both sides first, returns the tail of each, and splices at the current node - same three assignments as the iterative version but with the tail handed back for free, at the cost of a call stack as deep as the tree. All three produce the identical chain on the 900 trees with 0 disagreements, so the interview answer is the in-place one and the reason is space, not speed.' +
+      'The postcondition is worth stating as three testable facts rather than as a picture. No node has a left child - checked by walking the chain and seeing left empty at every stop, true for all 900 trees. The chain is the preorder listing - the spine of 1 2 4 5 3 6 7 for the perfect tree against the recursive preorder, 0 disagreements over the population. And the nodes are the same objects - reachable after the call as before, 4345 going in and 4345 coming out, 0 identity mismatches - which is what makes it an in-place rearrangement instead of a rebuild. The broken variant fails the third fact silently: it returns a shorter chain of real nodes, so a length check catches it while a value check on the prefix does not.' +
+      'Edge cases are the two shapes that make the splice degenerate. A node with no left child needs nothing: the chain already continues to the right, which is why the right-only chain of 3 costs 0 steps and the loop simply walks past it. A node whose left subtree has no right spine is the other degeneracy - the tail is the left child itself - and that is the case a version that assumes a loop has run at least once gets wrong. An empty tree returns nothing at all and the single node is already flattened: chain 1, no edits, 0 steps. Say the loop invariant out loud - everything to the left of the cursor is already a chain and the cursor points at the first node that is not - and the algorithm is three lines rather than a trick.',
+    walkthrough:
+      'Tree 1 2 3 4 5 6 7 has preorder 1 2 4 5 3 6 7. At 1 the left subtree is 2 with children 4 and 5, whose rightmost node is 5; save right = 3, hang it as the right child of 5, move the left subtree to 1 right, clear 1 left. The chain is now 1 2 4 5 3 6 7 with one tail step spent, and the cursor moves right through nodes that no longer have left children, so nothing else changes. Run the same tree with the save missing: 1 right becomes 2, 3 becomes unreachable, and the chain reads 1 2 4 - 3 of 7 nodes. On the left-only chain 1 2 null 3, every splice has a tail that is the left child itself, so 0 tail steps are spent and the chain is 1 2 3, which is also the preorder.',
+    commonMistake:
+      'Assigning the left subtree to the right pointer before saving the original right child, or flattening by rebuilding new nodes instead of relinking the existing ones.',
+    whyWrong:
+      'Without the save the right subtree is dropped the moment it is overwritten: the perfect 7 node tree keeps 1 2 4 and loses 4 nodes, and over the 900 tree population 1286 of the 4345 nodes become unreachable, with only 558 trees coming out right - the ones where no node has both children. Rebuilding new nodes produces the correct listing but a different tree, so anything the caller still holds - a reference to a node, a parent map, a second pointer - now points into the old structure instead of the chain.',
+    followUps:
+      [
+        'State the loop invariant of the single cursor walk and use it to argue that the tail search cannot be quadratic over one tree.',
+        'The zig-zag of 32 nodes costs 15 tail steps while the left chain of 64 costs 0. Explain both from the invariant.',
+        'Give the recursive version that returns the tail of the flattened subtree. What does it hand back for a node with no left child, and how deep is its stack on a chain of 64?',
+        'Your flatten is interrupted by an exception halfway down the chain. Which part of the input is still a valid tree and how would you make the operation atomic?',
+      ],
+    solution:
+      'function buildTree(cells) {\n' +
+      '  if (cells.length === 0 || cells[0] === null) return null;\n' +
+      '  const root = { val: cells[0], left: null, right: null };\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  let index = 1;\n' +
+      '  while (cursor < queue.length && index < cells.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.left = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.left);\n' +
+      '      }\n' +
+      '    }\n' +
+      '    if (index < cells.length) {\n' +
+      '      const value = cells[index];\n' +
+      '      index += 1;\n' +
+      '      if (value !== null) {\n' +
+      '        node.right = { val: value, left: null, right: null };\n' +
+      '        queue.push(node.right);\n' +
+      '      }\n' +
+      '    }\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function nodeCount(root) {\n' +
+      '  if (root === null) return 0;\n' +
+      '  return 1 + nodeCount(root.left) + nodeCount(root.right);\n' +
+      '}\n' +
+      '\n' +
+      'function serializeLevel(root) {\n' +
+      '  if (root === null) return "";\n' +
+      '  const rows = [];\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null) {\n' +
+      '      rows.push("null");\n' +
+      '      continue;\n' +
+      '    }\n' +
+      '    rows.push(String(node.val));\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  while (rows.length > 0 && rows[rows.length - 1] === "null") rows.pop();\n' +
+      '  return rows.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function preList(node) {\n' +
+      '  if (node === null) return [];\n' +
+      '  return [String(node.val)].concat(preList(node.left), preList(node.right));\n' +
+      '}\n' +
+      '\n' +
+      'function cloneTree(root) {\n' +
+      '  if (root === null) return null;\n' +
+      '  return { val: root.val, left: cloneTree(root.left), right: cloneTree(root.right) };\n' +
+      '}\n' +
+      '\n' +
+      'function rightmostOf(node, counter) {\n' +
+      '  let cursor = node;\n' +
+      '  while (cursor.right !== null) {\n' +
+      '    if (counter !== undefined) counter.steps += 1;\n' +
+      '    cursor = cursor.right;\n' +
+      '  }\n' +
+      '  return cursor;\n' +
+      '}\n' +
+      '\n' +
+      'function flattenInPlace(root, counter) {\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    if (cursor.left !== null) {\n' +
+      '      const tail = rightmostOf(cursor.left, counter);\n' +
+      '      tail.right = cursor.right;\n' +
+      '      cursor.right = cursor.left;\n' +
+      '      cursor.left = null;\n' +
+      '    }\n' +
+      '    cursor = cursor.right;\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function flattenByStack(root, counter) {\n' +
+      '  if (root === null) return null;\n' +
+      '  const stack = [root];\n' +
+      '  let previous = null;\n' +
+      '  let peak = 0;\n' +
+      '  while (stack.length > 0) {\n' +
+      '    if (stack.length > peak) peak = stack.length;\n' +
+      '    const node = stack.pop();\n' +
+      '    if (node.right !== null) stack.push(node.right);\n' +
+      '    if (node.left !== null) stack.push(node.left);\n' +
+      '    node.left = null;\n' +
+      '    node.right = null;\n' +
+      '    if (previous !== null) previous.right = node;\n' +
+      '    previous = node;\n' +
+      '  }\n' +
+      '  if (counter !== undefined) counter.peak = peak;\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function flattenByTail(root) {\n' +
+      '  if (root === null) return null;\n' +
+      '  const leftTail = flattenByTail(root.left);\n' +
+      '  const rightTail = flattenByTail(root.right);\n' +
+      '  if (leftTail === null) {\n' +
+      '    root.left = null;\n' +
+      '    return rightTail === null ? root : rightTail;\n' +
+      '  }\n' +
+      '  const savedRight = root.right;\n' +
+      '  leftTail.right = savedRight;\n' +
+      '  root.right = root.left;\n' +
+      '  root.left = null;\n' +
+      '  return rightTail === null ? leftTail : rightTail;\n' +
+      '}\n' +
+      '\n' +
+      'function flattenDroppingRight(root) {\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    if (cursor.left !== null) {\n' +
+      '      cursor.right = cursor.left;\n' +
+      '      cursor.left = null;\n' +
+      '    }\n' +
+      '    cursor = cursor.right;\n' +
+      '  }\n' +
+      '  return root;\n' +
+      '}\n' +
+      '\n' +
+      'function rightSpine(root) {\n' +
+      '  const out = [];\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    out.push(String(cursor.val));\n' +
+      '    cursor = cursor.right;\n' +
+      '  }\n' +
+      '  return out.join(" ");\n' +
+      '}\n' +
+      '\n' +
+      'function leftsClear(root) {\n' +
+      '  let cursor = root;\n' +
+      '  while (cursor !== null) {\n' +
+      '    if (cursor.left !== null) return false;\n' +
+      '    cursor = cursor.right;\n' +
+      '  }\n' +
+      '  return true;\n' +
+      '}\n' +
+      '\n' +
+      'function collectNodes(root) {\n' +
+      '  const seen = new Set();\n' +
+      '  const queue = [root];\n' +
+      '  let cursor = 0;\n' +
+      '  while (cursor < queue.length) {\n' +
+      '    const node = queue[cursor];\n' +
+      '    cursor += 1;\n' +
+      '    if (node === null || seen.has(node)) continue;\n' +
+      '    seen.add(node);\n' +
+      '    queue.push(node.left);\n' +
+      '    queue.push(node.right);\n' +
+      '  }\n' +
+      '  return seen;\n' +
+      '}\n' +
+      '\n' +
+      'function flattenLine(root) {\n' +
+      '  const wanted = preList(root).join(" ");\n' +
+      '  const identities = collectNodes(root);\n' +
+      '  const before = serializeLevel(root);\n' +
+      '  const sweepCopy = cloneTree(root);\n' +
+      '  const tailCopy = cloneTree(root);\n' +
+      '  const brokenCopy = cloneTree(root);\n' +
+      '  const counter = { steps: 0 };\n' +
+      '  const flattened = flattenInPlace(root, counter);\n' +
+      '  const peakCounter = {};\n' +
+      '  const byStack = flattenByStack(sweepCopy, peakCounter);\n' +
+      '  flattenByTail(tailCopy);\n' +
+      '  const broken = flattenDroppingRight(brokenCopy);\n' +
+      '  const chain = rightSpine(flattened);\n' +
+      '  const after = collectNodes(flattened).size;\n' +
+      '  return "spine=[" + chain + "] preorder=[" + wanted + "] agrees=" + (chain === wanted) +\n' +
+      '    " leftsClear=" + leftsClear(flattened) + " nodes=" + nodeCount(flattened) +\n' +
+      '    " identities=" + identities.size + " survivors=" + after +\n' +
+      '    " spineSteps=" + counter.steps + " chainLength=" + (chain === "" ? 0 : chain.split(" ").length) +\n' +
+      '    " stackAgrees=" + (rightSpine(byStack) === wanted) +\n' +
+      '    " peakStack=" + (peakCounter.peak === undefined ? 0 : peakCounter.peak) +\n' +
+      '    " tailAgrees=" + (rightSpine(tailCopy) === wanted) +\n' +
+      '    " brokenSpine=[" + rightSpine(broken) + "] brokenAgrees=" + (rightSpine(broken) === wanted) +\n' +
+      '    " brokenKept=" + nodeCount(broken) + " lostToOverwrite=" + (nodeCount(root) - nodeCount(broken)) +\n' +
+      '    " chain=[" + serializeLevel(flattened) + "] original=[" + before + "]";\n' +
+      '}',
+    modify:
+      'Flatten the tree by inorder instead of preorder - every node has no left child and the right pointers spell the inorder listing. Which pointer does the splice have to move now, and does the tail search get cheaper or dearer?',
   },
 ];
 
