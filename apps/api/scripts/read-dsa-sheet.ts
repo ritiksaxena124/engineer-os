@@ -27,7 +27,7 @@ export interface SheetRow {
   url: string | null;
 }
 
-function readSheet(): SheetRow[] {
+export function readSheet(): SheetRow[] {
   const workbook = XLSX.read(readFileSync(SHEET), { type: 'buffer', cellFormula: true, cellHyperlinks: true });
   const page = workbook.Sheets[SHEET_NAME];
   if (!page) throw new Error(`"${SHEET_NAME}" is not in ${SHEET}`);
@@ -55,48 +55,50 @@ function linkOf(cell: XLSX.CellObject | undefined): string | null {
   return target ? target : null;
 }
 
-const sheet = readSheet();
-const byKey = new Map(sheet.map((row) => [sheetKey(row.step, row.name), row]));
-const command = process.argv[2] ?? 'verify';
+if (import.meta.main) {
+  const sheet = readSheet();
+  const byKey = new Map(sheet.map((row) => [sheetKey(row.step, row.name), row]));
+  const command = process.argv[2] ?? 'verify';
 
-if (command === 'list') {
-  const wanted = Number(process.argv[3] ?? NaN);
-  const subtopic = process.argv[4];
+  if (command === 'list') {
+    const wanted = Number(process.argv[3] ?? NaN);
+    const subtopic = process.argv[4];
+    for (const row of sheet) {
+      if (!Number.isNaN(wanted) && row.step !== wanted) continue;
+      if (subtopic && row.subtopic !== subtopic) continue;
+      console.log(`${row.step}\t${row.subtopic}\t${row.difficulty}\t${row.name}\t${row.url ?? '-'}`);
+    }
+    process.exit(0);
+  }
+
+  const problems: string[] = [];
+  for (const authored of DSA_PROBLEMS) {
+    const row = byKey.get(sheetKey(authored.step, authored.name));
+    if (!row) {
+      problems.push(`"${authored.name}" (step ${authored.step}) is not in the sheet — the app cannot claim a problem the list does not have`);
+      continue;
+    }
+    if (row.difficulty !== authored.difficulty) {
+      problems.push(`"${authored.name}": sheet says ${row.difficulty}, the app says ${authored.difficulty}`);
+    }
+  }
+
+  const authoredKeys = new Set(DSA_PROBLEMS.map((entry) => sheetKey(entry.step, entry.name)));
+  const perStep = new Map<number, { total: number; done: number }>();
   for (const row of sheet) {
-    if (!Number.isNaN(wanted) && row.step !== wanted) continue;
-    if (subtopic && row.subtopic !== subtopic) continue;
-    console.log(`${row.step}\t${row.subtopic}\t${row.difficulty}\t${row.name}\t${row.url ?? '-'}`);
+    const bucket = perStep.get(row.step) ?? { total: 0, done: 0 };
+    bucket.total += 1;
+    if (authoredKeys.has(sheetKey(row.step, row.name))) bucket.done += 1;
+    perStep.set(row.step, bucket);
   }
-  process.exit(0);
-}
 
-const problems: string[] = [];
-for (const authored of DSA_PROBLEMS) {
-  const row = byKey.get(sheetKey(authored.step, authored.name));
-  if (!row) {
-    problems.push(`"${authored.name}" (step ${authored.step}) is not in the sheet — the app cannot claim a problem the list does not have`);
-    continue;
+  console.log(`${DSA_PROBLEMS.length} authored / ${sheet.length} on the sheet`);
+  for (const [step, bucket] of [...perStep].sort((a, b) => a[0] - b[0])) {
+    console.log(`  step ${String(step).padStart(2)}: ${bucket.done}/${bucket.total}`);
   }
-  if (row.difficulty !== authored.difficulty) {
-    problems.push(`"${authored.name}": sheet says ${row.difficulty}, the app says ${authored.difficulty}`);
+
+  if (problems.length > 0) {
+    console.error(`\nthe sheet and the app disagree:\n${problems.join('\n')}`);
+    process.exit(1);
   }
-}
-
-const authoredKeys = new Set(DSA_PROBLEMS.map((entry) => sheetKey(entry.step, entry.name)));
-const perStep = new Map<number, { total: number; done: number }>();
-for (const row of sheet) {
-  const bucket = perStep.get(row.step) ?? { total: 0, done: 0 };
-  bucket.total += 1;
-  if (authoredKeys.has(sheetKey(row.step, row.name))) bucket.done += 1;
-  perStep.set(row.step, bucket);
-}
-
-console.log(`${DSA_PROBLEMS.length} authored / ${sheet.length} on the sheet`);
-for (const [step, bucket] of [...perStep].sort((a, b) => a[0] - b[0])) {
-  console.log(`  step ${String(step).padStart(2)}: ${bucket.done}/${bucket.total}`);
-}
-
-if (problems.length > 0) {
-  console.error(`\nthe sheet and the app disagree:\n${problems.join('\n')}`);
-  process.exit(1);
 }

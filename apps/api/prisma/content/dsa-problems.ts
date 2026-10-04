@@ -1,4 +1,5 @@
 import type { ConceptSpec } from './types';
+import { DSA_STEP_CONCEPTS, DSA_STEP_PROBLEMS } from './dsa-steps';
 
 /**
  * Striver's A2Z sheet, in the app's own terms.
@@ -42,6 +43,7 @@ export interface DsaProblem {
  * set is what makes the ladder rung mean something rather than being one drill's vocabulary.
  */
 export const DSA_CONCEPTS = {
+  ...DSA_STEP_CONCEPTS,
   'dsa-digit-extraction': {
     slug: 'dsa-digit-extraction',
     name: 'Digits fall out through division and modulus',
@@ -29428,6 +29430,7 @@ export const DSA_PROBLEMS: DsaProblem[] = [
     modify:
       'Answer the lowest common ancestor for a list of k nodes instead of a pair, in one pass. Which case of the recursion changes, how many sides can report at once now, and when does a node that holds none of the list become the answer?',
   },
+  ...DSA_STEP_PROBLEMS,
 ];
 
 /** The sheet matches a row by step and problem name; the app never invents either. */
