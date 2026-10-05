@@ -23,6 +23,12 @@ export interface TopicSpec {
   summary: string;
   /** skill matrix key (§93) this topic contributes to */
   skill?: string;
+  /**
+   * Named block of its phase that the learning path groups by — the fanout curriculum is a series
+   * of ordered modules living inside one phase, and an unlabelled 200-topic list is the "mixed way"
+   * of reading it. Must be one unbroken run of topics per phase; validateCurriculum enforces that.
+   */
+  module?: string;
   /** level a prerequisite must reach before this topic unlocks; defaults to 3 (Can Debug) */
   unlockRequiredLevel?: number;
   prerequisites: { slug: string; critical?: boolean }[];

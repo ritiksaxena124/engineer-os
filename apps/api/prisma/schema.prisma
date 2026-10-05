@@ -114,6 +114,10 @@ model Topic {
   summary  String
   isActive Boolean @default(true)
 
+  // named block of the phase that the learning path groups by (the system-design module series);
+  // null means the topic stands on its own in the phase rather than inside a block
+  moduleLabel String?
+
   phaseKey String
   phase    Phase  @relation(fields: [phaseKey], references: [key], onDelete: Restrict)
 

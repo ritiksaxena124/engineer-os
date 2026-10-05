@@ -108,3 +108,19 @@ export const isBanded = (slug: string) => slug.startsWith('dsa-') || slug.starts
 export function difficultyLabel(row: { slug: string; difficulty: number; band?: string | null }): string {
   return isBanded(row.slug) ? (row.band ?? 'Medium') : `D${row.difficulty}`;
 }
+
+/**
+ * A phase is read as blocks, not as one long list: consecutive topics sharing a module label form
+ * the block, and the seed gate guarantees a label never reopens after it closes.
+ */
+export function moduleBlocks<T extends { module: string | null }>(
+  topics: T[],
+): { module: string | null; topics: T[] }[] {
+  const blocks: { module: string | null; topics: T[] }[] = [];
+  for (const topic of topics) {
+    const current = blocks[blocks.length - 1];
+    if (current && current.module === topic.module) current.topics.push(topic);
+    else blocks.push({ module: topic.module, topics: [topic] });
+  }
+  return blocks;
+}
