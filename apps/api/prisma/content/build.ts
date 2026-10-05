@@ -25,6 +25,20 @@ export const t = (
 });
 
 /**
+ * A topic that belongs to a named module block of its phase. The label travels first because a
+ * module is thirteen of these in a row, and the block name is the thing they share.
+ */
+export const tm = (
+  module: string,
+  slug: string,
+  title: string,
+  summary: string,
+  skill: string,
+  prerequisites: string[] = [],
+  advisory: string[] = [],
+): TopicSpec => ({ ...t(slug, title, summary, skill, prerequisites, advisory), module });
+
+/**
  * A concept a real answer must touch. Terms are the accepted phrasings — a learner who says
  * "timer queue" for "macrotask queue" is not wrong, and the grader has to know that.
  */

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { answerDepth, asVerdict, partTone, phaseStandings, rungTone, shortDate, verdictTone } from '@/lib/view';
+import { answerDepth, asVerdict, moduleBlocks, partTone, phaseStandings, rungTone, shortDate, verdictTone } from '@/lib/view';
 import type { Phase, Topic } from '@/lib/types';
 
 describe('rung tone', () => {
@@ -75,11 +75,41 @@ const topic = (phaseKey: string, slug: string, unlocked: boolean, level = 0): To
   phaseKey,
   number: 1,
   skillKey: null,
+  module: null,
   unlockRequiredLevel: 3,
   level,
   unlocked,
   blockedBy: unlocked ? [] : [{ slug: 'below-it', requiredLevel: 3, currentLevel: level }],
   warnings: [],
+});
+
+const described = (slug: string, module: string | null): Topic => ({ ...topic('p18', slug, true), module });
+
+describe('module blocks', () => {
+  test('a phase with no modules is one unlabelled block, exactly as it was', () => {
+    const blocks = moduleBlocks([described('a', null), described('b', null)]);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].module).toBeNull();
+    expect(blocks[0].topics.map((entry) => entry.slug)).toEqual(['a', 'b']);
+  });
+
+  test('consecutive topics sharing a label read as one block, in order', () => {
+    const blocks = moduleBlocks([
+      described('l1', 'Module 01 · Foundations'),
+      described('l2', 'Module 01 · Foundations'),
+      described('free', null),
+      described('m1', 'Module 02 · APIs'),
+    ]);
+    expect(blocks.map((entry) => [entry.module, entry.topics.length])).toEqual([
+      ['Module 01 · Foundations', 2],
+      [null, 1],
+      ['Module 02 · APIs', 1],
+    ]);
+  });
+
+  test('an empty phase has no blocks to render', () => {
+    expect(moduleBlocks([])).toEqual([]);
+  });
 });
 
 describe('exam readiness', () => {

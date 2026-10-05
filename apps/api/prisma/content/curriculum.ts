@@ -37,6 +37,8 @@ export function validateCurriculum(): string[] {
 
   for (const phase of ALL_PHASES) {
     if (phase.topics.length === 0) problems.push(`phase ${phase.key} has no topics`);
+    let run: string | null = null;
+    const closed = new Set<string>();
     for (const topic of phase.topics) {
       const previous = seenSlugs.get(topic.slug);
       if (previous) {
@@ -45,6 +47,19 @@ export function validateCurriculum(): string[] {
       seenSlugs.set(topic.slug, phase.key);
       if (topic.skill && !SKILL_KEYS.has(topic.skill)) {
         problems.push(`topic "${topic.slug}" has unknown skill "${topic.skill}"`);
+      }
+
+      // A module is a block, not a tag: once the block ends it is closed, so a path can group by
+      // label without the same name appearing twice in one phase.
+      if (topic.module && topic.module !== run) {
+        if (closed.has(topic.module)) {
+          problems.push(`phase ${phase.key} breaks module "${topic.module}" into separate runs`);
+        }
+        if (run) closed.add(run);
+        run = topic.module;
+      } else if (!topic.module && run) {
+        closed.add(run);
+        run = null;
       }
     }
   }
@@ -131,7 +146,8 @@ function validateDirectives(slug: string, kind: string, body: string, problems: 
 }
 
 /** §43: a lesson that skips a rung of the anatomy has not taught the concept, it has named it. */
-export function validateLessons(): string[] {  const problems: string[] = [];
+export function validateLessons(): string[] {
+  const problems: string[] = [];
   const topicSlugs = new Set(ALL_TOPICS.map((topic) => topic.slug));
   const lessonSlugs = new Set<string>();
 
