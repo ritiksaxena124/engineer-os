@@ -48,7 +48,7 @@ describe('dsa content', () => {
   test('every DSA topic is in the phase the sheet belongs to', () => {
     const dsa = new Set(ALL_TOPICS.filter((topic) => topic.phaseKey === 'p03').map((topic) => topic.slug));
     for (const problem of DSA_PROBLEMS) {
-      if (problem.step <= 6) expect(dsa.has(problem.topicSlug), `${problem.name} sits outside p03`).toBe(true);
+      expect(dsa.has(problem.topicSlug), `${problem.name} sits outside p03`).toBe(true);
     }
   });
 
