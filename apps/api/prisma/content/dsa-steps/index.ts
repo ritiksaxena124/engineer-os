@@ -36,6 +36,11 @@ import {
   problems as step16aProblems,
 } from './step16a';
 import {
+  concepts as step16bConcepts,
+  expects as step16bExpects,
+  problems as step16bProblems,
+} from './step16b';
+import {
   concepts as step16cConcepts,
   expects as step16cExpects,
   problems as step16cProblems,
@@ -76,6 +81,7 @@ export const DSA_STEP_CONCEPTS: Record<string, ConceptSpec> = {
   ...step15cConcepts,
   ...step15dConcepts,
   ...step16aConcepts,
+  ...step16bConcepts,
   ...step16cConcepts,
   ...step16dConcepts,
   ...step16eConcepts,
@@ -91,6 +97,7 @@ export const DSA_STEP_PROBLEMS: DsaProblem[] = [
   ...step15cProblems,
   ...step15dProblems,
   ...step16aProblems,
+  ...step16bProblems,
   ...step16cProblems,
   ...step16dProblems,
   ...step16eProblems,
@@ -106,6 +113,7 @@ export const DSA_STEP_EXPECTS: Record<string, string> = {
   ...step15cExpects,
   ...step15dExpects,
   ...step16aExpects,
+  ...step16bExpects,
   ...step16cExpects,
   ...step16dExpects,
   ...step16eExpects,
