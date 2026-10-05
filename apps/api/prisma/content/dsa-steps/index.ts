@@ -55,6 +55,11 @@ import {
   expects as step17aExpects,
   problems as step17aProblems,
 } from './step17a';
+import {
+  concepts as step18aConcepts,
+  expects as step18aExpects,
+  problems as step18aProblems,
+} from './step18a';
 
 /**
  * The sheet steps authored as separate batches, in sheet order.
@@ -75,6 +80,7 @@ export const DSA_STEP_CONCEPTS: Record<string, ConceptSpec> = {
   ...step16dConcepts,
   ...step16eConcepts,
   ...step17aConcepts,
+  ...step18aConcepts,
 };
 
 export const DSA_STEP_PROBLEMS: DsaProblem[] = [
@@ -89,6 +95,7 @@ export const DSA_STEP_PROBLEMS: DsaProblem[] = [
   ...step16dProblems,
   ...step16eProblems,
   ...step17aProblems,
+  ...step18aProblems,
 ];
 
 export const DSA_STEP_EXPECTS: Record<string, string> = {
@@ -103,4 +110,5 @@ export const DSA_STEP_EXPECTS: Record<string, string> = {
   ...step16dExpects,
   ...step16eExpects,
   ...step17aExpects,
+  ...step18aExpects,
 };
