@@ -35,19 +35,36 @@ describe('curriculum content', () => {
     expect(validateLessons()).toEqual([]);
   });
 
-  test('the system-design foundations module is structured: a diagram and one source per lesson', () => {
-    const foundations = LESSONS.filter((lesson) => lesson.topicSlug.startsWith('sd-'));
-    expect(foundations).toHaveLength(13);
+  test('a module block is one unbroken run of topics inside its phase', () => {
+    const runs: string[] = [];
+    for (const phase of ALL_PHASES) {
+      let previous: string | null = null;
+      for (const topic of phase.topics) {
+        if (!topic.module) continue;
+        if (topic.module !== previous) {
+          expect(runs).not.toContain(topic.module);
+          runs.push(topic.module);
+        }
+        previous = topic.module;
+      }
+    }
+    expect(runs).toEqual(['Module 01 · Foundations']);
+  });
 
-    for (const lesson of foundations) {
-      const bodies = lesson.sections.map((section) => section.body).join('\n');
+  test('every module topic is taught by a diagrammed, sourced lesson', () => {
+    const taught = ALL_TOPICS.filter((topic) => topic.module);
+    expect(taught).toHaveLength(13);
+
+    for (const topic of taught) {
+      const lessons = LESSONS.filter((lesson) => lesson.topicSlug === topic.slug);
+      expect(lessons).toHaveLength(1);
+
+      const bodies = lessons[0].sections.map((section) => section.body).join('\n');
       expect(bodies.split('```svg').length - 1).toBeGreaterThanOrEqual(1);
       expect(bodies.split('\n').filter((line) => line.trim().startsWith('[[source:'))).toHaveLength(1);
     }
 
-    // The module reads in order inside the phase, and every topic it teaches is in the same phase.
-    const phaseKeys = foundations.map((lesson) => ALL_TOPICS.find((topic) => topic.slug === lesson.topicSlug)?.phaseKey);
-    expect(new Set(phaseKeys)).toEqual(new Set(['p18']));
+    expect(new Set(taught.map((topic) => topic.phaseKey))).toEqual(new Set(['p18']));
   });
 
   test('the whole graph is a DAG: every prerequisite resolves and nothing cycles', () => {

@@ -6,6 +6,8 @@ export interface CatalogTopic extends GraphTopic {
   phaseKey: string;
   skillKey: string | null;
   summary: string;
+  /** named block of the phase the path groups by; null for a topic that stands on its own */
+  moduleLabel: string | null;
 }
 
 /** Current mastery level per topic slug; absent means untouched, which gates as zero. */
@@ -55,6 +57,7 @@ export class CurriculumService {
           phaseKey: topic.phaseKey,
           number: topic.number,
           skillKey: topic.skillKey,
+          module: topic.moduleLabel,
           unlockRequiredLevel: topic.unlockRequiredLevel,
           level: levels[topic.slug] ?? 0,
           unlocked,
@@ -138,6 +141,7 @@ export class CurriculumService {
       unlockRequiredLevel: row.unlockRequiredLevel,
       phaseKey: row.phaseKey,
       skillKey: row.skillKey,
+      moduleLabel: row.moduleLabel,
       prerequisites: row.requires.map((edge) => ({
         slug: edge.prerequisite.slug,
         critical: edge.critical,

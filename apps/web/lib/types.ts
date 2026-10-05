@@ -26,6 +26,8 @@ export interface Topic {
   phaseKey: string;
   number: number;
   skillKey: string | null;
+  /** named block of the phase, so a 200-topic phase still reads as an ordered series */
+  module: string | null;
   unlockRequiredLevel: number;
   level: number;
   unlocked: boolean;
