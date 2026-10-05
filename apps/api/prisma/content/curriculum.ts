@@ -80,9 +80,58 @@ export function validateCurriculum(): string[] {
   return problems;
 }
 
+const SOURCE_DIRECTIVE = /^\[\[source:\s*[^|\]]+\|\s*https?:\/\/[^\]\s]+\s*\]\]$/;
+
+/**
+ * The two authoring directives the lesson page renders — a fenced svg block and a source line — are
+ * checked here because they reach the browser as HTML: an unbalanced fence silently eats the rest of
+ * the section, and script or handler markup inside a diagram would be executed by the page.
+ */
+function validateDirectives(slug: string, kind: string, body: string, problems: string[]): void {
+  const lines = body.split('\n');
+  let figure: string[] | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('[[source:')) {
+      if (!SOURCE_DIRECTIVE.test(trimmed)) {
+        problems.push(`lesson "${slug}" section "${kind}" has a malformed source directive: ${trimmed}`);
+      }
+      continue;
+    }
+
+    if (figure) {
+      if (trimmed === '```') {
+        const markup = figure.join('\n').trim();
+        if (!markup.startsWith('<svg') || !markup.endsWith('</svg>')) {
+          problems.push(`lesson "${slug}" section "${kind}" has an svg block that is not one svg element`);
+        }
+        if (/<script|javascript:|\son[a-z]+\s*=/i.test(markup)) {
+          problems.push(`lesson "${slug}" section "${kind}" has executable markup in a diagram`);
+        }
+        figure = null;
+        continue;
+      }
+      figure.push(line);
+      continue;
+    }
+
+    if (trimmed === '```svg') {
+      figure = [];
+      continue;
+    }
+
+    if (trimmed.startsWith('```')) {
+      problems.push(`lesson "${slug}" section "${kind}" opens a fence that is not an svg block`);
+    }
+  }
+
+  if (figure) problems.push(`lesson "${slug}" section "${kind}" leaves an svg block unclosed`);
+}
+
 /** §43: a lesson that skips a rung of the anatomy has not taught the concept, it has named it. */
-export function validateLessons(): string[] {
-  const problems: string[] = [];
+export function validateLessons(): string[] {  const problems: string[] = [];
   const topicSlugs = new Set(ALL_TOPICS.map((topic) => topic.slug));
   const lessonSlugs = new Set<string>();
 
@@ -111,6 +160,7 @@ export function validateLessons(): string[] {
       if (section.body.trim().length < 80) {
         problems.push(`lesson "${lesson.slug}" section "${section.kind}" is too thin to teach anything`);
       }
+      validateDirectives(lesson.slug, section.kind, section.body, problems);
     }
   }
 

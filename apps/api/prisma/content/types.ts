@@ -1,5 +1,22 @@
 export type TrackKey = 'backend' | 'fullstack' | 'agentic-ai';
 
+/**
+ * One section of a lesson body. `kind` is a rung of the §43 anatomy; `body` is plain text that may
+ * carry two authoring directives: a fenced ```svg block (a diagram) and a `[[source: … | url]]`
+ * line (further reading). Both are validated by validateLessons and rendered by the lesson page.
+ */
+export interface LessonSectionSpec {
+  kind: string;
+  body: string;
+}
+
+export interface LessonSpec {
+  slug: string;
+  title: string;
+  topicSlug: string;
+  sections: LessonSectionSpec[];
+}
+
 export interface TopicSpec {
   slug: string;
   title: string;

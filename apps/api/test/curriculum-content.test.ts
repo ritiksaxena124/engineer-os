@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { ALL_PHASES, ALL_TOPICS, validateCurriculum, validateLessons } from '../prisma/content/curriculum';
+import { LESSONS } from '../prisma/content/lessons';
 import { TRACKS } from '../prisma/content/reference';
 import { topologicalOrder, unlockState, type GraphTopic } from '../src/curriculum/graph';
 
@@ -32,6 +33,21 @@ describe('curriculum content', () => {
 
   test('every lesson teaches the whole §43 anatomy or does not seed', () => {
     expect(validateLessons()).toEqual([]);
+  });
+
+  test('the system-design foundations module is structured: a diagram and one source per lesson', () => {
+    const foundations = LESSONS.filter((lesson) => lesson.topicSlug.startsWith('sd-'));
+    expect(foundations).toHaveLength(13);
+
+    for (const lesson of foundations) {
+      const bodies = lesson.sections.map((section) => section.body).join('\n');
+      expect(bodies.split('```svg').length - 1).toBeGreaterThanOrEqual(1);
+      expect(bodies.split('\n').filter((line) => line.trim().startsWith('[[source:'))).toHaveLength(1);
+    }
+
+    // The module reads in order inside the phase, and every topic it teaches is in the same phase.
+    const phaseKeys = foundations.map((lesson) => ALL_TOPICS.find((topic) => topic.slug === lesson.topicSlug)?.phaseKey);
+    expect(new Set(phaseKeys)).toEqual(new Set(['p18']));
   });
 
   test('the whole graph is a DAG: every prerequisite resolves and nothing cycles', () => {

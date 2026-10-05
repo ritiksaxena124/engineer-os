@@ -9,7 +9,7 @@ import { useQuery } from '@/lib/useQuery';
 import type { Phase, Topic } from '@/lib/types';
 
 /**
- * The graph is 40 phases and 303 topics; a flat list of that is unusable. Only the work in front
+ * The graph is 40 phases and 331 topics; a flat list of that is unusable. Only the work in front
  * of the learner is expanded — the phases behind are evidence of progress and the ones ahead are
  * a queue they can see but not skip into.
  */

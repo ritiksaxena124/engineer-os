@@ -1,14 +1,5 @@
-export interface LessonSectionSpec {
-  kind: string;
-  body: string;
-}
-
-export interface LessonSpec {
-  slug: string;
-  title: string;
-  topicSlug: string;
-  sections: LessonSectionSpec[];
-}
+import { SD_MODULE_01_LESSONS } from './system-design';
+import type { LessonSpec } from './types';
 
 /**
  * §43 anatomy, in order, for every lesson. The lesson engine refuses to seed a lesson that
@@ -34,7 +25,7 @@ export const LESSON_ANATOMY = [
   'mini-project',
 ] as const;
 
-export const LESSONS: LessonSpec[] = [
+const CORE_LESSONS: LessonSpec[] = [
   {
     slug: 'the-life-of-a-program',
     title: 'What Actually Happens When a Program Runs',
@@ -178,3 +169,6 @@ export const LESSONS: LessonSpec[] = [
     ],
   },
 ];
+
+/** Every authored lesson: the two hand-written foundations plus each module in the curriculum. */
+export const LESSONS: LessonSpec[] = [...CORE_LESSONS, ...SD_MODULE_01_LESSONS];

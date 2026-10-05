@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { Badge, Button, Panel } from '@/components/ui';
 import { Failure, Loading, Empty } from '@/components/states';
 import { useQuery } from '@/lib/useQuery';
+import { parseLessonBody } from '@/lib/lessonBody';
 import { shortDate } from '@/lib/view';
 import { api } from '@/lib/api';
 import type { Lesson } from '@/lib/types';
@@ -93,14 +94,46 @@ export function LessonScreen() {
   );
 }
 
-/** Lesson bodies are authored as plain text with line breaks and inline `code`. */
+/** Bodies are plain text plus two directives: an inline `svg` diagram and a `source` link. */
 function Prose({ body }: { body: string }) {
   return (
     <div className="max-w-[74ch] space-y-2 text-[13px] leading-relaxed text-muted">
-      {body.split('\n').map((line, index) => (
-        <p key={index}>{renderInline(line)}</p>
-      ))}
+      {parseLessonBody(body).map((node, index) => {
+        if (node.type === 'figure') return <Figure key={index} svg={node.svg} />;
+        if (node.type === 'source') return <SourceLine key={index} label={node.label} url={node.url} />;
+        return (
+          <p key={index}>{renderInline(node.text)}</p>
+        );
+      })}
     </div>
+  );
+}
+
+/**
+ * Diagrams are authored as SVG markup inside the lesson body, so they scale with the column and
+ * inherit the theme instead of being flat images. The markup is content we wrote, never user input.
+ */
+function Figure({ svg }: { svg: string }) {
+  return (
+    <figure className="my-3 rounded-panel border border-line bg-surface p-4">
+      <div className="[&_svg]:block [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: svg }} />
+    </figure>
+  );
+}
+
+function SourceLine({ label, url }: { label: string; url: string }) {
+  return (
+    <p className="pt-1 text-[12px]">
+      <span className="text-[11px] uppercase tracking-wide text-dim">Further reading </span>
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer noopener"
+        className="text-accent underline underline-offset-2 hover:text-ink"
+      >
+        {label}
+      </a>
+    </p>
   );
 }
 
