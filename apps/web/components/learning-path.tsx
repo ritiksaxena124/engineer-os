@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui';
 import { Empty, Failure, Loading } from '@/components/states';
 import { RungLabel } from '@/components/rung';
+import { moduleBlocks } from '@/lib/view';
 import { useQuery } from '@/lib/useQuery';
 import type { Phase, Topic } from '@/lib/types';
 
@@ -92,13 +93,24 @@ function PhaseBlock({
         <span className="w-4 text-[11px] text-dim">{open ? '−' : '+'}</span>
       </button>
 
-      {open && (
-        <ul className="border-t border-line">
-          {topics.map((topic) => (
-            <TopicRow key={topic.slug} topic={topic} />
-          ))}
-        </ul>
-      )}
+      {open &&
+        moduleBlocks(topics).map((block) => (
+          <div key={`${block.module ?? 'plain'}-${block.topics[0]?.slug ?? 'empty'}`} className="border-t border-line first:border-t-0">
+            {block.module && (
+              <h3 className="flex items-baseline gap-2 bg-raised px-4 py-2 text-[11px] uppercase tracking-[0.08em] text-dim">
+                {block.module}
+                <span className="normal-case tracking-normal text-dim">
+                  {block.topics.filter((topic) => topic.unlocked).length}/{block.topics.length} open
+                </span>
+              </h3>
+            )}
+            <ul className="divide-y divide-line">
+              {block.topics.map((topic) => (
+                <TopicRow key={topic.slug} topic={topic} />
+              ))}
+            </ul>
+          </div>
+        ))}
     </section>
   );
 }
@@ -107,7 +119,7 @@ function TopicRow({ topic }: { topic: Topic }) {
   const blockers = useMemo(() => topic.blockedBy.slice(0, 2), [topic.blockedBy]);
 
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-4 py-2 last:border-b-0">
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
       {topic.unlocked ? (
         <Link href={`/topics/${topic.slug}`} className="text-[12px] text-ink hover:underline">
           {topic.title}
